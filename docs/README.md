@@ -25,6 +25,12 @@
 
 Diretório [assets/](assets/) — diagramas, imagens e mockups referenciados pelos documentos.
 
+### Ferramentas de apoio
+
+| Diretório | Conteúdo |
+| --------- | -------- |
+| [../infra/github/](../infra/github/) | Importação das 12 Milestones e 128 issues para o GitHub via `gh` CLI, a partir de `07-ISSUES.md` |
+
 ---
 
 ## Como usar esta documentação
