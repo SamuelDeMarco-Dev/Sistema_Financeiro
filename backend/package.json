@@ -1,0 +1,11 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Gerenciador de Finanças (PFM) — API backend.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  }
+}
