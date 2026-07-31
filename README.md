@@ -52,11 +52,30 @@ npm run dev                   # http://localhost:5173
 
 Ou, a partir da raiz, suba os dois em paralelo com `npm run dev`.
 
+### Ambiente Docker (banco, banco de teste e e-mail)
+
+O [`docker-compose.yml`](docker-compose.yml) da raiz sobe três serviços: PostgreSQL de
+desenvolvimento (5432), PostgreSQL de teste (5433, `tmpfs`, dados descartáveis) e Mailpit
+para capturar e-mails localmente — nenhum e-mail real sai de máquina de desenvolvimento.
+
+```bash
+docker compose up -d           # sobe os três serviços em segundo plano
+docker compose ps              # confere o healthcheck (pg_isready) dos dois bancos
+docker compose logs -f postgres
+docker compose down            # derruba os serviços, mantém o volume do banco de dev
+docker compose down -v         # derruba e remove os volumes (perde dados locais)
+```
+
+As credenciais (`pfm` / `pfm_local`) e os bancos (`pfm`, `pfm_teste`) estão alinhados com
+`backend/.env.exemplo`.
+
 | Serviço | Endereço |
 | ------- | -------- |
 | API | http://localhost:3333 |
 | Documentação da API | http://localhost:3333/api/docs |
 | Frontend | http://localhost:5173 |
+| PostgreSQL (dev) | localhost:5432 |
+| PostgreSQL (teste) | localhost:5433 |
 | Prisma Studio | http://localhost:5555 |
 | Mailpit (e-mails capturados) | http://localhost:8025 |
 
