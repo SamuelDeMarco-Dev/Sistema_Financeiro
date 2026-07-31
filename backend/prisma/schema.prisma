@@ -1,0 +1,12 @@
+// Schema vazio nesta issue: apenas datasource e generator, para que
+// banco/cliente.ts tenha um PrismaClient valido a desconectar no
+// encerramento gracioso (issue #3). Os modelos de dominio entram na
+// primeira migration (issue #10).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
