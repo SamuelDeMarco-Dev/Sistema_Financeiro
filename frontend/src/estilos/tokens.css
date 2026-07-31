@@ -1,0 +1,33 @@
+/**
+ * Paleta semantica de 01-SPECIFICATION.md §8.2.
+ * Componentes de dominio NUNCA usam cor crua do Tailwind (ex.: bg-slate-800) —
+ * apenas estas classes semanticas (bg-fundo, text-texto, bg-perigo, ...).
+ * Valores em "R G B" (sem rgb()) para suportar o modificador de opacidade do
+ * Tailwind: rgb(var(--cor-x) / <alpha-value>).
+ */
+
+:root {
+  --cor-primaria: 37 99 235;
+  --cor-sucesso: 22 163 74;
+  --cor-perigo: 220 38 38;
+  --cor-atencao: 234 88 12;
+  --cor-informacao: 124 58 237;
+  --cor-fundo: 255 255 255;
+  --cor-superficie: 248 250 252;
+  --cor-borda: 226 232 240;
+  --cor-texto: 15 23 42;
+  --cor-texto-suave: 100 116 139;
+}
+
+.dark {
+  --cor-primaria: 59 130 246;
+  --cor-sucesso: 34 197 94;
+  --cor-perigo: 239 68 68;
+  --cor-atencao: 249 115 22;
+  --cor-informacao: 139 92 246;
+  --cor-fundo: 15 23 42;
+  --cor-superficie: 30 41 59;
+  --cor-borda: 51 65 85;
+  --cor-texto: 241 245 249;
+  --cor-texto-suave: 148 163 184;
+}
