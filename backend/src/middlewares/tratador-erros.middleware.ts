@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { ErroAplicacao } from '@/erros';
 import { mapearZod } from '@/utilitarios/mapear-zod';
+import { registrador } from '@/utilitarios/registrador';
 import { respostaErro } from '@/utilitarios/resposta';
 import type { CodigoErro } from '@/erros';
 import type { NextFunction, Request, Response } from 'express';
@@ -40,8 +41,7 @@ export function tratadorErros(
   }
 
   if (erro instanceof ErroAplicacao) {
-    // TODO(#5): trocar por utilitarios/registrador.ts (Pino) quando o logger estruturado existir.
-    console.warn(`[${erro.codigo}] ${req.method} ${req.originalUrl}: ${erro.message}`);
+    registrador.warn({ requestId: req.requestId, codigo: erro.codigo }, erro.message);
     res.status(erro.statusHttp).json(respostaErro(erro.message, erro.detalhes, erro.codigo));
     return;
   }
@@ -54,6 +54,6 @@ export function tratadorErros(
 
   // RN-56: a resposta nunca inclui stack trace ou detalhe de infraestrutura,
   // em nenhum ambiente — quem precisa investigar le o log, nao o corpo HTTP.
-  console.error(`Erro nao tratado em ${req.method} ${req.originalUrl}:`, erro);
+  registrador.error({ requestId: req.requestId, erro }, 'Erro nao tratado');
   res.status(500).json(respostaErro('Erro interno do servidor.', undefined, 'ERRO_INTERNO'));
 }
