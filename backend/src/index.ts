@@ -1,15 +1,12 @@
 import { prisma } from '@/banco/cliente';
+import { ambiente } from '@/configuracao/ambiente';
 import { criarServidor } from '@/servidor';
-
-// TODO(#4): consumir a partir de `ambiente.PORTA` assim que a validacao de
-// variaveis de ambiente existir.
-const porta = Number(process.env['PORTA'] ?? 3333);
 
 const app = criarServidor();
 
-const servidor = app.listen(porta, () => {
+const servidor = app.listen(ambiente.PORTA, () => {
   // eslint-disable-next-line no-console -- ainda nao ha logger estruturado (issue #5)
-  console.log(`API ouvindo em http://localhost:${porta}`);
+  console.log(`API ouvindo em http://localhost:${ambiente.PORTA}`);
 });
 
 async function encerrarGraciosamente(sinal: NodeJS.Signals): Promise<void> {
