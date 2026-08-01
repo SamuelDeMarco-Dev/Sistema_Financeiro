@@ -17,7 +17,7 @@ const RETULOS_TEMA: Record<Tema, string> = {
   SISTEMA: 'Sistema',
 };
 
-export function App(): JSX.Element {
+export function Inicio(): JSX.Element {
   const { tema, temaEfetivo, definirTema } = usarTema();
 
   return (
@@ -71,7 +71,7 @@ export function App(): JSX.Element {
       </section>
 
       <footer className="mt-auto border-t border-borda pt-4 text-xs text-textoSuave">
-        Issue #6 — esqueleto Vite + React + Tailwind com Design System.
+        Issues #6/#7 — Design System, roteamento e React Query.
       </footer>
     </main>
   );
