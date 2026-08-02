@@ -9,17 +9,15 @@ const servidor = app.listen(ambiente.PORTA, () => {
   registrador.info(`API ouvindo em http://localhost:${ambiente.PORTA}`);
 });
 
-async function encerrarGraciosamente(sinal: NodeJS.Signals): Promise<void> {
+function encerrarGraciosamente(sinal: NodeJS.Signals): void {
   registrador.info(`${sinal} recebido: encerrando requisicoes em curso...`);
 
-  servidor.close(async (erro) => {
-    await prisma.$disconnect();
-
+  servidor.close((erro) => {
     if (erro) {
       process.exitCode = 1;
     }
 
-    process.exit();
+    void prisma.$disconnect().finally(() => process.exit());
   });
 }
 

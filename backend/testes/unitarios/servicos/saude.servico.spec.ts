@@ -40,7 +40,10 @@ describe('saude.servico', () => {
       const resultado = await obterStatusProntidao();
 
       expect(resultado.status).toBe('indisponivel');
-      expect(resultado.verificacoes.banco).toEqual({ status: 'erro', mensagem: 'Conexao recusada.' });
+      expect(resultado.verificacoes.banco).toEqual({
+        status: 'erro',
+        mensagem: 'Conexao recusada.',
+      });
       // As demais verificacoes continuam sendo reportadas mesmo com o banco fora do ar.
       expect(resultado.verificacoes.armazenamento).toEqual({ status: 'ok', gravavel: true });
     });

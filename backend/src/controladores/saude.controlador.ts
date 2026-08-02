@@ -4,10 +4,11 @@ import { respostaSucesso } from '@/utilitarios/resposta';
 import type { Request, Response } from 'express';
 
 /** *Liveness*: o processo esta de pe. Nao verifica dependencias externas —
- * para isso existe `/saude/prontidao`. */
-export const liveness = asyncHandler(async (_req: Request, res: Response) => {
+ * para isso existe `/saude/prontidao`. Sincrono (sem `asyncHandler`): nao
+ * ha nenhum trabalho assincrono a aguardar aqui. */
+export function liveness(_req: Request, res: Response): void {
   res.status(200).json(respostaSucesso(saudeServico.obterStatusLiveness(), 'Serviço operacional.'));
-});
+}
 
 // Formato de resposta do 503 documentado em 04-API.md §25.2 inclui `data`
 // mesmo com `success: false` — uma excecao explicita ao envelope padrao de

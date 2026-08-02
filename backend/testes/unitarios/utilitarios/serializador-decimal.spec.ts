@@ -16,6 +16,6 @@ describe('registrarSerializadorDecimal (ADR-012)', () => {
 
     const json = JSON.stringify({ valor: new Prisma.Decimal('42.00') });
     expect(json).toBe('{"valor":"42.00"}');
-    expect(JSON.parse(json).valor).toEqual(expect.any(String));
+    expect((JSON.parse(json) as { valor: unknown }).valor).toEqual(expect.any(String));
   });
 });

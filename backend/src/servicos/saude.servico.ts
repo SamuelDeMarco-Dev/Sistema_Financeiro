@@ -1,6 +1,5 @@
+import { constants as constantesFs, readFileSync } from 'node:fs';
 import { access, mkdir, readdir } from 'node:fs/promises';
-import { constants as constantesFs } from 'node:fs';
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ambiente } from '@/configuracao/ambiente';
 import * as saudeRepositorio from '@/repositorios/saude.repositorio';
@@ -34,13 +33,16 @@ export function obterStatusLiveness(): StatusLiveness {
   };
 }
 
-type VerificacaoOk<T extends object> = { status: 'ok' } & T;
-type VerificacaoErro = { status: 'erro'; mensagem: string };
+type VerificacaoBanco = { status: 'ok'; latenciaMs: number } | { status: 'erro'; mensagem: string };
+type VerificacaoMigrations =
+  { status: 'ok'; pendentes: number } | { status: 'erro'; mensagem: string };
+type VerificacaoArmazenamento =
+  { status: 'ok'; gravavel: true } | { status: 'erro'; mensagem: string };
 
 export interface VerificacoesProntidao {
-  banco: VerificacaoOk<{ latenciaMs: number }> | VerificacaoErro;
-  migrations: VerificacaoOk<{ pendentes: number }> | VerificacaoErro;
-  armazenamento: VerificacaoOk<{ gravavel: true }> | VerificacaoErro;
+  banco: VerificacaoBanco;
+  migrations: VerificacaoMigrations;
+  armazenamento: VerificacaoArmazenamento;
 }
 
 export interface StatusProntidao {

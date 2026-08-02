@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export const TEMAS = ['CLARO', 'ESCURO', 'SISTEMA'] as const;
 export type Tema = (typeof TEMAS)[number];
@@ -32,9 +32,10 @@ interface ProvedorTemaProps {
   children: ReactNode;
 }
 
-export function ProvedorTema({ children }: ProvedorTemaProps): JSX.Element {
+export function ProvedorTema({ children }: ProvedorTemaProps): ReactElement {
   const [tema, setTema] = useState<Tema>(lerTemaArmazenado);
-  const [preferenciaSistema, setPreferenciaSistema] = useState<TemaEfetivo>(obterPreferenciaSistema);
+  const [preferenciaSistema, setPreferenciaSistema] =
+    useState<TemaEfetivo>(obterPreferenciaSistema);
 
   // Acompanha a preferencia do SO em tempo real quando o tema escolhido e SISTEMA.
   useEffect(() => {
@@ -44,7 +45,9 @@ export function ProvedorTema({ children }: ProvedorTemaProps): JSX.Element {
     };
 
     consulta.addEventListener('change', ouvirMudanca);
-    return () => consulta.removeEventListener('change', ouvirMudanca);
+    return () => {
+      consulta.removeEventListener('change', ouvirMudanca);
+    };
   }, []);
 
   const temaEfetivo: TemaEfetivo = tema === 'SISTEMA' ? preferenciaSistema : tema;
@@ -66,10 +69,13 @@ export function ProvedorTema({ children }: ProvedorTemaProps): JSX.Element {
   return <ContextoTema.Provider value={valor}>{children}</ContextoTema.Provider>;
 }
 
-export function usarTema(): ContextoTemaValor {
+// Nome em ingles (nao `usarTema`): eslint-plugin-react-hooks reconhece
+// Hooks customizados pelo prefixo fixo `use`, sem opcao de configuracao
+// (05-DEVELOPMENT.md §4.1).
+export function useTema(): ContextoTemaValor {
   const contexto = useContext(ContextoTema);
   if (!contexto) {
-    throw new Error('usarTema deve ser usado dentro de <ProvedorTema>.');
+    throw new Error('useTema deve ser usado dentro de <ProvedorTema>.');
   }
   return contexto;
 }

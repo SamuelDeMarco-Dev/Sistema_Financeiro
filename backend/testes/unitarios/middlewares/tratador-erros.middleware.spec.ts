@@ -31,7 +31,7 @@ describe('tratadorErros', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     const corpo = corpoEnviado(res);
     expect(corpo).toMatchObject({ success: false, codigo: 'VALIDACAO' });
-    expect(corpo['errors']).toEqual(
+    expect(corpo.errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ campo: 'valor' })]),
     );
   });
@@ -39,7 +39,12 @@ describe('tratadorErros', () => {
   it('traduz ErroAplicacao (NaoEncontradoErro) para 404 com o codigo e a mensagem da classe', () => {
     const res = fabricarResposta();
 
-    tratadorErros(new NaoEncontradoErro('Conta nao encontrada.'), fabricarRequisicao(), res, vi.fn());
+    tratadorErros(
+      new NaoEncontradoErro('Conta nao encontrada.'),
+      fabricarRequisicao(),
+      res,
+      vi.fn(),
+    );
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(corpoEnviado(res)).toMatchObject({
@@ -106,6 +111,6 @@ describe('tratadorErros', () => {
     const corpo = corpoEnviado(res);
     expect(corpo).toMatchObject({ success: false, codigo: 'ERRO_INTERNO' });
     expect(JSON.stringify(corpo)).not.toContain('detalhe interno sensivel');
-    expect(corpo['errors']).toBeUndefined();
+    expect(corpo.errors).toBeUndefined();
   });
 });

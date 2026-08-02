@@ -11,10 +11,13 @@ const CABECALHO_REQUEST_ID = 'x-request-id';
  * log emitido durante esta requisicao sem precisar de `req` em maos. */
 export function correlacao(req: Request, res: Response, next: NextFunction): void {
   const recebido = req.headers[CABECALHO_REQUEST_ID];
-  const requestId = typeof recebido === 'string' && recebido.trim().length > 0 ? recebido : randomUUID();
+  const requestId =
+    typeof recebido === 'string' && recebido.trim().length > 0 ? recebido : randomUUID();
 
   req.requestId = requestId;
   res.setHeader('X-Request-Id', requestId);
 
-  contextoRequisicao.run({ requestId }, () => next());
+  contextoRequisicao.run({ requestId }, () => {
+    next();
+  });
 }

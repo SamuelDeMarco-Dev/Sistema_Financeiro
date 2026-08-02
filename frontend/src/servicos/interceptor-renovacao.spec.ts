@@ -57,7 +57,9 @@ describe('criarInterceptorRenovacao', () => {
 
   it('rejeita com ErroApi (nao com o AxiosError cru) quando o status nao e 401', async () => {
     const instanciaFake = vi.fn() as unknown as AxiosInstance;
-    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = { baseURL: 'http://x' };
+    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = {
+      baseURL: 'http://x',
+    };
     const interceptor = criarInterceptorRenovacao(instanciaFake);
 
     const erro500 = fabricarErro401();
@@ -69,11 +71,14 @@ describe('criarInterceptorRenovacao', () => {
 
   it('nao tenta renovar duas vezes a mesma requisicao (evita loop infinito)', async () => {
     const instanciaFake = vi.fn() as unknown as AxiosInstance;
-    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = { baseURL: 'http://x' };
+    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = {
+      baseURL: 'http://x',
+    };
     const interceptor = criarInterceptorRenovacao(instanciaFake);
 
     const erro = fabricarErro401();
-    (erro.config as InternalAxiosRequestConfig & { _jaTentouRenovar?: boolean })._jaTentouRenovar = true;
+    (erro.config as InternalAxiosRequestConfig & { _jaTentouRenovar?: boolean })._jaTentouRenovar =
+      true;
 
     await expect(interceptor(erro)).rejects.toMatchObject({ name: 'ErroApi' });
     expect(axios.post).not.toHaveBeenCalled();

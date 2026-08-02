@@ -2,10 +2,13 @@ import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { contextoRequisicao, criarRegistradorTeste } from '@/utilitarios/registrador';
 
-function fabricarDestinoCapturavel(): { destino: Writable; linhas: () => Record<string, unknown>[] } {
+function fabricarDestinoCapturavel(): {
+  destino: Writable;
+  linhas: () => Record<string, unknown>[];
+} {
   const bruto: string[] = [];
   const destino = new Writable({
-    write(chunk, _codificacao, callback) {
+    write(chunk: Buffer | string, _codificacao, callback) {
       bruto.push(chunk.toString());
       callback();
     },
@@ -64,6 +67,6 @@ describe('utilitarios/registrador', () => {
 
     const [comContexto, semContexto] = linhas();
     expect(comContexto).toMatchObject({ requestId: 'req-123' });
-    expect(semContexto?.['requestId']).toBeUndefined();
+    expect(semContexto?.requestId).toBeUndefined();
   });
 });

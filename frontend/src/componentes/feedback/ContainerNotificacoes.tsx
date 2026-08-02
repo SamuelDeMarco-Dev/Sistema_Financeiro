@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/utilitarios/cn';
 import { inscrever, removerNotificacao } from './notificar';
 import type { Notificacao } from './notificar';
+import type { ReactElement } from 'react';
 
 /** Regiao aria-live unica para toda a aplicacao — monte uma vez perto da
  * raiz (main.tsx). Leitores de tela anunciam cada notificacao ao ser
  * inserida no DOM (A11Y-03). */
-export function ContainerNotificacoes(): JSX.Element {
+export function ContainerNotificacoes(): ReactElement {
   const [lista, setLista] = useState<Notificacao[]>([]);
 
   useEffect(() => inscrever(setLista), []);
@@ -29,7 +30,9 @@ export function ContainerNotificacoes(): JSX.Element {
           <span>{notificacao.mensagem}</span>
           <button
             type="button"
-            onClick={() => removerNotificacao(notificacao.id)}
+            onClick={() => {
+              removerNotificacao(notificacao.id);
+            }}
             aria-label="Fechar notificacao"
             className="text-textoSuave hover:text-texto"
           >

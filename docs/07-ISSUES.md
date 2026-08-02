@@ -31,29 +31,29 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 ### Labels
 
-| Categoria | Valores |
-| --------- | ------- |
-| Camada | `backend`, `frontend`, `banco`, `infra`, `docs` |
-| Tipo | `feat`, `fix`, `refactor`, `test`, `chore`, `ci` |
-| Domínio | `autenticacao`, `perfil`, `contas`, `categorias`, `etiquetas`, `movimentacoes`, `transferencias`, `anexos`, `cartoes`, `faturas`, `compartilhadas`, `convites`, `metas`, `orcamentos`, `notificacoes`, `dashboard`, `relatorios`, `pesquisa`, `auditoria` |
-| Prioridade | `p0-critica`, `p1-alta`, `p2-media`, `p3-baixa` |
+| Categoria  | Valores                                                                                                                                                                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Camada     | `backend`, `frontend`, `banco`, `infra`, `docs`                                                                                                                                                                                                           |
+| Tipo       | `feat`, `fix`, `refactor`, `test`, `chore`, `ci`                                                                                                                                                                                                          |
+| Domínio    | `autenticacao`, `perfil`, `contas`, `categorias`, `etiquetas`, `movimentacoes`, `transferencias`, `anexos`, `cartoes`, `faturas`, `compartilhadas`, `convites`, `metas`, `orcamentos`, `notificacoes`, `dashboard`, `relatorios`, `pesquisa`, `auditoria` |
+| Prioridade | `p0-critica`, `p1-alta`, `p2-media`, `p3-baixa`                                                                                                                                                                                                           |
 
 ### Índice
 
-| Milestone | Issues | Pontos | Seção |
-| --------- | ------ | -----: | ----- |
-| M0 — Fundação e Infraestrutura | #1–#9 | 34 | [ir](#milestone-0--fundação-e-infraestrutura) |
-| M1 — Autenticação e Perfil | #10–#21 | 55 | [ir](#milestone-1--autenticação-e-perfil) |
-| M2 — Contas Financeiras e Categorias | #22–#31 | 42 | [ir](#milestone-2--contas-financeiras-e-categorias) |
-| M3 — Movimentações e Transferências | #32–#45 | 76 | [ir](#milestone-3--movimentações-e-transferências) |
-| M4 — Dashboard e Relatórios | #46–#55 | 50 | [ir](#milestone-4--dashboard-e-relatórios) |
-| M5 — CI/CD e Deploy em Produção | #56–#65 | 42 | [ir](#milestone-5--cicd-e-deploy-em-produção) |
-| M6 — Contas Compartilhadas | #66–#78 | 71 | [ir](#milestone-6--contas-compartilhadas) |
-| M7 — Metas Financeiras | #79–#85 | 29 | [ir](#milestone-7--metas-financeiras) |
-| M8 — Cartões, Faturas e Parcelamentos | #86–#97 | 63 | [ir](#milestone-8--cartões-faturas-e-parcelamentos) |
-| M9 — Orçamentos e Notificações | #98–#108 | 52 | [ir](#milestone-9--orçamentos-e-notificações) |
-| M10 — Dashboard Analítico e Exportações | #109–#118 | 47 | [ir](#milestone-10--dashboard-analítico-e-exportações) |
-| M11 — Pesquisa, Auditoria e Observabilidade | #119–#128 | 42 | [ir](#milestone-11--pesquisa-auditoria-e-observabilidade) |
+| Milestone                                   | Issues    | Pontos | Seção                                                     |
+| ------------------------------------------- | --------- | -----: | --------------------------------------------------------- |
+| M0 — Fundação e Infraestrutura              | #1–#9     |     34 | [ir](#milestone-0--fundação-e-infraestrutura)             |
+| M1 — Autenticação e Perfil                  | #10–#21   |     55 | [ir](#milestone-1--autenticação-e-perfil)                 |
+| M2 — Contas Financeiras e Categorias        | #22–#31   |     42 | [ir](#milestone-2--contas-financeiras-e-categorias)       |
+| M3 — Movimentações e Transferências         | #32–#45   |     76 | [ir](#milestone-3--movimentações-e-transferências)        |
+| M4 — Dashboard e Relatórios                 | #46–#55   |     50 | [ir](#milestone-4--dashboard-e-relatórios)                |
+| M5 — CI/CD e Deploy em Produção             | #56–#65   |     42 | [ir](#milestone-5--cicd-e-deploy-em-produção)             |
+| M6 — Contas Compartilhadas                  | #66–#78   |     71 | [ir](#milestone-6--contas-compartilhadas)                 |
+| M7 — Metas Financeiras                      | #79–#85   |     29 | [ir](#milestone-7--metas-financeiras)                     |
+| M8 — Cartões, Faturas e Parcelamentos       | #86–#97   |     63 | [ir](#milestone-8--cartões-faturas-e-parcelamentos)       |
+| M9 — Orçamentos e Notificações              | #98–#108  |     52 | [ir](#milestone-9--orçamentos-e-notificações)             |
+| M10 — Dashboard Analítico e Exportações     | #109–#118 |     47 | [ir](#milestone-10--dashboard-analítico-e-exportações)    |
+| M11 — Pesquisa, Auditoria e Observabilidade | #119–#128 |     42 | [ir](#milestone-11--pesquisa-auditoria-e-observabilidade) |
 
 ---
 
@@ -70,6 +70,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Criar a estrutura de diretórios do monorepo com os dois pacotes independentes, arquivos de configuração compartilhados e `.gitignore` adequado. É a issue que todas as outras pressupõem.
 
 **Checklist técnico**
+
 - [ ] Criar `backend/`, `frontend/`, `.github/workflows/`.
 - [ ] `package.json` raiz com `workspaces` e scripts agregadores (`verificar`, `dev`).
 - [ ] `.gitignore` cobrindo `node_modules`, `dist`, `.env`, `uploads`, `coverage`, `.DS_Store`.
@@ -79,6 +80,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `README.md` raiz com visão do projeto e link para `docs/`.
 
 **Critérios de aceite**
+
 - [ ] `npm ci` na raiz instala as dependências dos dois pacotes.
 - [ ] `git status` limpo após um `npm run build` completo (nada gerado é versionado).
 - [ ] Estrutura de pastas confere com [02-ARCHITECTURE.md §1.1](02-ARCHITECTURE.md#11-repositório).
@@ -92,6 +94,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Ambiente local reprodutível: PostgreSQL de desenvolvimento, PostgreSQL de teste em porta separada e Mailpit para capturar e-mails. Nenhum e-mail real deve sair de máquina de desenvolvimento.
 
 **Checklist técnico**
+
 - [ ] `docker-compose.yml` com serviço `postgres` (16-alpine, porta 5432, volume nomeado).
 - [ ] Serviço `postgres_teste` (porta 5433, `tmpfs` para velocidade — dados descartáveis por definição).
 - [ ] Serviço `mailpit` (portas 1025 SMTP / 8025 UI).
@@ -100,6 +103,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Documentar comandos de subida/derrubada no `README.md`.
 
 **Critérios de aceite**
+
 - [ ] `docker compose up -d` sobe os três serviços com `healthcheck` saudável.
 - [ ] `psql` conecta em 5432 e 5433 com as credenciais do `.env.exemplo`.
 - [ ] Mailpit acessível em `http://localhost:8025`.
@@ -114,6 +118,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Servidor Express em TypeScript com a estrutura de pastas em camadas, ordem de middlewares definida e encerramento gracioso. Sem rota de domínio.
 
 **Checklist técnico**
+
 - [ ] `tsconfig.json` conforme [05-DEVELOPMENT.md §5.1](05-DEVELOPMENT.md#51-configuração), incluindo `noUncheckedIndexedAccess` e `exactOptionalPropertyTypes`.
 - [ ] Criar todas as pastas de `src/` de [02-ARCHITECTURE.md §3](02-ARCHITECTURE.md#3-estrutura-de-pastas-do-backend) com `.gitkeep`.
 - [ ] `src/servidor.ts` montando os middlewares na ordem exata de §4.1 (a ordem é significativa).
@@ -122,6 +127,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Alias `@/*` funcionando em runtime (`tsx`) e no build.
 
 **Critérios de aceite**
+
 - [ ] `npm run dev` sobe em 3333 e recarrega ao salvar.
 - [ ] `npm run build && npm start` executa o artefato compilado.
 - [ ] `npm run tipos` sem erro.
@@ -136,6 +142,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Três fundações usadas por todo o resto: validação de env vars com falha rápida, utilitários de envelope conforme ADR-004 e a hierarquia de erros com tradutor único para HTTP.
 
 **Checklist técnico**
+
 - [ ] `configuracao/ambiente.ts` com schema Zod e `process.exit(1)` em configuração inválida.
 - [ ] Regra ESLint `no-restricted-imports` proibindo `process.env` fora deste arquivo.
 - [ ] `utilitarios/resposta.ts` com `respostaSucesso` e `respostaErro`.
@@ -146,6 +153,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `middlewares/async-handler.ts` e `nao-encontrado.middleware.ts`.
 
 **Critérios de aceite**
+
 - [ ] Iniciar sem `JWT_SEGREDO` aborta com mensagem clara indicando a variável faltante.
 - [ ] `throw new NaoEncontradoErro('x')` em qualquer camada produz `404` no envelope padrão.
 - [ ] `NODE_ENV=production` não expõe `stack` em nenhuma resposta (RN-56).
@@ -161,6 +169,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Observabilidade mínima desde o primeiro dia: log JSON com `requestId` correlacionado e os endpoints que o deploy usará como portão em M5.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/registrador.ts` com Pino, nível por `NIVEL_LOG`, `pino-pretty` só em desenvolvimento.
 - [ ] `middlewares/correlacao.middleware.ts` gerando/propagando `X-Request-Id` via `AsyncLocalStorage`.
 - [ ] `middlewares/registrador.middleware.ts` logando método, rota, status e duração.
@@ -169,6 +178,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `prontidao` verifica banco (`SELECT 1`), migrations pendentes e escrita no diretório de uploads.
 
 **Critérios de aceite**
+
 - [ ] Toda requisição gera exatamente um registro JSON com `requestId`.
 - [ ] `X-Request-Id` enviado pelo cliente é ecoado; ausente, é gerado.
 - [ ] Corpo de `/autenticacao/*` nunca aparece no log (teste automatizado verifica).
@@ -183,6 +193,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Aplicação React com o Design System de [01-SPECIFICATION.md §8](01-SPECIFICATION.md#8-design-system-e-responsividade) implementado como tokens CSS, funcionando em tema claro e escuro.
 
 **Checklist técnico**
+
 - [ ] `npm create vite` com template `react-ts`; estrutura de pastas de [02-ARCHITECTURE.md §7](02-ARCHITECTURE.md#7-estrutura-de-pastas-do-frontend).
 - [ ] Tailwind com `estilos/tokens.css` definindo as 10 cores semânticas em `:root` e `.dark`.
 - [ ] `tailwind.config.ts` mapeando os tokens (`primaria`, `sucesso`, `perigo`, `atencao`, `informacao`, `fundo`, `superficie`, `borda`, `texto`, `textoSuave`).
@@ -194,11 +205,12 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Alias `@/*` no `vite.config.ts` e no `tsconfig.json`.
 
 **Critérios de aceite**
+
 - [ ] Alternância de tema muda todas as cores sem recarregar a página.
 - [ ] `SISTEMA` acompanha a preferência do sistema operacional em tempo real.
 - [ ] Contraste ≥ 4.5:1 para `texto` sobre `fundo` e sobre `superficie`, nos dois temas (verificado com ferramenta).
 - [ ] Nenhuma cor crua do Tailwind (`bg-slate-800`) em componente — só tokens.
-- [ ] Página de exemplo sem *scroll* horizontal em 320 px.
+- [ ] Página de exemplo sem _scroll_ horizontal em 320 px.
 
 ---
 
@@ -206,11 +218,12 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M0` · **5 pts** · `frontend` `chore` `p0-critica` · Depende de: #6 · ADR-010
 
-**Descrição.** Infraestrutura de dados e navegação: React Router com *lazy loading*, React Query configurado e cliente Axios com o interceptor de renovação em fila única.
+**Descrição.** Infraestrutura de dados e navegação: React Router com _lazy loading_, React Query configurado e cliente Axios com o interceptor de renovação em fila única.
 
 **Checklist técnico**
-- [ ] React Router com `LayoutPublico` e `LayoutAutenticado`; `RotaProtegida` como *placeholder* (sem auth real ainda).
-- [ ] `React.lazy` + `Suspense` por página, com *fallback* de esqueleto.
+
+- [ ] React Router com `LayoutPublico` e `LayoutAutenticado`; `RotaProtegida` como _placeholder_ (sem auth real ainda).
+- [ ] `React.lazy` + `Suspense` por página, com _fallback_ de esqueleto.
 - [ ] `QueryClient` com `staleTime: 30_000`, `retry: 1`, `refetchOnWindowFocus: false`.
 - [ ] `servicos/api.ts` com Axios, `baseURL` de `VITE_API_URL`, `withCredentials: true`, `timeout: 20_000`.
 - [ ] Interceptor de request injetando o access token da memória.
@@ -218,10 +231,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Desempacotamento do envelope: o serviço devolve `data`, não a resposta bruta.
 - [ ] Normalização de erro: `ErroApi` com `codigo`, `mensagem` e `errors` tipados.
 - [ ] Componentes `Esqueleto`, `EstadoVazio`, `EstadoErro`, `Carregando` em `componentes/feedback/`.
-- [ ] Sistema de *toast* (`notificar.sucesso/erro`) acessível via `aria-live`.
+- [ ] Sistema de _toast_ (`notificar.sucesso/erro`) acessível via `aria-live`.
 
 **Critérios de aceite**
-- [ ] Navegação entre rotas carrega o *chunk* sob demanda (verificado na aba Network).
+
+- [ ] Navegação entre rotas carrega o _chunk_ sob demanda (verificado na aba Network).
 - [ ] Cinco requisições simultâneas recebendo `401` disparam **uma** chamada a `/renovar` (teste unitário com mock).
 - [ ] Erro de rede produz `ErroApi` com `codigo` legível, não exceção crua do Axios.
 - [ ] Os quatro componentes de feedback renderizam nos dois temas.
@@ -235,7 +249,8 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Automatizar as convenções de [05-DEVELOPMENT.md](05-DEVELOPMENT.md) para que sejam garantidas por ferramenta, não por vigilância em revisão. Inclui as fronteiras arquiteturais.
 
 **Checklist técnico**
-- [ ] ESLint 9 (flat config) nos dois pacotes com `typescript-eslint` em modo *type-checked*.
+
+- [ ] ESLint 9 (flat config) nos dois pacotes com `typescript-eslint` em modo _type-checked_.
 - [ ] Todas as regras de [05-DEVELOPMENT.md §8.2](05-DEVELOPMENT.md#82-eslint--regras-que-reprovam-o-build), com `--max-warnings 0`.
 - [ ] `eslint-plugin-boundaries` aplicando a matriz de importação de §6.5 (`prisma` só em `repositorios/`, `express` fora de `servicos/`).
 - [ ] `eslint-plugin-jsx-a11y` e `react-hooks` no frontend.
@@ -244,6 +259,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `commitlint.config.cjs` com os tipos e escopos de §10.3.
 
 **Critérios de aceite**
+
 - [ ] Importar `prisma` em um serviço reprova o `npm run lint`.
 - [ ] Importar `express` em um serviço reprova o `npm run lint`.
 - [ ] Ler `process.env` fora de `configuracao/ambiente.ts` reprova o lint.
@@ -259,16 +275,18 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Pipeline que reproduz exatamente `npm run verificar` e bloqueia merge com o portão vermelho.
 
 **Checklist técnico**
+
 - [ ] `.github/workflows/ci.yml` disparando em `pull_request` para `main` e `staging` e em `push` para `staging`.
 - [ ] Jobs paralelos `backend` e `frontend`; serviço PostgreSQL para os testes do backend.
 - [ ] Passos: `npm ci` → `tipos` → `lint` → `formatar:check` → `teste:cobertura` → `build`.
 - [ ] Cache de `~/.npm` por `package-lock.json`.
-- [ ] Portão de cobertura falhando abaixo de 80% de *statements* / 75% de *branches*.
+- [ ] Portão de cobertura falhando abaixo de 80% de _statements_ / 75% de _branches_.
 - [ ] Upload de relatório de cobertura como artefato.
 - [ ] Varredura de segredos (`gitleaks`) no diff.
-- [ ] Proteger `main` e `staging`: PR obrigatório, CI verde, 1 aprovação, sem *force push*, sem exclusão.
+- [ ] Proteger `main` e `staging`: PR obrigatório, CI verde, 1 aprovação, sem _force push_, sem exclusão.
 
 **Critérios de aceite**
+
 - [ ] PR com erro de tipo, lint ou teste tem o merge bloqueado.
 - [ ] PR verde completa em menos de 6 minutos.
 - [ ] Push direto em `staging` ou `main` é rejeitado pelo servidor.
@@ -290,6 +308,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Primeira migration do projeto. Cria os três modelos de identidade conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo), com o mapeamento pt-BR de tabelas e colunas.
 
 **Checklist técnico**
+
 - [ ] `prisma/schema.prisma` com `datasource`, `generator` e os modelos `Usuario`, `Perfil`, `TokenRenovacao`.
 - [ ] Enum `TemaPreferido`.
 - [ ] `@@map`/`@map` em todos os modelos e campos (tabelas `snake_case` plural, colunas `snake_case`).
@@ -300,6 +319,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration nomeada `cria_estrutura_inicial`.
 
 **Critérios de aceite**
+
 - [ ] `npx prisma migrate deploy` aplica em banco vazio sem erro.
 - [ ] Nomes de tabela e coluna no banco estão em `snake_case` pt-BR (verificado por consulta em `information_schema`).
 - [ ] `Perfil` tem relação 1:1 com `Usuario` e `onDelete: Cascade`.
@@ -314,6 +334,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Endpoint de cadastro criando usuário, perfil com padrões e token de verificação, disparando e-mail. Base de todo o resto — sem cadastro não há nada para testar.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/senha.ts` com `gerarHash` e `comparar` usando bcrypt custo `BCRYPT_CUSTO` (RN-52).
 - [ ] `validadores/autenticacao.validador.ts` com `cadastrarSchema` (regras de senha de [04-API.md §7.1](04-API.md#71-post-autenticacaocadastrar), máx. 72 caracteres).
 - [ ] `UsuarioRepositorio` com `buscarPorEmail`, `criar` (usuário + perfil na mesma transação).
@@ -324,6 +345,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Envio de e-mail não bloqueia a resposta e a falha de SMTP não derruba o cadastro (log de erro + token reenviável).
 
 **Critérios de aceite**
+
 - [ ] `201` com `usuario.emailVerificado: false`; `senhaHash` ausente da resposta.
 - [ ] E-mail duplicado (inclusive com caixa diferente) responde `409 EMAIL_JA_CADASTRADO`.
 - [ ] Senha fora das regras responde `400 VALIDACAO` com o campo e o motivo.
@@ -340,6 +362,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Emissão do par de tokens conforme a estratégia de [02-ARCHITECTURE.md §8.1](02-ARCHITECTURE.md#81-estratégia-de-tokens): access token JWT curto no corpo, refresh token opaco em cookie `httpOnly`.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/jwt.ts` com `assinarAccessToken` e `verificarAccessToken`.
 - [ ] `TokenRenovacaoRepositorio` persistindo apenas o **hash** do refresh token (RN-53).
 - [ ] `AutenticacaoServico.entrar`: busca por e-mail, `bcrypt.compare`, verifica `emailVerificadoEm`, verifica `bloqueadoAte`.
@@ -351,12 +374,13 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Atualização de `ultimoLoginEm`.
 
 **Critérios de aceite**
+
 - [ ] `200` com `accessToken`, `expiraEm: 900`, dados do usuário e do perfil.
 - [ ] `Set-Cookie` com as quatro flags corretas.
 - [ ] E-mail inexistente e senha errada retornam a **mesma** mensagem `401 CREDENCIAIS_INVALIDAS` (sem enumeração de contas).
 - [ ] Conta não verificada responde `403 EMAIL_NAO_VERIFICADO`.
 - [ ] 6ª tentativa falha em 15 min responde `429` com `Retry-After`.
-- [ ] Refresh token no banco está *hasheado*, não em texto claro.
+- [ ] Refresh token no banco está _hasheado_, não em texto claro.
 
 ---
 
@@ -367,14 +391,16 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Renovação com rotação obrigatória. Reuso de token já revogado é tratado como indício de vazamento e revoga toda a família de tokens do usuário.
 
 **Checklist técnico**
+
 - [ ] `AutenticacaoServico.renovar`: valida hash, verifica expiração e revogação.
 - [ ] Rotação: revoga o antigo (`revogadoEm`, `substituidoPorId`) e emite novo, na mesma transação.
 - [ ] Detecção de reuso: token com `revogadoEm != null` revoga **todos** os tokens ativos do usuário e responde `401`.
 - [ ] `POST /autenticacao/renovar` sem corpo, consumindo o cookie.
-- [ ] *Rate limit* de 30 por 15 min por IP.
+- [ ] _Rate limit_ de 30 por 15 min por IP.
 - [ ] Log de nível `warn` ao detectar reuso, com `usuarioId` e IP.
 
 **Critérios de aceite**
+
 - [ ] `200` com novo access token e novo cookie.
 - [ ] Token antigo deixa de funcionar imediatamente após a rotação.
 - [ ] Reusar token revogado responde `401` **e** invalida as outras sessões (teste de integração).
@@ -390,6 +416,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Middleware que popula `req.usuario` e os endpoints de encerramento de sessão, individual e global.
 
 **Checklist técnico**
+
 - [ ] `tipos/express.d.ts` augmentando `Request` com `usuario` e `requestId`.
 - [ ] `middlewares/autenticar.middleware.ts`: extrai `Bearer`, verifica JWT, carrega usuário, rejeita usuário excluído.
 - [ ] Distinguir `TOKEN_EXPIRADO` de `NAO_AUTENTICADO` (o cliente reage diferente a cada um).
@@ -398,6 +425,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Ambos respondem `204`.
 
 **Critérios de aceite**
+
 - [ ] Rota protegida sem token responde `401 NAO_AUTENTICADO`.
 - [ ] Token expirado responde `401` com `codigo: "TOKEN_EXPIRADO"`.
 - [ ] Token de usuário excluído responde `401`.
@@ -413,8 +441,9 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Fluxos de token de uso único e alteração autenticada. A resposta de "esqueci senha" é deliberadamente idêntica exista ou não o e-mail.
 
 **Checklist técnico**
+
 - [ ] `POST /autenticacao/verificar-email` consumindo token de 24 h e preenchendo `emailVerificadoEm`.
-- [ ] `POST /autenticacao/reenviar-verificacao` com *rate limit* de 3/hora.
+- [ ] `POST /autenticacao/reenviar-verificacao` com _rate limit_ de 3/hora.
 - [ ] `POST /autenticacao/esqueci-senha`: gera token de 1 h, envia e-mail, responde sempre `200` com a mesma mensagem.
 - [ ] `POST /autenticacao/redefinir-senha`: valida token, troca a senha, revoga **todos** os refresh tokens.
 - [ ] `PATCH /autenticacao/alterar-senha`: exige senha atual, revoga as **outras** sessões e mantém a atual.
@@ -422,6 +451,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Tokens de uso único invalidados após o consumo.
 
 **Critérios de aceite**
+
 - [ ] Token de verificação usado duas vezes responde `400` na segunda.
 - [ ] "Esqueci senha" com e-mail inexistente responde `200` com mensagem idêntica ao caso existente.
 - [ ] Token de recuperação expirado (> 1 h) responde `400`.
@@ -437,6 +467,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Permitir ao usuário ver onde está logado e revogar sessões específicas.
 
 **Checklist técnico**
+
 - [ ] `GET /autenticacao/sessoes` listando tokens ativos com dispositivo, IP e datas.
 - [ ] Marcar a sessão atual com `atual: true`.
 - [ ] Parsing do `userAgent` para rótulo legível ("Chrome · Windows").
@@ -444,6 +475,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Sessão de outro usuário responde `404`.
 
 **Critérios de aceite**
+
 - [ ] Lista traz apenas tokens não revogados e não expirados.
 - [ ] A sessão em uso vem marcada como `atual`.
 - [ ] Revogar a sessão atual funciona e equivale a `sair`.
@@ -458,17 +490,19 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** CRUD do perfil e upload de avatar com conversão para WebP. O e-mail deliberadamente **não** é alterável aqui — trocá-lo exige novo ciclo de verificação.
 
 **Checklist técnico**
+
 - [ ] `GET /perfil` e `PATCH /perfil` (todos os campos opcionais).
 - [ ] Validar `timezone` contra `Intl.supportedValuesOf('timeZone')` e `moedaPadrao` contra ISO 4217.
 - [ ] Rejeitar `email` no corpo do `PATCH` com `400 VALIDACAO` explicando o motivo.
 - [ ] `middlewares/upload.middleware.ts` com Multer, limite de 2 MB, filtro de MIME.
-- [ ] Validação por *magic number* além da extensão.
-- [ ] `POST /perfil/foto`: converte para WebP com `sharp`, gera *thumbnail* 128×128, remove o arquivo anterior.
+- [ ] Validação por _magic number_ além da extensão.
+- [ ] `POST /perfil/foto`: converte para WebP com `sharp`, gera _thumbnail_ 128×128, remove o arquivo anterior.
 - [ ] `DELETE /perfil/foto`.
-- [ ] *Rate limit* de 50 uploads/hora.
+- [ ] _Rate limit_ de 50 uploads/hora.
 - [ ] `utilitarios/data.ts` com conversão de/para o timezone do perfil.
 
 **Critérios de aceite**
+
 - [ ] `PATCH` altera apenas os campos enviados.
 - [ ] `timezone` inválido responde `400`.
 - [ ] Arquivo de 3 MB responde `413 ARQUIVO_MUITO_GRANDE`.
@@ -481,12 +515,13 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M1` · **5 pts** · `frontend` `feat` `autenticacao` `p0-critica` · Depende de: #7, #12 · RF-03
 
-**Descrição.** Estado de sessão no cliente: access token em memória, sessão restaurada por renovação silenciosa no *boot* e proteção de rotas.
+**Descrição.** Estado de sessão no cliente: access token em memória, sessão restaurada por renovação silenciosa no _boot_ e proteção de rotas.
 
 **Checklist técnico**
+
 - [ ] `ContextoAutenticacao` com `usuario`, `estaAutenticado`, `carregando`, `entrar`, `sair`.
 - [ ] `armazenamento-token.ts` guardando o access token **em memória** (nunca `localStorage`).
-- [ ] No *boot*, tentar `POST /renovar` uma vez para restaurar a sessão a partir do cookie.
+- [ ] No _boot_, tentar `POST /renovar` uma vez para restaurar a sessão a partir do cookie.
 - [ ] `RotaProtegida` redirecionando para `/entrar` e preservando o destino em `state.de`.
 - [ ] Redirecionar para o destino original após o login.
 - [ ] `RotaPublica` impedindo acesso a `/entrar` quando já autenticado.
@@ -494,8 +529,9 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Hooks `usarLogin`, `usarCadastro`, `usarSessao`.
 
 **Critérios de aceite**
+
 - [ ] Recarregar a página com cookie válido mantém o usuário autenticado.
-- [ ] Recarregar sem cookie leva a `/entrar` sem *flash* de conteúdo protegido.
+- [ ] Recarregar sem cookie leva a `/entrar` sem _flash_ de conteúdo protegido.
 - [ ] Acessar `/movimentacoes` deslogado redireciona e, após o login, volta a `/movimentacoes`.
 - [ ] Access token não aparece em `localStorage` nem em `sessionStorage` (verificado no DevTools).
 
@@ -508,6 +544,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Telas públicas com React Hook Form + Zod, mensagens em pt-BR orientadas à ação e acessibilidade completa.
 
 **Checklist técnico**
+
 - [ ] `LayoutPublico` responsivo com identidade visual e alternância de tema.
 - [ ] `FormularioLogin` com e-mail, senha (com botão mostrar/ocultar) e "lembrar-me".
 - [ ] `FormularioCadastro` com indicador de força de senha e confirmação.
@@ -518,10 +555,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Botão desabilitado com indicador de carregamento durante o envio.
 
 **Critérios de aceite**
+
 - [ ] Formulário navegável e submetível **apenas** por teclado.
 - [ ] Erro de campo anunciado por leitor de tela.
-- [ ] `403 EMAIL_NAO_VERIFICADO` leva à tela de reenvio, não a um *toast* genérico.
-- [ ] Sem *scroll* horizontal em 320 px.
+- [ ] `403 EMAIL_NAO_VERIFICADO` leva à tela de reenvio, não a um _toast_ genérico.
+- [ ] Sem _scroll_ horizontal em 320 px.
 - [ ] Duplo clique no botão de envio não dispara duas requisições.
 
 ---
@@ -533,14 +571,16 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Duas telas públicas completando o ciclo de senha, com mensagem neutra que não revela quais e-mails existem.
 
 **Checklist técnico**
+
 - [ ] Página "esqueci minha senha" com campo de e-mail e tela de confirmação neutra.
 - [ ] Página "redefinir senha" lendo o token da URL, com nova senha e confirmação.
 - [ ] Validar o token antes de exibir o formulário; tela de erro com ação de solicitar novo link.
-- [ ] Após redefinir, redirecionar para o login com *toast* de sucesso.
+- [ ] Após redefinir, redirecionar para o login com _toast_ de sucesso.
 - [ ] Indicador de força de senha reaproveitado do cadastro.
 - [ ] Tratamento de `429` com mensagem indicando quando tentar novamente.
 
 **Critérios de aceite**
+
 - [ ] Confirmação neutra é exibida independentemente de o e-mail existir.
 - [ ] Token inválido ou expirado mostra erro claro com caminho de recuperação.
 - [ ] Redefinição bem-sucedida invalida a sessão anterior (login necessário).
@@ -555,15 +595,17 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Área autenticada de preferências, incluindo avatar, tema, timezone, moeda e alteração de senha.
 
 **Checklist técnico**
+
 - [ ] `LayoutAutenticado` com cabeçalho, menu lateral (≥ `lg`) e navegação inferior (mobile).
 - [ ] Página de configurações em abas: Perfil · Preferências · Segurança.
 - [ ] Aba Perfil: nome, upload de avatar com pré-visualização e recorte, remoção.
 - [ ] Aba Preferências: tema, idioma, moeda, timezone, formato de data, primeiro dia da semana, notificações.
 - [ ] Aba Segurança: alteração de senha e lista de sessões ativas com revogação.
-- [ ] Salvamento por seção, com estado de carregamento e *toast*.
+- [ ] Salvamento por seção, com estado de carregamento e _toast_.
 - [ ] Invalidar `['perfil']` e `['sessao']` após mutação.
 
 **Critérios de aceite**
+
 - [ ] Trocar o tema reflete imediatamente e persiste após recarregar.
 - [ ] Trocar o timezone altera as datas exibidas em toda a aplicação.
 - [ ] Upload de avatar atualiza o cabeçalho sem recarregar a página.
@@ -586,6 +628,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modelos `Conta`, `Categoria` e `Etiqueta` com escopo dual preparado. Nesta Milestone só o escopo pessoal existe; as colunas de grupo entram em M6.
 
 **Checklist técnico**
+
 - [ ] Modelos conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo), com `usuarioId` e `contaCompartilhadaId` (esta última já declarada, sem FK ativa até M6).
 - [ ] Enums `TipoConta` e `TipoCategoria`.
 - [ ] `saldoInicial` como `Decimal @db.Decimal(14,2)` (RN-07).
@@ -595,6 +638,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration nomeada `adiciona_contas_e_categorias`.
 
 **Critérios de aceite**
+
 - [ ] `saldo_inicial` é `numeric(14,2)` no banco (verificado em `information_schema`).
 - [ ] Duas contas com o mesmo nome para o mesmo usuário violam o índice único.
 - [ ] Conta excluída logicamente libera o nome para reuso.
@@ -609,6 +653,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** O coração aritmético do sistema. Todo cálculo monetário do projeto passa por aqui, e um erro nesta issue contamina dashboard, relatórios, orçamentos e faturas. Exige 100% de cobertura.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/dinheiro.ts` com `somar`, `subtrair`, `multiplicar`, `dividir`, `arredondar`, `ratearParcelas`, `paraStringApi`, `deStringApi` — todos operando em `Prisma.Decimal`.
 - [ ] `ratearParcelas` com a diferença de arredondamento na **última** parcela (RN-21).
 - [ ] `ContaRepositorio.calcularSaldoAtual` implementando a agregação de [03-DATABASE.md §8.1](03-DATABASE.md#81-saldo-atual-de-uma-conta-rn-01-rn-02-rn-03) — somando `valorPago`, não `valor`.
@@ -618,7 +663,8 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Testes com valores extremos, três casas decimais e casos de resto.
 
 **Critérios de aceite**
-- [ ] Cobertura **100%** em `dinheiro.ts` (*statements* e *branches*).
+
+- [ ] Cobertura **100%** em `dinheiro.ts` (_statements_ e _branches_).
 - [ ] `ratearParcelas` satisfaz `Σ = total` para `1000/3`, `100/7`, `0.05/2`, `10/4`, `0.01/3`.
 - [ ] Saldo ignora `PENDENTE`, `ATRASADA` e `CANCELADA` (RN-02).
 - [ ] Despesa `PAGA_PARCIALMENTE` de `100.00` com `valorPago: 30.00` reduz o saldo em exatamente `30.00` (RN-03).
@@ -634,6 +680,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Endpoints completos de conta, incluindo a proteção que impede perder histórico por exclusão.
 
 **Checklist técnico**
+
 - [ ] `ContaRepositorio`, `ContaServico`, `ContaControlador`, `contas.validador.ts`, `contas.rotas.ts`.
 - [ ] `GET /contas` com saldo atual, previsto e contagem de movimentações; `meta.totalizadores.saldoTotal`.
 - [ ] `GET /contas/resumo` enxuto para seletores (sem agregações).
@@ -645,6 +692,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Bloquear lançamento em conta arquivada (preparado para M3).
 
 **Critérios de aceite**
+
 - [ ] Saldo de conta nova é igual ao `saldoInicial`.
 - [ ] Nome duplicado no mesmo escopo responde `409`.
 - [ ] Conta de outro usuário responde `404`, não `403`.
@@ -661,6 +709,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** As 18 categorias padrão e suas subcategorias, copiadas para o usuário no cadastro para que ele comece com algo utilizável em vez de uma tela vazia.
 
 **Checklist técnico**
+
 - [ ] `prisma/seed.ts` idempotente criando as categorias de [03-DATABASE.md §10.1](03-DATABASE.md#101-categorias-padrão-do-sistema) com `ehPadraoSistema: true`.
 - [ ] Subcategorias iniciais de Alimentação, Transporte e Moradia.
 - [ ] `npm run seed:producao` criando **somente** as categorias do sistema.
@@ -669,6 +718,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] A cópia preserva a hierarquia pai/filho.
 
 **Critérios de aceite**
+
 - [ ] Rodar o seed duas vezes não duplica categorias.
 - [ ] Usuário recém-cadastrado tem as 18 categorias e as subcategorias com a hierarquia correta.
 - [ ] `seed:producao` não cria usuário nem movimentação.
@@ -683,6 +733,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** CRUD com hierarquia de um nível e a exclusão que exige recategorização — não se apaga silenciosamente a classificação de lançamentos existentes.
 
 **Checklist técnico**
+
 - [ ] `GET /categorias` com árvore montada (`subcategorias` aninhadas) e filtros `tipo`, `apenasRaiz`.
 - [ ] `POST /categorias` validando profundidade máxima 1 e mesmo tipo do pai.
 - [ ] `PATCH /categorias/:id` impedindo troca de `tipo` quando há movimentações vinculadas.
@@ -692,6 +743,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `validarCompatibilidadeCategoria(categoria, tipo)` exportado para uso em M3 (RN-10).
 
 **Critérios de aceite**
+
 - [ ] Subcategoria de subcategoria responde `422 REGRA_NEGOCIO`.
 - [ ] Subcategoria de tipo diferente do pai responde `422`.
 - [ ] Trocar o tipo de categoria em uso responde `422`.
@@ -708,6 +760,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Marcadores livres, transversais às categorias. Nome normalizado e único por escopo.
 
 **Checklist técnico**
+
 - [ ] `GET /etiquetas` com contagem de uso.
 - [ ] `POST /etiquetas` normalizando para minúsculas e validando unicidade no escopo.
 - [ ] `PATCH /etiquetas/:id` e `DELETE /etiquetas/:id`.
@@ -715,6 +768,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Nome de 1–40 caracteres, sem espaços nas extremidades.
 
 **Critérios de aceite**
+
 - [ ] `"Viagem"` e `"viagem"` colidem com `409 CONFLITO`.
 - [ ] Excluir etiqueta em uso remove só o vínculo; a movimentação permanece.
 - [ ] Etiqueta de outro usuário responde `404`.
@@ -728,6 +782,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Primeira tela com dado financeiro real. Define o padrão visual de exibição de valores para todo o produto.
 
 **Checklist técnico**
+
 - [ ] `funcionalidades/contas/` com hooks, serviço, schemas e componentes.
 - [ ] Chaves de query `chavesContas` e invalidação em cascata nas mutações.
 - [ ] `CartaoSaldoTotal` em destaque com o saldo consolidado.
@@ -741,12 +796,13 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Os quatro estados obrigatórios.
 
 **Critérios de aceite**
+
 - [ ] Criar conta atualiza a lista e o saldo total sem recarregar.
 - [ ] Valores alinhados em coluna (numerais tabulares).
 - [ ] Saldo negativo tem sinal `−` além da cor (A11Y-01).
 - [ ] `409` na exclusão exibe diálogo oferecendo arquivar.
 - [ ] Reordenação possível por teclado.
-- [ ] Sem *scroll* horizontal em 320 px.
+- [ ] Sem _scroll_ horizontal em 320 px.
 
 ---
 
@@ -757,6 +813,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Gestão de categorias com hierarquia visível e o fluxo de recategorização na exclusão.
 
 **Checklist técnico**
+
 - [ ] Abas Receitas / Despesas.
 - [ ] `ArvoreCategorias` com pai expansível e filhos indentados.
 - [ ] `FormularioCategoria` com nome, tipo, cor, ícone e pai (só categorias raiz do mesmo tipo).
@@ -767,6 +824,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Contagem de uso por categoria.
 
 **Critérios de aceite**
+
 - [ ] Árvore expande e recolhe; estado por categoria.
 - [ ] Seletor de pai oferece apenas raízes do mesmo tipo.
 - [ ] `409` abre o seletor de destino e a exclusão conclui após a escolha.
@@ -782,6 +840,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Seletores que serão usados em todos os formulários das Milestones seguintes. Investir na qualidade deles agora evita reescrever seis formulários depois.
 
 **Checklist técnico**
+
 - [ ] `SelecionadorConta` com ícone, cor, saldo e agrupamento pessoal/grupo (preparado para M6).
 - [ ] `SelecionadorCategoria` com busca, agrupamento por pai e filtro por tipo.
 - [ ] `SelecionadorEtiquetas` multi-seleção com criação inline.
@@ -792,6 +851,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Todos operáveis por teclado, com `aria-label` e `aria-describedby`.
 
 **Critérios de aceite**
+
 - [ ] `CampoMoeda` digitando `12345` produz `"123.45"` na submissão.
 - [ ] `CampoMoeda` rejeita mais de duas casas decimais e valores não numéricos.
 - [ ] `CampoData` respeita o timezone do perfil (teste com `America/Sao_Paulo` e `UTC`).
@@ -807,6 +867,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Cobertura de integração das rotas da Milestone, com ênfase em autorização negativa e nas constraints do banco.
 
 **Checklist técnico**
+
 - [ ] `testes/fabricas/` com `fabricarUsuario`, `fabricarConta`, `fabricarCategoria`, `fabricarEtiqueta`.
 - [ ] `prepararUsuarioComConta()` retornando token, conta e categoria.
 - [ ] Testes de integração de todas as rotas de contas, categorias e etiquetas.
@@ -815,6 +876,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `EXPLAIN ANALYZE` da listagem de contas verificando uso de índice.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 85% em `contas` e `categorias`.
 - [ ] Toda rota tem ao menos um teste de autorização negativa.
 - [ ] Suíte de integração roda em < 30 s.
@@ -837,6 +899,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A tabela central do sistema, com todos os campos de transferência, recorrência, parcelamento e cartão. Modelagem errada aqui é caríssima de corrigir depois.
 
 **Checklist técnico**
+
 - [ ] Modelo `Movimentacao` completo conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo).
 - [ ] Modelos `Anexo`, `MovimentacaoEtiqueta`, `CompraParcelada`.
 - [ ] Enums `TipoMovimentacao`, `SituacaoMovimentacao`, `SentidoTransferencia`, `FrequenciaRecorrencia`.
@@ -846,6 +909,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration `adiciona_movimentacoes_e_etiquetas`.
 
 **Critérios de aceite**
+
 - [ ] `valor` e `valor_pago` são `numeric(14,2)`; `data_competencia` é `date` (não `timestamp`).
 - [ ] Auto-relação funciona: modelo com ocorrências filhas.
 - [ ] Todos os índices existem (verificado em `pg_indexes`).
@@ -860,6 +924,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Todos os `CHECK` e índices parciais de [03-DATABASE.md §6](03-DATABASE.md#6-constraints-não-expressáveis-no-prisma). O banco passa a rejeitar estado inválido mesmo que um bug de aplicação escape — última linha de defesa da integridade financeira.
 
 **Checklist técnico**
+
 - [ ] Migration manual `constraints_dominio`.
 - [ ] `CHECK` de escopo XOR em `movimentacoes`, `contas`, `categorias`, `etiquetas`.
 - [ ] `CHECK` de integridade de valores: `valor > 0`, `0 ≤ valor_pago ≤ valor`.
@@ -871,6 +936,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Testes de integração que **violam deliberadamente** cada constraint e esperam erro do banco.
 
 **Critérios de aceite**
+
 - [ ] Inserir movimentação com `conta_id` **e** `conta_compartilhada_id` falha no banco.
 - [ ] Inserir com os dois nulos falha.
 - [ ] `valor = 0` e `valor` negativo falham.
@@ -889,6 +955,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** O endpoint mais importante da API. Concentra a maior densidade de regras de negócio do projeto.
 
 **Checklist técnico**
+
 - [ ] `movimentacao.validador.ts` com `criarMovimentacaoSchema` e o `refine` de XOR de destino ([04-API.md §12.2](04-API.md#122-post-movimentacoes)).
 - [ ] Rejeitar `tipo: TRANSFERENCIA` neste endpoint (existe rota própria).
 - [ ] `MovimentacaoServico.criar` validando, em ordem: propriedade da conta (RN-51), conta não arquivada, categoria existente, compatibilidade de tipo (RN-10), escopo da categoria (RN-11), limites de data (RN-13).
@@ -899,6 +966,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Objetos `transferencia`, `recorrencia`, `parcelamento` sempre presentes como chave, com `null` quando não se aplicam.
 
 **Critérios de aceite**
+
 - [ ] Receita e despesa criadas com todos os campos previstos.
 - [ ] Categoria de `RECEITA` em despesa responde `422 CATEGORIA_INCOMPATIVEL` nomeando a categoria.
 - [ ] Categoria `AMBOS` aceita os dois tipos.
@@ -919,11 +987,12 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Listagem com todos os filtros de [04-API.md §12.1](04-API.md#121-get-movimentacoes) e totalizadores calculados sobre o filtro inteiro, não sobre a página.
 
 **Checklist técnico**
+
 - [ ] `montarWhere(filtros)` centralizado no repositório, com filtro base (`excluidoEm: null`, `ehModeloRecorrencia: false`).
 - [ ] Parâmetros repetíveis tratados como OU lógico.
 - [ ] `categoriaId` incluindo automaticamente as subcategorias.
 - [ ] `campoData` alternando entre competência, vencimento e efetivação.
-- [ ] `busca` sobre descrição e observação, *case-insensitive*.
+- [ ] `busca` sobre descrição e observação, _case-insensitive_.
 - [ ] Paginação com `limite` máximo 100, respondendo `400` acima disso (não truncando silenciosamente).
 - [ ] Ordenação por lista fechada de campos; campo fora dela responde `400`.
 - [ ] `meta.totalizadores` sobre todo o filtro, **excluindo** transferências e canceladas (RN-25).
@@ -931,6 +1000,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `EXPLAIN ANALYZE` documentado no PR.
 
 **Critérios de aceite**
+
 - [ ] Cada filtro funciona isoladamente e em combinação.
 - [ ] Totalizadores conferem com a soma manual do conjunto filtrado.
 - [ ] Transferências não entram nos totalizadores de receita/despesa.
@@ -949,6 +1019,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Alteração e exclusão lógica com recálculo de saldo e auditoria. Mudar de conta é deliberadamente proibido.
 
 **Checklist técnico**
+
 - [ ] `PATCH /movimentacoes/:id` alterando apenas os campos enviados.
 - [ ] Bloquear alteração de `contaId`, `contaCompartilhadaId` e `cartaoId` com `422 REGRA_NEGOCIO` (afetaria o saldo de duas contas).
 - [ ] Revalidar compatibilidade de categoria quando `categoriaId` ou `tipo` mudam.
@@ -958,6 +1029,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Log de auditoria em alteração de valor de movimentação efetivada (RN-15).
 
 **Critérios de aceite**
+
 - [ ] Alterar valor de movimentação efetivada ajusta o saldo corretamente.
 - [ ] Tentar mudar `contaId` responde `422` com mensagem explicando a alternativa.
 - [ ] Movimentação excluída desaparece de listagens, saldos e totalizadores.
@@ -974,6 +1046,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Transições de situação de pagamento. O pagamento parcial é a regra que mais frequentemente é implementada errada — o saldo deve refletir `valorPago`, não `valor`.
 
 **Checklist técnico**
+
 - [ ] `PATCH /movimentacoes/:id/pagar` com `dataEfetivacao` (padrão hoje), `valorPago` (padrão total) e `contaId` opcional.
 - [ ] `valorPago < valor` → `PAGA_PARCIALMENTE`; igual → `PAGA` (RN-14).
 - [ ] `valorPago > valor` responde `422`.
@@ -984,6 +1057,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Testes de invariante: sequência criar → pagar parcial → completar → estornar → pagar devolve o saldo esperado em cada passo.
 
 **Critérios de aceite**
+
 - [ ] Pagar `100.00` integralmente reduz o saldo em `100.00`.
 - [ ] Pagar `30.00` de `100.00` reduz o saldo em `30.00` e resulta em `PAGA_PARCIALMENTE` (RN-03).
 - [ ] Pagar `70.00` adicionais completa para `PAGA` e o saldo total reduzido é `100.00`.
@@ -1001,6 +1075,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Recorrência com registro-mãe como modelo e ocorrências concretas geradas para 12 meses (ADR-006). Edição e exclusão exigem escopo explícito.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/data.ts` com `calcularProximaOcorrencia(data, frequencia, intervalo)` tratando meses curtos e ano bissexto.
 - [ ] Criação com `recorrencia`: cria o modelo (`ehModeloRecorrencia: true`) e gera 12 meses de ocorrências, em transação.
 - [ ] Validar exclusividade entre `fimEm` e `totalOcorrencias` (`422` se ambos).
@@ -1010,6 +1085,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `meta.recorrencia` na resposta de criação, com contagem gerada.
 
 **Critérios de aceite**
+
 - [ ] Recorrência mensal gera 12 ocorrências com datas corretas.
 - [ ] Recorrência mensal iniciada em 31/01 gera 28/02 (ou 29 em bissexto) e 31/03 — não pula meses.
 - [ ] Modelo nunca aparece em listagem nem afeta saldo.
@@ -1029,6 +1105,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Par de lançamentos vinculados criado e excluído na mesma transação (ADR-007). Retorna os saldos atualizados das duas contas para evitar a janela de saldo velho na interface.
 
 **Checklist técnico**
+
 - [ ] `TransferenciaServico.criar` gerando `transferenciaId` (UUID) e os dois lançamentos com `sentido` `SAIDA`/`ENTRADA`, em `$transaction`.
 - [ ] Validar propriedade das duas contas e que são diferentes (`422 CONTAS_IGUAIS`).
 - [ ] Validar que nenhuma está arquivada.
@@ -1040,6 +1117,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Garantir exclusão de `TRANSFERENCIA` em todo totalizador (helper único, RN-25).
 
 **Critérios de aceite**
+
 - [ ] `201` com os dois `movimentacaoId` e os saldos atualizados.
 - [ ] Contas iguais respondem `422 CONTAS_IGUAIS`.
 - [ ] Conta de terceiro responde `404`.
@@ -1057,15 +1135,17 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Comprovantes vinculados a movimentações, entregues por rota autenticada — não servidos estaticamente pelo Nginx, porque a propriedade precisa ser verificada em cada acesso.
 
 **Checklist técnico**
+
 - [ ] `POST /movimentacoes/:id/anexos` com Multer, múltiplos arquivos, limite de 5 MB e 5 por movimentação.
-- [ ] Validação por extensão **e** *magic number* (PDF `%PDF`, JPEG `FFD8FF`, PNG `89504E47`).
+- [ ] Validação por extensão **e** _magic number_ (PDF `%PDF`, JPEG `FFD8FF`, PNG `89504E47`).
 - [ ] Caminho `/<usuarioId>/<ano>/<mes>/<uuid>.<ext>`; nome original sanitizado e nunca usado no disco.
-- [ ] `GET /anexos/:id/conteudo` validando propriedade e fazendo *stream* com `Content-Disposition: inline`.
+- [ ] `GET /anexos/:id/conteudo` validando propriedade e fazendo _stream_ com `Content-Disposition: inline`.
 - [ ] `DELETE /anexos/:id` removendo registro e arquivo físico.
 - [ ] Excluir movimentação remove os anexos do disco.
-- [ ] *Rate limit* de 50 uploads/hora.
+- [ ] _Rate limit_ de 50 uploads/hora.
 
 **Critérios de aceite**
+
 - [ ] Upload de PDF e imagem funciona; `.exe` renomeado para `.pdf` é rejeitado com `415`.
 - [ ] Arquivo de 6 MB responde `413`.
 - [ ] 6º anexo na mesma movimentação responde `422`.
@@ -1079,9 +1159,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M3` · **5 pts** · `backend` `feat` `movimentacoes` `p1-alta` · Depende de: #38 · RF-30, RN-18
 
-**Descrição.** Duas tarefas diárias idempotentes. Idempotência não é detalhe: a tarefa pode reexecutar por *restart* do container e não pode duplicar efeitos.
+**Descrição.** Duas tarefas diárias idempotentes. Idempotência não é detalhe: a tarefa pode reexecutar por _restart_ do container e não pode duplicar efeitos.
 
 **Checklist técnico**
+
 - [ ] `tarefas/agendador.ts` com `node-cron`, ativo por `HABILITAR_TAREFAS_AGENDADAS` e apenas em `NODE_APP_INSTANCE === '0'` (evita execução duplicada no cluster PM2).
 - [ ] `marcar-atrasadas.tarefa.ts` (00:05): `PENDENTE` com `dataVencimento < hoje` → `ATRASADA`.
 - [ ] `gerar-recorrencias.tarefa.ts` (00:15): reabastece ocorrências até 12 meses à frente.
@@ -1091,6 +1172,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Cada tarefa exposta como função pura, testável sem o agendador.
 
 **Critérios de aceite**
+
 - [ ] Cada tarefa executada duas vezes seguidas produz o mesmo estado final (idempotência).
 - [ ] `marcar-atrasadas` não altera `PAGA`, `CANCELADA` nem modelos de recorrência.
 - [ ] `gerar-recorrencias` não duplica ocorrências existentes.
@@ -1107,6 +1189,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Tela principal do produto. Filtros na URL para que o estado seja compartilhável e sobreviva ao recarregamento.
 
 **Checklist técnico**
+
 - [ ] `usarParametrosUrl` sincronizando filtros com `searchParams`.
 - [ ] `BarraFiltros` com período (atalhos: este mês, mês passado, 30 dias, personalizado), tipo, situação, conta, categoria, etiqueta e busca com debounce de 400 ms.
 - [ ] Chips de filtros ativos, removíveis individualmente, com ação "limpar todos".
@@ -1118,10 +1201,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Indicadores visuais de recorrência (`↻`), parcelamento (`3/10`) e transferência (`⇄`) — com rótulo textual, não só ícone.
 
 **Critérios de aceite**
+
 - [ ] Recarregar a página preserva todos os filtros.
 - [ ] URL com filtros é compartilhável e reproduz a mesma visão.
 - [ ] Busca dispara uma requisição por pausa de digitação, não por tecla.
-- [ ] Tabela vira cartões abaixo de 768 px, sem *scroll* horizontal.
+- [ ] Tabela vira cartões abaixo de 768 px, sem _scroll_ horizontal.
 - [ ] Totalizadores refletem o filtro, não a página.
 - [ ] Ações rápidas atualizam a lista e o saldo sem recarregar.
 - [ ] Estado vazio distingue "nenhuma movimentação" de "nenhum resultado para o filtro".
@@ -1135,6 +1219,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Formulário único para receita e despesa, com seção de recorrência e o diálogo de escopo na edição.
 
 **Checklist técnico**
+
 - [ ] `FormularioMovimentacao` em `Sheet` (mobile) / `Dialog` (desktop), com abas Receita / Despesa.
 - [ ] Campos: descrição, valor, datas, conta/cartão, categoria, situação, etiquetas, observação.
 - [ ] Seção recolhível de recorrência, com pré-visualização das próximas 3 datas.
@@ -1146,6 +1231,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Invalidação em cascata: `movimentacoes`, `contas`, `dashboard`, `relatorios`.
 
 **Critérios de aceite**
+
 - [ ] Criar receita e despesa funciona com todos os campos.
 - [ ] Pré-visualização das datas de recorrência é correta, inclusive iniciando em dia 31.
 - [ ] Editar ocorrência exibe o diálogo de escopo e respeita a escolha.
@@ -1162,6 +1248,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Formulário de transferência com pré-visualização do efeito nos dois saldos, e upload de anexos na movimentação.
 
 **Checklist técnico**
+
 - [ ] `FormularioTransferencia` com conta de origem, destino, valor, data e descrição automática.
 - [ ] Excluir a conta escolhida na origem da lista de destino (impede o erro antes da requisição).
 - [ ] Pré-visualização "saldo depois" das duas contas.
@@ -1171,6 +1258,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Indicador de quantidade de anexos na listagem.
 
 **Critérios de aceite**
+
 - [ ] Conta de origem não aparece como opção de destino.
 - [ ] Pré-visualização de saldo confere com o resultado após a submissão.
 - [ ] Upload mostra progresso e trata falha sem perder os arquivos já enviados.
@@ -1186,6 +1274,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A rede de segurança da Milestone mais crítica. Além da cobertura por rota, testes de **invariante**: sequências de operações cujo saldo final é conhecido e verificável.
 
 **Checklist técnico**
+
 - [ ] Fábricas de movimentação, transferência, recorrência e compra parcelada.
 - [ ] Integração de todas as rotas de movimentações e transferências.
 - [ ] Teste de invariante: criar 20 movimentações variadas → conferir saldo → executar 10 operações (pagar, estornar, editar, excluir) → conferir saldo recalculado do zero.
@@ -1195,6 +1284,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `EXPLAIN ANALYZE` da listagem com filtros combinados.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 90% em `movimentacao.servico.ts` e `transferencia.servico.ts`.
 - [ ] Saldo recalculado do zero coincide com o incremental após 30 operações.
 - [ ] Todos os casos-limite de datas passam (virada de mês/ano, 29/02, dia 31).
@@ -1218,6 +1308,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** View `vw_saldo_conta` centralizando a agregação de saldo, para não repetir a mesma expressão `CASE` em seis consultas diferentes. Deliberadamente **não** materializada (ADR-005).
 
 **Checklist técnico**
+
 - [ ] Migration `adiciona_views_saldo` com a view de [03-DATABASE.md §8.7](03-DATABASE.md#87-views-auxiliares).
 - [ ] Consumo via `prisma.$queryRaw` **tipado**, exclusivamente dentro de `ContaRepositorio`.
 - [ ] Refatorar `calcularSaldoAtual` e `calcularSaldoConsolidado` para usar a view.
@@ -1226,6 +1317,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste de regressão confirmando que os saldos permanecem idênticos aos da M2.
 
 **Critérios de aceite**
+
 - [ ] Saldos idênticos aos calculados antes da refatoração, em todos os testes existentes.
 - [ ] Plano de execução usa `idx_mov_saldo`, sem `Seq Scan`.
 - [ ] Saldo consolidado de usuário com 5 000 movimentações responde em < 80 ms.
@@ -1240,6 +1332,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Bloco de indicadores com saldo atual, receitas, despesas, saldo previsto, variação contra o período anterior e taxa de poupança.
 
 **Checklist técnico**
+
 - [ ] `DashboardRepositorio.obterIndicadores(usuarioId, periodo, escopo)`.
 - [ ] Saldo atual consolidado; receitas e despesas por `dataCompetencia` no período.
 - [ ] Saldo previsto somando pendentes e atrasadas até o fim do período (RN-04).
@@ -1250,6 +1343,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Período padrão: mês corrente no timezone do perfil.
 
 **Critérios de aceite**
+
 - [ ] Indicadores conferem com os totalizadores da listagem para o mesmo filtro.
 - [ ] Transferências não entram em receitas nem despesas.
 - [ ] Receitas zero não produz `NaN` nem `Infinity` na taxa de poupança.
@@ -1265,6 +1359,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Série temporal com `generate_series`, garantindo que meses sem movimentação apareçam com zero — lacunas distorceriam a leitura do gráfico.
 
 **Checklist técnico**
+
 - [ ] Consulta de [03-DATABASE.md §8.4](03-DATABASE.md#84-fluxo-de-caixa-de-12-meses-rf-41) com `generate_series`.
 - [ ] `GET /dashboard/fluxo-caixa` com parâmetro `meses` (padrão 12, máx. 36).
 - [ ] Rótulo mensal abreviado em pt-BR (`jan/26`).
@@ -1274,6 +1369,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `$queryRaw` tipado no repositório.
 
 **Critérios de aceite**
+
 - [ ] Sempre retorna exatamente `meses` pontos, mesmo sem nenhuma movimentação.
 - [ ] Mês sem movimentação vem com `"0.00"`, não ausente.
 - [ ] Rótulos em pt-BR e na ordem cronológica.
@@ -1289,6 +1385,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Distribuição de despesas (e receitas) por categoria, com percentual calculado no servidor.
 
 **Checklist técnico**
+
 - [ ] Consulta de [03-DATABASE.md §8.3](03-DATABASE.md#83-despesas-por-categoria-no-período-rf-42) com percentual por janela.
 - [ ] `GET /dashboard/por-categoria` com `tipo` (padrão `DESPESA`), período e escopo.
 - [ ] Agrupar por categoria raiz, com opção `incluirSubcategorias` para detalhar.
@@ -1297,6 +1394,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Soma dos percentuais igual a 100% (tratando arredondamento no último item).
 
 **Critérios de aceite**
+
 - [ ] Percentuais somam exatamente 100,00 quando há dados.
 - [ ] Período sem despesas retorna array vazio, não erro.
 - [ ] Subcategorias agrupadas na raiz por padrão.
@@ -1312,6 +1410,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Endpoint único que devolve todos os blocos da tela inicial, evitando 6 requisições paralelas em conexão móvel.
 
 **Checklist técnico**
+
 - [ ] `GET /dashboard` retornando a estrutura de [04-API.md §21.1](04-API.md#211-get-dashboard-).
 - [ ] Executar as consultas em paralelo com `Promise.all`.
 - [ ] Blocos `contasCompartilhadas`, `metas`, `orcamentos` e `cartoes` retornam array vazio até as Milestones correspondentes (chave sempre presente).
@@ -1321,6 +1420,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Medição de tempo total logada.
 
 **Critérios de aceite**
+
 - [ ] Todas as chaves da estrutura documentada estão presentes, mesmo vazias.
 - [ ] Responde em < 300 ms com 5 000 movimentações.
 - [ ] Consultas executam em paralelo (verificado no log de duração).
@@ -1336,6 +1436,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Relatórios de fechamento com quebras por categoria, conta e dia, mais comparativo com o período anterior.
 
 **Checklist técnico**
+
 - [ ] `GET /relatorios/mensal` com a estrutura de [04-API.md §22.1](04-API.md#221-get-relatoriosmensal-).
 - [ ] Saldo inicial e final do período.
 - [ ] Quebras: por categoria (receitas e despesas), por conta, por dia.
@@ -1345,6 +1446,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Validar `ano` (2000–2100) e `mes` (1–12).
 
 **Critérios de aceite**
+
 - [ ] Relatório mensal confere com o extrato do período, valor a valor.
 - [ ] `saldoFinal = saldoInicial + resultado` do período.
 - [ ] Soma dos 12 meses do anual confere com o total anual.
@@ -1361,6 +1463,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Três relatórios de detalhamento com período livre, complementando os de fechamento.
 
 **Checklist técnico**
+
 - [ ] `GET /relatorios/por-categoria` com período livre, tipo, escopo e detalhe de subcategorias.
 - [ ] `GET /relatorios/por-conta` com receitas, despesas, resultado e saldos inicial/final por conta.
 - [ ] `GET /relatorios/fluxo-caixa` com evolução do saldo acumulado, granularidade diária ou mensal.
@@ -1368,6 +1471,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Validar que `dataInicio ≤ dataFim` e o intervalo máximo de 5 anos.
 
 **Critérios de aceite**
+
 - [ ] Soma por conta confere com o total geral do período.
 - [ ] Saldo acumulado do fluxo de caixa termina no saldo atual da conta.
 - [ ] `dataInicio > dataFim` responde `400`.
@@ -1383,20 +1487,22 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Tela inicial do produto: em uma olhada, quanto tenho, quanto entrou, quanto saiu e para onde foi.
 
 **Checklist técnico**
+
 - [ ] `usarDashboard(periodo)` com `staleTime` de 60 s.
 - [ ] `SelecionadorPeriodo` com atalhos e persistência na URL.
 - [ ] `CartaoIndicador` com valor, rótulo, ícone e variação (seta + sinal + cor).
 - [ ] Grade responsiva: 1 → 2 (`md`) → 4 (`xl`) colunas de indicadores.
 - [ ] Seções: indicadores, fluxo de caixa, despesas por categoria, últimas movimentações, contas, alertas.
-- [ ] Esqueleto por seção — não um *spinner* de página inteira.
+- [ ] Esqueleto por seção — não um _spinner_ de página inteira.
 - [ ] Seções condicionais (metas, orçamentos, grupos, cartões) só renderizam com dados.
 - [ ] Ação rápida flutuante de "nova movimentação" em mobile.
 
 **Critérios de aceite**
-- [ ] Trocar o período recarrega os dados sem *layout shift*.
+
+- [ ] Trocar o período recarrega os dados sem _layout shift_.
 - [ ] Esqueleto por seção durante o carregamento.
 - [ ] Variação exibida com seta **e** sinal, não só por cor (A11Y-01).
-- [ ] Sem *scroll* horizontal em 320 px.
+- [ ] Sem _scroll_ horizontal em 320 px.
 - [ ] Registrar movimentação em outra tela atualiza o dashboard ao voltar.
 - [ ] Usuário sem dados vê estado vazio orientando o primeiro passo.
 
@@ -1409,9 +1515,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Componentes de gráfico reutilizáveis, legíveis nos dois temas e com equivalente textual — gráfico sem alternativa acessível é informação indisponível para parte dos usuários.
 
 **Checklist técnico**
+
 - [ ] `GraficoLinha` (fluxo de caixa), `GraficoPizza` (categorias), `GraficoBarra` (comparativo).
 - [ ] Cores dos tokens do Design System, com contraste verificado nos dois temas.
-- [ ] *Tooltip* com valor formatado em moeda pt-BR.
+- [ ] _Tooltip_ com valor formatado em moeda pt-BR.
 - [ ] `ResponsiveContainer` com altura mínima; rótulos rotacionados em telas estreitas.
 - [ ] `TabelaEquivalente` recolhível abaixo de cada gráfico (A11Y-04).
 - [ ] `role="img"` com `aria-label` descrevendo a tendência da série.
@@ -1420,6 +1527,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Paleta de categorias determinística: mesma categoria, mesma cor em todos os gráficos.
 
 **Critérios de aceite**
+
 - [ ] Gráficos legíveis em 320 px, sem rótulos sobrepostos.
 - [ ] Tabela equivalente contém todos os pontos da série.
 - [ ] Leitor de tela anuncia a descrição do gráfico.
@@ -1436,6 +1544,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Abas de relatório reaproveitando os componentes de gráfico e tabela.
 
 **Checklist técnico**
+
 - [ ] Abas: Mensal · Anual · Por categoria · Por conta · Fluxo de caixa.
 - [ ] Aba e período persistidos na URL.
 - [ ] Navegação mês a mês e ano a ano com setas.
@@ -1445,6 +1554,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Layout de impressão razoável (`@media print`).
 
 **Critérios de aceite**
+
 - [ ] Troca de aba preserva o período selecionado.
 - [ ] URL reproduz aba e período ao ser compartilhada.
 - [ ] Totais das tabelas conferem com os indicadores.
@@ -1464,9 +1574,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M5` · **5 pts** · `infra` `build` `p0-critica` · Depende de: #9 · RNF-09, ADR-008
 
-**Descrição.** Imagem multi-estágio enxuta, com `pm2-runtime` em modo cluster como *entrypoint* — o PM2 usa todos os núcleos da VPS que um processo Node isolado desperdiçaria.
+**Descrição.** Imagem multi-estágio enxuta, com `pm2-runtime` em modo cluster como _entrypoint_ — o PM2 usa todos os núcleos da VPS que um processo Node isolado desperdiçaria.
 
 **Checklist técnico**
+
 - [ ] `Dockerfile` multi-estágio conforme [08-CICD.md §3.1](08-CICD.md#31-dockerfile-do-backend): `deps` → `build` → `runtime`.
 - [ ] Base `node:22-alpine`; usuário não-root (`node`).
 - [ ] `prisma generate` no estágio de build; `prisma` e migrations copiados para o runtime.
@@ -1477,6 +1588,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `dumb-init` para propagação correta de sinais.
 
 **Critérios de aceite**
+
 - [ ] Imagem final < 250 MB.
 - [ ] Container roda como usuário não-root (`id` confirma).
 - [ ] `docker stop` encerra em < 10 s, com desligamento gracioso.
@@ -1493,9 +1605,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Orquestração de produção com API e PostgreSQL. O frontend é artefato estático servido pelo Nginx, sem container próprio.
 
 **Checklist técnico**
+
 - [ ] `docker-compose.prod.yml` com `api` e `postgres`, conforme [08-CICD.md §3.3](08-CICD.md#33-docker-composeprodyml).
 - [ ] PostgreSQL vinculado a `127.0.0.1` (nunca `0.0.0.0`).
-- [ ] Volumes nomeados para dados; *bind mount* para `/var/pfm/uploads`.
+- [ ] Volumes nomeados para dados; _bind mount_ para `/var/pfm/uploads`.
 - [ ] `restart: unless-stopped`; limites de memória e CPU.
 - [ ] `depends_on` com `condition: service_healthy`.
 - [ ] Rotação de logs (`json-file`, `max-size`, `max-file`).
@@ -1503,10 +1616,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Variáveis de build do frontend injetadas em tempo de build (`VITE_*`).
 
 **Critérios de aceite**
+
 - [ ] `docker compose -f docker-compose.prod.yml up -d` sobe os dois serviços saudáveis.
 - [ ] PostgreSQL não responde a partir de IP externo (verificado com `nmap`).
 - [ ] Volume de uploads persiste após `down`/`up`.
-- [ ] Build do frontend gera `dist/` com *assets* versionados por hash.
+- [ ] Build do frontend gera `dist/` com _assets_ versionados por hash.
 - [ ] Logs limitados em tamanho, sem crescimento indefinido.
 
 ---
@@ -1518,6 +1632,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Preparar o servidor: usuário de deploy sem privilégio excessivo, Docker, firewall e endurecimento do SSH.
 
 **Checklist técnico**
+
 - [ ] Ubuntu 24.04 LTS atualizado; `unattended-upgrades` para pacotes de segurança.
 - [ ] Usuário `deploy` no grupo `docker`, com `sudo` restrito ao necessário.
 - [ ] SSH: autenticação só por chave, `PermitRootLogin no`, `PasswordAuthentication no`.
@@ -1530,6 +1645,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Script `infra/provisionar.sh` versionado e idempotente.
 
 **Critérios de aceite**
+
 - [ ] Login por senha e login como root são rejeitados.
 - [ ] `ufw status` mostra apenas as três portas.
 - [ ] Usuário `deploy` executa `docker` sem `sudo`.
@@ -1542,9 +1658,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M5` · **5 pts** · `infra` `chore` `p0-critica` · Depende de: #58 · RNF-11, RN-56
 
-**Descrição.** Ponto de entrada único: TLS, proxy para a API, SPA estática com *fallback* de rota e cabeçalhos de segurança.
+**Descrição.** Ponto de entrada único: TLS, proxy para a API, SPA estática com _fallback_ de rota e cabeçalhos de segurança.
 
 **Checklist técnico**
+
 - [ ] Configuração de [08-CICD.md §4.1](08-CICD.md#41-configuração-do-nginx).
 - [ ] `location /` servindo `/var/www/pfm` com `try_files ... /index.html` (rotas do React Router).
 - [ ] `location /api/v1` e `/api/docs` em proxy para `127.0.0.1:3333`, com `X-Forwarded-For` e `X-Forwarded-Proto`.
@@ -1552,10 +1669,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Redirecionamento 80 → 443; HSTS com `preload`.
 - [ ] TLS 1.2/1.3, cifras modernas, OCSP stapling.
 - [ ] Cabeçalhos: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP.
-- [ ] gzip e brotli; `Cache-Control: immutable` para *assets* com hash e `no-cache` para `index.html`.
+- [ ] gzip e brotli; `Cache-Control: immutable` para _assets_ com hash e `no-cache` para `index.html`.
 - [ ] `client_max_body_size 6M` (compatível com o limite de anexo de 5 MB).
 
 **Critérios de aceite**
+
 - [ ] Nota A em SSL Labs.
 - [ ] HTTP redireciona para HTTPS com 301.
 - [ ] Recarregar `/movimentacoes` diretamente serve o `index.html` (sem 404).
@@ -1570,20 +1688,22 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M5` · **8 pts** · `infra` `ci` `p0-critica` · Depende de: #57, #59 · RNF-11
 
-**Descrição.** O pipeline que dá sentido a esta Milestone: merge em `main` publica sem intervenção manual, com *health check* como portão e rollback automático.
+**Descrição.** O pipeline que dá sentido a esta Milestone: merge em `main` publica sem intervenção manual, com _health check_ como portão e rollback automático.
 
 **Checklist técnico**
+
 - [ ] `.github/workflows/deploy-producao.yml` disparando em `push` para `main`.
 - [ ] Jobs sequenciais: `verificar` → `construir` → `implantar` → `verificar-saude`.
 - [ ] Build da imagem da API e publicação no GHCR com tag de SHA e `latest`.
 - [ ] Build do frontend com as variáveis de produção; artefato empacotado.
 - [ ] Deploy via SSH sem expor a chave em log.
-- [ ] Sequência no servidor: dump do banco → `pull` da imagem → `migrate deploy` → subir nova → *health check* → sincronizar frontend → limpar imagens antigas.
+- [ ] Sequência no servidor: dump do banco → `pull` da imagem → `migrate deploy` → subir nova → _health check_ → sincronizar frontend → limpar imagens antigas.
 - [ ] Guardar a tag da versão anterior para rollback.
 - [ ] `GITHUB_ENVIRONMENT` de produção com os secrets necessários.
 - [ ] Notificação de sucesso/falha.
 
 **Critérios de aceite**
+
 - [ ] Merge em `main` publica sem nenhum passo manual.
 - [ ] Pipeline completo em < 12 minutos.
 - [ ] Nenhum segredo aparece no log do workflow.
@@ -1600,15 +1720,17 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A rede de segurança do deploy. Rollback não ensaiado é rollback que falha na hora que importa — esta issue exige teste real de falha.
 
 **Checklist técnico**
+
 - [ ] `infra/verificar-saude.sh`: consulta `/api/v1/saude/prontidao` a cada 5 s por até 90 s.
 - [ ] Exigir `status: "pronto"` e todas as verificações `ok`, não apenas HTTP 200.
 - [ ] `infra/reverter.sh`: retorna à imagem anterior, sobe, revalida e alerta.
-- [ ] Rollback disparado automaticamente em falha do *health check*.
+- [ ] Rollback disparado automaticamente em falha do _health check_.
 - [ ] Rollback de migration **não** é automático — apenas alerta com o caminho do dump (reverter schema automaticamente é mais arriscado que o problema original).
 - [ ] Log de deploy em `/var/pfm/releases/historico.log` com SHA, horário e resultado.
 - [ ] Notificação distinguindo "deploy revertido" de "deploy falhou sem reverter".
 
 **Critérios de aceite**
+
 - [ ] Deploy de versão deliberadamente quebrada dispara rollback e a versão anterior volta a atender.
 - [ ] Tempo total de indisponibilidade no rollback < 60 s.
 - [ ] Histórico de deploy registra todas as tentativas.
@@ -1624,6 +1746,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Ambiente de homologação em subdomínio, com o mesmo pipeline, para validar a Milestone antes do PR para `main`.
 
 **Checklist técnico**
+
 - [ ] `deploy-staging.yml` disparando em `push` para `staging`.
 - [ ] Subdomínio `staging.<dominio>` com certificado próprio.
 - [ ] Compose de staging com portas e banco separados na mesma VPS.
@@ -1633,6 +1756,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Backup **não** obrigatório em staging (dados descartáveis).
 
 **Critérios de aceite**
+
 - [ ] Push em `staging` publica em `staging.<dominio>`.
 - [ ] Banner de homologação visível em todas as telas.
 - [ ] Bancos de staging e produção completamente isolados.
@@ -1648,6 +1772,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Backup diário com verificação de integridade. Backup não testado não é backup — a restauração é parte desta issue, não uma promessa futura.
 
 **Checklist técnico**
+
 - [ ] `infra/backup.sh` com `pg_dump --format=custom --compress=9`.
 - [ ] Timer do systemd às 03:30, timezone do servidor.
 - [ ] Retenção: 7 diários + 4 semanais, com limpeza automática.
@@ -1658,6 +1783,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Procedimento documentado em [08-CICD.md](08-CICD.md).
 
 **Critérios de aceite**
+
 - [ ] Backup executa automaticamente e gera arquivo válido.
 - [ ] Restauração em banco descartável funciona, com contagens conferindo.
 - [ ] Retenção remove os antigos e mantém a quantidade correta.
@@ -1674,7 +1800,8 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Ajustes que só fazem sentido com produção real: `trust proxy`, CORS restrito, encerramento gracioso e métricas.
 
 **Checklist técnico**
-- [ ] `app.set('trust proxy', 1)` para IP real atrás do Nginx (sem isso o *rate limit* vê um único IP).
+
+- [ ] `app.set('trust proxy', 1)` para IP real atrás do Nginx (sem isso o _rate limit_ vê um único IP).
 - [ ] CORS restrito a `ORIGENS_PERMITIDAS`, sem coringa em produção.
 - [ ] Helmet com CSP alinhada ao Nginx.
 - [ ] Encerramento gracioso: para de aceitar conexões, finaliza as em curso (30 s), desconecta o Prisma.
@@ -1684,7 +1811,8 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Pool do Prisma dimensionado para o cluster PM2.
 
 **Critérios de aceite**
-- [ ] *Rate limit* usa o IP real do cliente, não o do proxy.
+
+- [ ] _Rate limit_ usa o IP real do cliente, não o do proxy.
 - [ ] Origem não permitida é bloqueada por CORS em produção.
 - [ ] `SIGTERM` não interrompe requisição em andamento.
 - [ ] Resposta de erro em produção não contém `stack`, nome de tabela nem caminho de arquivo.
@@ -1700,6 +1828,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** O que fazer quando algo dá errado às 3h da manhã. Conhecimento operacional que não está escrito é conhecimento que não existe.
 
 **Checklist técnico**
+
 - [ ] Runbook em [08-CICD.md](08-CICD.md): deploy manual, rollback manual, restauração, rotação de segredos.
 - [ ] Procedimento de diagnóstico: onde ficam os logs, estado dos containers, teste de saúde.
 - [ ] Cenários: API não sobe, banco inacessível, disco cheio, certificado expirado, deploy travado.
@@ -1709,6 +1838,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Registrar a versão `1.0.0` no `CHANGELOG.md`.
 
 **Critérios de aceite**
+
 - [ ] Um desenvolvedor sem contexto executa um rollback manual seguindo apenas o runbook.
 - [ ] Todos os secrets inventariados com finalidade.
 - [ ] Os cinco cenários de falha têm procedimento escrito.
@@ -1731,6 +1861,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Grupos, membros e convites, mais a ativação das colunas de escopo dual nas entidades existentes e a recriação dos `CHECK` na forma completa.
 
 **Checklist técnico**
+
 - [ ] Modelos `ContaCompartilhada`, `MembroCompartilhado`, `Convite` de [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo).
 - [ ] Enums `PapelMembro`, `SituacaoMembro`, `SituacaoConvite`.
 - [ ] Ativar FK de `contaCompartilhadaId` em `contas`, `categorias`, `movimentacoes`, `etiquetas`.
@@ -1741,6 +1872,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration `adiciona_contas_compartilhadas`.
 
 **Critérios de aceite**
+
 - [ ] Migration aplica em banco com dados existentes, sem perda.
 - [ ] Inserir segundo `ADMINISTRADOR` ativo no mesmo grupo falha no banco.
 - [ ] Segundo convite `PENDENTE` para o mesmo e-mail e grupo falha.
@@ -1756,6 +1888,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Criação de grupo com o criador como administrador, e o objeto `minhasPermissoes` que resolve a matriz RN-30 no servidor — o frontend consome a decisão, não a reimplementa.
 
 **Checklist técnico**
+
 - [ ] `POST /contas-compartilhadas` criando grupo e membro administrador em transação.
 - [ ] `criarCategoriasPadrao` copiando as categorias do sistema para o escopo do grupo.
 - [ ] `GET /contas-compartilhadas` com `meuPapel`, saldo total e resumo do mês.
@@ -1766,6 +1899,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Não membro recebe `404`, não `403`.
 
 **Critérios de aceite**
+
 - [ ] Criador vira `ADMINISTRADOR` automaticamente.
 - [ ] `minhasPermissoes` correto para os três papéis.
 - [ ] `permiteParticipanteEditarProprias: false` reflete em `minhasPermissoes` do participante.
@@ -1782,6 +1916,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** O ponto único de decisão de autorização em grupos. Precisa de teste negativo para cada combinação — testar que o administrador consegue não prova que o observador não consegue.
 
 **Checklist técnico**
+
 - [ ] `middlewares/autorizar-compartilhada.middleware.ts` conforme [02-ARCHITECTURE.md §8.3](02-ARCHITECTURE.md#83-autorização).
 - [ ] Resolver o vínculo, exigir `situacao: ATIVO`, validar o papel, popular `req.membro`.
 - [ ] Não membro ou membro inativo → `404 NAO_ENCONTRADO`.
@@ -1791,6 +1926,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Matriz de teste completa: 3 papéis × 13 ações de RN-30.
 
 **Critérios de aceite**
+
 - [ ] Toda combinação papel × ação da matriz RN-30 tem teste, positivo e negativo.
 - [ ] Observador recebe `403` em toda escrita.
 - [ ] Participante recebe `403` ao editar lançamento de terceiro.
@@ -1807,6 +1943,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Alterar papéis, remover membros, sair do grupo e transferir a administração atomicamente. A invariante de exatamente um administrador não pode ser violada em nenhum instante.
 
 **Checklist técnico**
+
 - [ ] `GET /contas-compartilhadas/:id/membros`.
 - [ ] `PATCH .../membros/:membroId` alterando papel; proibir alterar o próprio e proibir definir `ADMINISTRADOR` por aqui.
 - [ ] `DELETE .../membros/:membroId` marcando `REMOVIDO`; movimentações permanecem (RN-34).
@@ -1816,6 +1953,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Log de auditoria em todas essas ações.
 
 **Critérios de aceite**
+
 - [ ] Transferência de administração jamais deixa dois ou zero administradores.
 - [ ] Administrador não sai nem é removido sem transferir antes.
 - [ ] Alterar o próprio papel responde `422`.
@@ -1832,6 +1970,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Enviar, aceitar, recusar, cancelar e expirar convites, incluindo convite para e-mail ainda não cadastrado.
 
 **Checklist técnico**
+
 - [ ] `POST .../convites` gerando token, validade de 7 dias e e-mail; retorna `usuarioJaCadastrado`.
 - [ ] Bloquear convite duplicado (`409 CONVITE_DUPLICADO`) e para quem já é membro (`409 JA_E_MEMBRO`).
 - [ ] `GET .../convites` (administrador) e `GET /convites/recebidos`.
@@ -1841,9 +1980,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Rejeitar aceite de convite expirado (`422 CONVITE_EXPIRADO`).
 - [ ] Tarefa `limpar-tokens` marcando convites vencidos como `EXPIRADO`.
 - [ ] Notificações de convite recebido e aceito.
-- [ ] *Rate limit* de 20 convites/hora.
+- [ ] _Rate limit_ de 20 convites/hora.
 
 **Critérios de aceite**
+
 - [ ] Convite duplicado pendente responde `409`.
 - [ ] Convite para membro atual responde `409`.
 - [ ] Aceitar com e-mail diferente do convidado responde `403`.
@@ -1861,19 +2001,21 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Rota pública para exibir o convite a quem ainda não tem conta. Por ser pública e o token poder circular, expõe o mínimo possível.
 
 **Checklist técnico**
+
 - [ ] `GET /convites/token/:token` sem autenticação.
 - [ ] Retornar apenas: nome do grupo, quem convidou, papel, validade, situação, `requerCadastro`.
 - [ ] **Nunca** retornar saldo, movimentação, lista de membros ou e-mails completos.
 - [ ] Mascarar o e-mail do convidado (`an***@exemplo.com`).
-- [ ] *Rate limit* estrito por IP (sem ele, o token é atacável por força bruta).
+- [ ] _Rate limit_ estrito por IP (sem ele, o token é atacável por força bruta).
 - [ ] Token inválido responde `404` genérico, sem distinguir inexistente de expirado.
 - [ ] Template de e-mail de convite com o link.
 
 **Critérios de aceite**
+
 - [ ] Resposta não contém nenhum dado financeiro (teste inspeciona o JSON inteiro).
 - [ ] E-mail mascarado.
 - [ ] Token inexistente e token expirado produzem respostas indistinguíveis.
-- [ ] *Rate limit* ativo por IP.
+- [ ] _Rate limit_ ativo por IP.
 - [ ] `requerCadastro: true` quando o e-mail não tem conta.
 
 ---
@@ -1885,6 +2027,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Estender as entidades de M2/M3 ao escopo de grupo. O autor de cada lançamento é sempre visível.
 
 **Checklist técnico**
+
 - [ ] Aceitar `contaCompartilhadaId` em criação de conta, categoria, etiqueta e movimentação.
 - [ ] Validar membresia ativa e papel em cada caso.
 - [ ] Categoria de movimentação de grupo deve ser do mesmo grupo ou global (RN-11).
@@ -1895,6 +2038,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Criação de conta de grupo restrita ao administrador.
 
 **Critérios de aceite**
+
 - [ ] Participante cria movimentação no grupo; observador recebe `403`.
 - [ ] Categoria de outro grupo responde `422`.
 - [ ] Categoria pessoal em movimentação de grupo responde `422`.
@@ -1911,6 +2055,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Estender a transferência para atravessar a fronteira pessoal/grupo, exigindo membresia nas duas pontas.
 
 **Checklist técnico**
+
 - [ ] Aceitar contas de escopos diferentes em `POST /transferencias`.
 - [ ] Validar membresia ativa quando alguma ponta é de grupo (RN-27).
 - [ ] Validar papel ≥ `PARTICIPANTE` na ponta de grupo.
@@ -1920,6 +2065,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Atualizar `GET /transferencias/:id` para exibir o escopo de cada lado.
 
 **Critérios de aceite**
+
 - [ ] Transferência pessoal → grupo e grupo → pessoal funcionam, atômicas.
 - [ ] Não membro do grupo de destino responde `404`.
 - [ ] Observador na ponta de grupo responde `403`.
@@ -1936,6 +2082,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Entrada para o diferencial do produto: lista de grupos com resumo e formulário de criação.
 
 **Checklist técnico**
+
 - [ ] `funcionalidades/compartilhadas/` com hooks, serviço, schemas e componentes.
 - [ ] `CartaoGrupo` com imagem, nome, papel, saldo, contagem de membros e resumo do mês.
 - [ ] `FormularioGrupo` com nome, descrição, cor, moeda, imagem e configuração de permissão.
@@ -1946,11 +2093,12 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Seção `contasCompartilhadas` do dashboard.
 
 **Critérios de aceite**
+
 - [ ] Criar grupo redireciona para o detalhe recém-criado.
 - [ ] Papel do usuário visível em cada cartão.
 - [ ] Convite pendente aparece com destaque; aceitar adiciona o grupo à lista.
 - [ ] Estado vazio explica o recurso, não apenas informa a ausência.
-- [ ] Grade responsiva sem *scroll* horizontal em 320 px.
+- [ ] Grade responsiva sem _scroll_ horizontal em 320 px.
 
 ---
 
@@ -1961,6 +2109,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Tela de trabalho do grupo, com controles condicionados a `minhasPermissoes` — sem reimplementar a matriz no cliente.
 
 **Checklist técnico**
+
 - [ ] Abas: Movimentações · Contas · Membros · Categorias · Configurações.
 - [ ] Cabeçalho com imagem, nome, saldo e papel.
 - [ ] Aba Movimentações reaproveitando os componentes de M3, com escopo de grupo e coluna de autor (avatar + nome).
@@ -1969,9 +2118,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Aba Configurações visível apenas ao administrador.
 - [ ] Todo controle de escrita condicionado a `minhasPermissoes`.
 - [ ] Observador vê a interface em modo leitura, sem botões de ação.
-- [ ] Aba de auditoria como *placeholder* até M11.
+- [ ] Aba de auditoria como _placeholder_ até M11.
 
 **Critérios de aceite**
+
 - [ ] Observador não vê nenhum botão de criação ou edição.
 - [ ] Participante vê ações apenas nos próprios lançamentos.
 - [ ] Aba Configurações oculta para não administrador.
@@ -1988,6 +2138,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Fluxos de convite e administração de membros, com confirmações proporcionais ao risco de cada ação.
 
 **Checklist técnico**
+
 - [ ] `DialogoConvite` com e-mail, papel, mensagem opcional e explicação de cada papel.
 - [ ] Lista de convites pendentes enviados, com cancelamento e indicador de validade.
 - [ ] `DialogoAlterarPapel` explicando o efeito da mudança.
@@ -1998,6 +2149,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Página pública de convite consumindo a pré-visualização mascarada.
 
 **Critérios de aceite**
+
 - [ ] Convidar exibe confirmação e o convite aparece na lista de pendentes.
 - [ ] `409` de duplicidade mostra mensagem específica, não erro genérico.
 - [ ] Transferir administração exige confirmação explícita e atualiza os papéis na interface.
@@ -2014,6 +2166,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A issue que impede um vazamento entre grupos. Cada combinação de papel e ação precisa de teste positivo **e** negativo.
 
 **Checklist técnico**
+
 - [ ] Fábricas `fabricarGrupoComMembros(papeis)` e `fabricarConvite`.
 - [ ] Teste tabular cobrindo 3 papéis × 13 ações de RN-30.
 - [ ] Testes de isolamento: usuário do grupo A não acessa nada do grupo B.
@@ -2024,6 +2177,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste de movimentação de ex-membro permanecendo no grupo.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 90% em `conta-compartilhada.servico.ts`, `membro.servico.ts` e `convite.servico.ts`.
 - [ ] Todas as 39 combinações da matriz testadas.
 - [ ] Nenhum vazamento entre grupos em nenhuma rota.
@@ -2039,6 +2193,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Fluxo E2E com dois usuários reais, validando o cenário que define o produto.
 
 **Checklist técnico**
+
 - [ ] Cenário Playwright com dois contextos de navegador (dois usuários simultâneos).
 - [ ] Usuário A cria grupo, cria conta de grupo, convida B.
 - [ ] Usuário B recebe o e-mail (via API do Mailpit), acessa o link e aceita.
@@ -2049,6 +2204,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Verificar saldo do grupo após cada operação.
 
 **Critérios de aceite**
+
 - [ ] Cenário completo passa de ponta a ponta.
 - [ ] Interface de B não oferece edição de lançamento de A.
 - [ ] Saldo do grupo correto em cada etapa.
@@ -2070,6 +2226,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modelos `Meta` e `MovimentacaoMeta`, com escopo dual e vínculo opcional a movimentação.
 
 **Checklist técnico**
+
 - [ ] Modelos conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo).
 - [ ] Enums `SituacaoMeta` e `TipoMovimentacaoMeta`.
 - [ ] `valorAlvo` e `valorAcumulado` como `Decimal(14,2)`.
@@ -2079,6 +2236,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration `adiciona_metas`.
 
 **Critérios de aceite**
+
 - [ ] `valor_alvo = 0` é rejeitado pelo banco.
 - [ ] Escopo duplo é rejeitado.
 - [ ] Duas movimentações de meta não podem apontar para a mesma movimentação.
@@ -2093,6 +2251,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** CRUD com os campos derivados de progresso, incluindo o aporte mensal necessário para cumprir o prazo.
 
 **Checklist técnico**
+
 - [ ] `GET /metas` com filtro por situação (padrão `ATIVA`) e escopo.
 - [ ] Campos derivados: `valorRestante`, `percentualProgresso` (limitado a 100 na exibição), `diasRestantes`, `aporteMensalNecessario`.
 - [ ] `aporteMensalNecessario = valorRestante / meses restantes`, arredondado para cima; `null` sem prazo.
@@ -2102,6 +2261,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Impedir reduzir `valorAlvo` abaixo do `valorAcumulado` (`422`).
 
 **Critérios de aceite**
+
 - [ ] Progresso correto em 0%, 50%, 100% e acima de 100% (exibido como 100).
 - [ ] `aporteMensalNecessario` é `null` sem prazo.
 - [ ] Prazo no passado responde `400` na criação.
@@ -2118,6 +2278,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Registro de aportes e resgates, com ou sem movimentação vinculada, e conclusão automática ao atingir o alvo.
 
 **Checklist técnico**
+
 - [ ] `POST /metas/:id/aportes` com `tipo`, `valor`, `data`, `contaId` e `gerarMovimentacao`.
 - [ ] Com `gerarMovimentacao: true`: cria a movimentação na conta e vincula, em transação (RN-47).
 - [ ] Com `false`: registra apenas o progresso.
@@ -2129,6 +2290,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Retornar a meta atualizada junto do aporte.
 
 **Critérios de aceite**
+
 - [ ] Aporte com movimentação reduz o saldo da conta exatamente pelo valor.
 - [ ] Aporte sem movimentação não altera saldo algum.
 - [ ] Atingir o alvo marca `CONCLUIDA` e cria a notificação.
@@ -2146,6 +2308,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Visualização de progresso — o principal valor percebido do recurso é ver a barra avançar.
 
 **Checklist técnico**
+
 - [ ] `CartaoMeta` com ícone, nome, barra de progresso, valores e prazo.
 - [ ] Barra com cor por faixa e **rótulo textual** do percentual (não só cor).
 - [ ] Indicador de prazo: dias restantes, aporte mensal necessário, alerta se atrasada.
@@ -2156,10 +2319,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Seção de metas no dashboard.
 
 **Critérios de aceite**
+
 - [ ] Progresso exibido com percentual textual além da barra.
 - [ ] Meta concluída visualmente distinta.
 - [ ] Meta com prazo vencido e alvo não atingido é sinalizada.
-- [ ] Grade responsiva sem *scroll* horizontal em 320 px.
+- [ ] Grade responsiva sem _scroll_ horizontal em 320 px.
 - [ ] `aporteMensalNecessario` ausente não exibe campo vazio.
 
 ---
@@ -2171,6 +2335,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Registrar aporte ou resgate com pré-visualização do progresso resultante e histórico da meta.
 
 **Checklist técnico**
+
 - [ ] `DialogoAporte` com tipo, valor, data, conta e alternância de `gerarMovimentacao`.
 - [ ] Explicar a diferença entre com e sem movimentação (é a decisão menos óbvia do formulário).
 - [ ] Pré-visualização do progresso após o aporte.
@@ -2180,6 +2345,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Tratar `422` de resgate excessivo com mensagem clara.
 
 **Critérios de aceite**
+
 - [ ] Pré-visualização confere com o progresso real após submeter.
 - [ ] Aporte com movimentação atualiza o saldo da conta na interface imediatamente.
 - [ ] Excluir aporte reverte o progresso e o saldo.
@@ -2195,6 +2361,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Notificações de conclusão e de prazo próximo. Como M9 ainda não existe, esta issue cria a estrutura mínima de notificação, que M9 estende.
 
 **Checklist técnico**
+
 - [ ] Migration mínima de `Notificacao` (antecipada de M9, com o enum completo `TipoNotificacao`).
 - [ ] `NotificacaoServico.criar` genérico e reutilizável.
 - [ ] Notificação `META_CONCLUIDA` ao atingir o alvo.
@@ -2204,6 +2371,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Respeitar `notificacoesApp` do perfil.
 
 **Critérios de aceite**
+
 - [ ] Concluir meta gera exatamente uma notificação.
 - [ ] Tarefa de prazo não duplica notificação em reexecução.
 - [ ] Notificação desativada no perfil não é criada.
@@ -2218,6 +2386,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Cobertura das regras de progresso e da atomicidade dos aportes.
 
 **Checklist técnico**
+
 - [ ] Fábricas `fabricarMeta` e `fabricarAporte`.
 - [ ] Integração de todas as rotas de metas e aportes.
 - [ ] Teste de invariante: `valorAcumulado = Σ aportes − Σ resgates` após 15 operações mistas.
@@ -2227,6 +2396,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Casos-limite: valor de 1 centavo, alvo atingido exatamente, prazo hoje.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 85% em `meta.servico.ts`.
 - [ ] Invariante do acumulado mantida após 15 operações.
 - [ ] Falha simulada na movimentação não deixa aporte órfão.
@@ -2249,6 +2419,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modelos `Cartao` e `Fatura`, com a chave natural do ciclo e o vínculo 1:1 com a movimentação de pagamento.
 
 **Checklist técnico**
+
 - [ ] Modelos conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo).
 - [ ] Enums `BandeiraCartao` e `SituacaoFatura`.
 - [ ] `@@unique([cartaoId, ano, mes])` como chave natural do ciclo.
@@ -2259,6 +2430,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration `adiciona_cartoes_faturas_parcelamentos` (inclui `CompraParcelada`, modelada em #32).
 
 **Critérios de aceite**
+
 - [ ] Duas faturas do mesmo cartão para o mesmo ano/mês violam a unicidade.
 - [ ] `dia_fechamento = 0` ou `32` é rejeitado pelo banco.
 - [ ] Nenhuma coluna capaz de armazenar número completo de cartão.
@@ -2273,6 +2445,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A função mais sujeita a erro de toda a Milestone: dada uma data de compra e o dia de fechamento, determinar a fatura. Exige 100% de cobertura e testes escritos antes da implementação.
 
 **Checklist técnico**
+
 - [ ] `utilitarios/data.ts`: `determinarCicloFatura(dataCompra, diaFechamento)` retornando `{ ano, mes }`.
 - [ ] Compra **no dia** do fechamento entra no ciclo seguinte (RN-40).
 - [ ] `ajustarDiaParaMes(dia, ano, mes)` usando o último dia quando o dia excede o mês (RN-41).
@@ -2282,6 +2455,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Nenhuma dependência de timezone (aritmética de data pura).
 
 **Critérios de aceite**
+
 - [ ] Cobertura **100%** em `data.ts`.
 - [ ] Compra em 28/07 com fechamento dia 28 vai para a fatura de agosto (RN-40).
 - [ ] Compra em 27/07 com fechamento dia 28 vai para a fatura de julho.
@@ -2300,6 +2474,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** CRUD com limite utilizado e disponível. Exceder o limite gera aviso, não bloqueio — o sistema registra a realidade, não a impõe.
 
 **Checklist técnico**
+
 - [ ] `GET /cartoes` com `limiteUtilizado`, `limiteDisponivel`, `percentualUtilizado` e `faturaAtual`.
 - [ ] Consulta de [03-DATABASE.md §8.6](03-DATABASE.md#86-limite-disponível-do-cartão-rn-42), considerando apenas faturas abertas, fechadas e parcialmente pagas.
 - [ ] `POST`, `GET /:id`, `PATCH`, `DELETE` (lógico).
@@ -2309,6 +2484,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Alterar `diaFechamento` **não** realoca faturas existentes — documentar na resposta.
 
 **Critérios de aceite**
+
 - [ ] Limite disponível confere com o total menos as parcelas em faturas não pagas.
 - [ ] Fatura paga não consome limite.
 - [ ] Cartão de outro usuário responde `404`.
@@ -2325,6 +2501,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Ao lançar despesa de cartão, encontrar ou criar a fatura do ciclo e alocar. O cliente nunca escolhe a fatura — é decisão do servidor.
 
 **Checklist técnico**
+
 - [ ] `FaturaServico.obterOuCriarPorCiclo(cartaoId, ano, mes)` idempotente.
 - [ ] Integrar ao fluxo de criação de movimentação com `cartaoId` (#34).
 - [ ] Recalcular `valorTotal` da fatura a cada alocação, dentro da transação.
@@ -2335,6 +2512,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Aviso (não erro) quando a despesa excede o limite disponível (RN-43).
 
 **Critérios de aceite**
+
 - [ ] Despesa de cartão é alocada na fatura correta conforme o ciclo.
 - [ ] Fatura criada automaticamente no primeiro lançamento do ciclo.
 - [ ] Dois lançamentos no mesmo ciclo usam a mesma fatura.
@@ -2352,6 +2530,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Parcelamento com a invariante mais verificável do sistema: a soma das parcelas é **exatamente** igual ao valor total.
 
 **Checklist técnico**
+
 - [ ] `POST /movimentacoes/parceladas` criando `CompraParcelada` e N movimentações em transação.
 - [ ] Rateio via `ratearParcelas` de #23, com resto na última parcela (RN-21).
 - [ ] Cada parcela com `numeroParcela`, `totalParcelas` e rótulo `x/N`.
@@ -2363,6 +2542,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Editar uma parcela isolada é permitido; editar a compra recria as parcelas não pagas.
 
 **Critérios de aceite**
+
 - [ ] `Σ parcelas = valorTotal` exatamente para `1000/3`, `100/7`, `0.05/2`, `10/4`, `5800/10`.
 - [ ] Última parcela absorve a diferença de arredondamento.
 - [ ] Parcelas de cartão caem em faturas de ciclos consecutivos.
@@ -2379,6 +2559,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Pagar a fatura gera **uma** despesa na conta pagadora, sem duplicar as despesas já registradas no cartão — a confusão mais comum em software financeiro doméstico.
 
 **Checklist técnico**
+
 - [ ] `PATCH /faturas/:id/pagar` com `contaId`, `valor` e `dataPagamento`.
 - [ ] Criar movimentação de despesa na conta pagadora, vinculada à fatura (RN-45).
 - [ ] Categoria própria "Pagamento de fatura", excluída de relatórios por categoria (senão o gasto seria contado duas vezes).
@@ -2389,6 +2570,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Toda a operação em transação.
 
 **Critérios de aceite**
+
 - [ ] Pagar fatura de `640.50` reduz o saldo da conta em exatamente `640.50`.
 - [ ] As despesas do cartão **não** são contadas de novo em nenhum relatório.
 - [ ] Pagamento parcial resulta em `PAGA_PARCIALMENTE` com `valorRestante` correto.
@@ -2405,6 +2587,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Tarefa diária de fechamento e avisos de fatura fechada e a vencer.
 
 **Checklist técnico**
+
 - [ ] `fechar-faturas.tarefa.ts` (00:30): fecha faturas cujo dia de fechamento é hoje.
 - [ ] Criar a fatura do ciclo seguinte ao fechar a atual.
 - [ ] Notificação `FATURA_FECHADA` com valor e vencimento.
@@ -2414,6 +2597,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Log com contagem de faturas fechadas.
 
 **Critérios de aceite**
+
 - [ ] Fatura fecha automaticamente na data correta.
 - [ ] Reexecução no mesmo dia não altera nada nem duplica notificação.
 - [ ] Fatura do ciclo seguinte é criada ao fechar a anterior.
@@ -2429,6 +2613,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Visão dos cartões com limite e fatura atual em destaque.
 
 **Checklist técnico**
+
 - [ ] `CartaoCredito` com cor da bandeira, nome, últimos dígitos e anel de limite.
 - [ ] Anel de progresso com cor por faixa e **percentual textual**.
 - [ ] Bloco da fatura atual com valor, vencimento, dias para fechamento e ação de pagar.
@@ -2439,10 +2624,11 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Estado vazio explicando o recurso.
 
 **Critérios de aceite**
+
 - [ ] Anel de limite com percentual textual, não só cor.
 - [ ] Fatura atual em destaque com dias para fechamento.
 - [ ] Alterar dia de fechamento exibe o aviso antes de confirmar.
-- [ ] Grade responsiva sem *scroll* horizontal em 320 px.
+- [ ] Grade responsiva sem _scroll_ horizontal em 320 px.
 - [ ] Cartão com limite estourado é sinalizado claramente.
 
 ---
@@ -2454,6 +2640,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Detalhe da fatura com itens, resumo por categoria e o fluxo de pagamento.
 
 **Checklist técnico**
+
 - [ ] Página de fatura com cabeçalho (valor, situação, datas) e lista de itens.
 - [ ] Itens com rótulo de parcela (`3/10`) e categoria.
 - [ ] Gráfico de pizza do `resumoPorCategoria`.
@@ -2464,6 +2651,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Invalidar `faturas`, `cartoes`, `contas`, `movimentacoes` e `dashboard` após pagar.
 
 **Critérios de aceite**
+
 - [ ] Itens agrupados e somados conferindo com o total da fatura.
 - [ ] Parcelas exibem o rótulo `x/N`.
 - [ ] Pré-visualização do saldo confere com o resultado.
@@ -2480,6 +2668,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Formulário com pré-visualização das parcelas — o usuário precisa ver que a soma fecha antes de confirmar.
 
 **Checklist técnico**
+
 - [ ] `FormularioCompraParcelada` com descrição, valor total, número de parcelas, data, cartão/conta e categoria.
 - [ ] Pré-visualização de todas as parcelas com valor e vencimento, usando a **mesma** regra de rateio do backend.
 - [ ] Exibir a soma das parcelas confirmando que fecha com o total.
@@ -2489,6 +2678,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Visualização de compra parcelada agrupando as parcelas.
 
 **Critérios de aceite**
+
 - [ ] Pré-visualização coincide exatamente com as parcelas criadas pelo backend.
 - [ ] Soma exibida é igual ao valor total informado.
 - [ ] Última parcela diferente vem com explicação visível.
@@ -2504,6 +2694,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A suíte que protege as duas áreas de maior risco da Milestone: aritmética de datas e arredondamento.
 
 **Checklist técnico**
+
 - [ ] Teste tabular de `determinarCicloFatura` com ≥ 30 combinações de data e dia de fechamento.
 - [ ] Teste tabular de `ratearParcelas` com ≥ 15 combinações, verificando a soma.
 - [ ] Testes de todos os meses, incluindo fevereiro bissexto e não bissexto.
@@ -2515,6 +2706,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste com `TZ=UTC` e `TZ=America/Sao_Paulo` produzindo o mesmo resultado.
 
 **Critérios de aceite**
+
 - [ ] Cobertura 100% em `data.ts` e `dinheiro.ts`.
 - [ ] Cobertura ≥ 90% em `cartao.servico.ts`, `fatura.servico.ts` e no serviço de parcelamento.
 - [ ] Todas as combinações da tabela de ciclos passam.
@@ -2531,12 +2723,14 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Fluxo completo do cartão na interface.
 
 **Checklist técnico**
+
 - [ ] Cenário: criar cartão → lançar despesa → conferir fatura → criar compra em 10× → conferir parcelas → pagar fatura → conferir saldo.
 - [ ] Verificar a soma das parcelas na pré-visualização e após a criação.
 - [ ] Verificar limite disponível após cada operação.
 - [ ] Verificar que o pagamento reduz o saldo da conta uma única vez.
 
 **Critérios de aceite**
+
 - [ ] Cenário completo passa de ponta a ponta.
 - [ ] Soma das parcelas confere na interface e no banco.
 - [ ] Limite disponível correto em cada etapa.
@@ -2558,6 +2752,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modelo `Orcamento` com escopo dual e marcas de idempotência de alerta, mais a extensão do modelo `Notificacao` criado parcialmente em #84.
 
 **Checklist técnico**
+
 - [ ] Modelo `Orcamento` conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo).
 - [ ] Colunas `alerta80EnviadoEm`, `alerta90EnviadoEm`, `alerta100EnviadoEm` (marcas de idempotência, RN-50).
 - [ ] Completar `Notificacao` com `entidadeTipo`, `entidadeId`, `urlAcao`.
@@ -2568,6 +2763,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Migration `adiciona_orcamentos_e_notificacoes`.
 
 **Critérios de aceite**
+
 - [ ] Segundo orçamento para a mesma categoria/escopo/período falha no banco.
 - [ ] Orçamento excluído logicamente libera o período para novo cadastro.
 - [ ] `valor_limite = 0` é rejeitado.
@@ -2583,6 +2779,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** CRUD com o cálculo de consumo por período. O escopo do consumo é a parte sutil: orçamento pessoal conta apenas despesas pessoais; de grupo, apenas as do grupo.
 
 **Checklist técnico**
+
 - [ ] `GET /orcamentos` com `ano`/`mes` (padrão mês corrente) e escopo.
 - [ ] Consulta de consumo de [03-DATABASE.md §8.5](03-DATABASE.md#85-consumo-de-orçamento-rn-49), respeitando o escopo.
 - [ ] Consumo por `dataCompetencia`, excluindo transferências, canceladas e excluídas (RN-49).
@@ -2594,6 +2791,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Validar que a categoria é do tipo `DESPESA` ou `AMBOS`.
 
 **Critérios de aceite**
+
 - [ ] Consumo confere com a soma das despesas da categoria no período.
 - [ ] Orçamento pessoal ignora despesas de grupo e vice-versa.
 - [ ] Subcategorias somam no orçamento da categoria pai.
@@ -2611,6 +2809,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Copiar os orçamentos de um mês para outro, sem sobrescrever silenciosamente o que já existe.
 
 **Checklist técnico**
+
 - [ ] `POST /orcamentos/replicar` com `deAno`, `deMes`, `paraAno`, `paraMes`, `sobrescrever`.
 - [ ] Com `sobrescrever: false`, preservar existentes e contabilizar como ignorados.
 - [ ] Com `true`, atualizar o `valorLimite` e **zerar** as marcas de alerta (novo período, novos alertas).
@@ -2620,6 +2819,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Respeitar o escopo (pessoal ou de grupo, não misturar).
 
 **Critérios de aceite**
+
 - [ ] Replicação cria os orçamentos ausentes e ignora os existentes.
 - [ ] Com `sobrescrever: true`, valores são atualizados e as marcas de alerta zeradas.
 - [ ] Período de origem sem orçamentos responde `200` com contagem zero, não erro.
@@ -2635,8 +2835,9 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Central de notificações com todos os tipos, respeitando as preferências do usuário.
 
 **Checklist técnico**
+
 - [ ] `GET /notificacoes` com filtros `apenasNaoLidas` e `tipo`, paginação e `meta.naoLidas`.
-- [ ] `GET /notificacoes/nao-lidas/contagem` — endpoint leve para o *badge*.
+- [ ] `GET /notificacoes/nao-lidas/contagem` — endpoint leve para o _badge_.
 - [ ] `PATCH /notificacoes/:id/ler` e `PATCH /notificacoes/ler-todas` (retornando `atualizadas`).
 - [ ] `DELETE /notificacoes/:id`.
 - [ ] `NotificacaoServico.criar` verificando `notificacoesApp` e as preferências por tipo (RF-71).
@@ -2645,6 +2846,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Tarefa de limpeza removendo notificações lidas com mais de 90 dias.
 
 **Critérios de aceite**
+
 - [ ] Contagem de não lidas confere com a listagem filtrada.
 - [ ] Tipo desativado nas preferências não gera notificação.
 - [ ] `notificacoesApp: false` desativa todas.
@@ -2661,6 +2863,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** A tarefa que dá utilidade ao orçamento. A idempotência por limiar é a regra crítica: sem ela, o usuário receberia o mesmo alerta todos os dias até o fim do mês.
 
 **Checklist técnico**
+
 - [ ] `alertar-orcamentos.tarefa.ts` (07:00) avaliando todos os orçamentos do mês corrente.
 - [ ] Disparar `ORCAMENTO_80`, `ORCAMENTO_90` e `ORCAMENTO_100` conforme a faixa.
 - [ ] Gravar a marca correspondente ao notificar; não notificar se a marca já existe (RN-50).
@@ -2671,6 +2874,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Log com contagem de orçamentos avaliados e alertas emitidos.
 
 **Critérios de aceite**
+
 - [ ] Orçamento em 85% dispara **um** alerta de 80%.
 - [ ] Reexecução no mesmo dia não gera segundo alerta (RN-50).
 - [ ] Passar de 85% para 92% dispara o alerta de 90%, e só ele.
@@ -2688,6 +2892,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Avisos de contas a vencer, atrasadas e receitas previstas.
 
 **Checklist técnico**
+
 - [ ] `notificar-vencimentos.tarefa.ts` (07:05).
 - [ ] `DESPESA_A_VENCER` em D-3 e D-0; `DESPESA_ATRASADA` no dia seguinte ao vencimento.
 - [ ] `RECEITA_PREVISTA` em D-0 para receitas pendentes.
@@ -2697,6 +2902,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Log com contagem por tipo.
 
 **Critérios de aceite**
+
 - [ ] Notificação de D-3 dispara uma única vez por movimentação.
 - [ ] Três vencimentos no mesmo dia geram uma notificação agrupada.
 - [ ] Movimentação paga antes do vencimento não gera notificação.
@@ -2712,6 +2918,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Completar os blocos do dashboard que ficaram vazios desde M4, agora que orçamentos, metas, grupos e cartões existem.
 
 **Checklist técnico**
+
 - [ ] Preencher `orcamentos`, `metas`, `contasCompartilhadas` e `cartoes` no `GET /dashboard`.
 - [ ] Bloco `alertas` consolidando: orçamento em risco, vencimentos próximos, faturas a vencer, metas com prazo próximo.
 - [ ] Ordenar alertas por severidade (`CRITICO` → `ATENCAO` → `INFORMACAO`) e limitar a 5.
@@ -2720,6 +2927,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Cada alerta com `urlAcao` navegável.
 
 **Critérios de aceite**
+
 - [ ] Todos os blocos preenchidos com dados reais.
 - [ ] Alertas ordenados por severidade, máximo 5.
 - [ ] `GET /dashboard` continua abaixo de 300 ms com 5 000 movimentações e todos os recursos ativos.
@@ -2735,6 +2943,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Visualização de consumo por categoria, com semáforo de risco e projeção.
 
 **Checklist técnico**
+
 - [ ] `CartaoOrcamento` com categoria, barra de consumo, valores e semáforo.
 - [ ] Barra com cor por faixa mais **percentual e valores textuais** (não só cor).
 - [ ] Indicador de projeção com aviso "no ritmo atual, vai estourar", rotulado como estimativa.
@@ -2745,12 +2954,13 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Estado vazio sugerindo criar a partir da média de gastos das categorias mais usadas.
 
 **Critérios de aceite**
+
 - [ ] Consumo e percentual conferem com a soma de despesas da categoria.
 - [ ] Semáforo com rótulo textual além da cor (A11Y-01).
 - [ ] Projeção identificada como estimativa, não como fato.
 - [ ] Navegação de mês preserva o escopo selecionado.
 - [ ] Replicação exibe o resultado (criados e ignorados).
-- [ ] Grade responsiva sem *scroll* horizontal em 320 px.
+- [ ] Grade responsiva sem _scroll_ horizontal em 320 px.
 
 ---
 
@@ -2761,6 +2971,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Notificações acessíveis do cabeçalho, com badge de contagem e navegação para o recurso relacionado.
 
 **Checklist técnico**
+
 - [ ] `SinoNotificacoes` no cabeçalho com badge de não lidas.
 - [ ] `usarContagemNaoLidas` com `refetchInterval` de 60 s.
 - [ ] `PainelNotificacoes` em `Popover` (desktop) / `Sheet` (mobile).
@@ -2772,6 +2983,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Estado vazio adequado.
 
 **Critérios de aceite**
+
 - [ ] Badge reflete a contagem real e atualiza a cada 60 s.
 - [ ] Clicar na notificação marca como lida e navega corretamente.
 - [ ] "Marcar todas" zera o badge imediatamente.
@@ -2788,6 +3000,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Alertas acionáveis no dashboard e controle granular de notificações no perfil.
 
 **Checklist técnico**
+
 - [ ] `PainelAlertas` no dashboard com severidade visual e ação por alerta.
 - [ ] Ícone e cor por severidade, com **rótulo textual** de severidade.
 - [ ] Alerta dispensável na sessão (sem persistir dispensa no servidor).
@@ -2797,6 +3010,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Seção de orçamentos no dashboard, com os 3 mais críticos.
 
 **Critérios de aceite**
+
 - [ ] Alertas exibem severidade com texto, não só cor.
 - [ ] Clicar no alerta navega para o recurso correto.
 - [ ] Desativar um tipo interrompe as notificações daquele tipo.
@@ -2812,6 +3026,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Cobertura do cálculo de consumo e, principalmente, da idempotência dos alertas.
 
 **Checklist técnico**
+
 - [ ] Fábricas `fabricarOrcamento` e `fabricarNotificacao`.
 - [ ] Integração de todas as rotas de orçamentos e notificações.
 - [ ] Teste de consumo por escopo: orçamento pessoal versus de grupo.
@@ -2822,6 +3037,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste de preferências desativadas.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 85% em `orcamento.servico.ts` e `notificacao.servico.ts`.
 - [ ] Tarefa de alertas idempotente em 5 execuções.
 - [ ] Progressão de limiares gera exatamente 3 notificações.
@@ -2844,6 +3060,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Comparar dois períodos arbitrários, sinalizando quando têm durações diferentes — comparar 30 dias com 90 dias sem aviso produz conclusão errada.
 
 **Checklist técnico**
+
 - [ ] `GET /relatorios/comparativo` com os quatro parâmetros de data e `agruparPor`.
 - [ ] Agrupamentos `CATEGORIA`, `CONTA` e `MES`.
 - [ ] Variação absoluta e percentual por item.
@@ -2853,6 +3070,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Ordenar por variação absoluta decrescente.
 
 **Critérios de aceite**
+
 - [ ] Categoria presente só no período A aparece com zero em B.
 - [ ] Variação percentual com valor base zero retorna `null`, não `Infinity`.
 - [ ] Durações diferentes sinalizadas em `meta`.
@@ -2868,15 +3086,17 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Métricas de segunda ordem que exigem histórico para ter sentido.
 
 **Checklist técnico**
+
 - [ ] `GET /dashboard/analitico` com média de gastos diária/mensal, maior despesa, categoria de maior crescimento, taxa de poupança histórica.
 - [ ] Evolução patrimonial (saldo consolidado ao fim de cada mês).
-- [ ] Distribuição de gastos por dia da semana (base do *heatmap*).
+- [ ] Distribuição de gastos por dia da semana (base do _heatmap_).
 - [ ] Gastos recorrentes versus eventuais.
 - [ ] Ticket médio por categoria.
 - [ ] Exigir mínimo de 3 meses de histórico; abaixo disso, responder com `meta.historicoInsuficiente`.
 - [ ] Latência-alvo < 1 200 ms.
 
 **Critérios de aceite**
+
 - [ ] Métricas conferem com cálculo manual em base de teste conhecida.
 - [ ] Usuário com menos de 3 meses recebe `historicoInsuficiente`, não valores enganosos.
 - [ ] Evolução patrimonial termina no saldo consolidado atual.
@@ -2892,6 +3112,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Matriz de 12 meses × dimensão (categoria, conta ou usuário do grupo), base das barras empilhadas.
 
 **Checklist técnico**
+
 - [ ] `GET /relatorios/matriz-12-meses` com `dimensao` (`CATEGORIA`|`CONTA`|`USUARIO`) e `tipo`.
 - [ ] Dimensão `USUARIO` válida apenas com `contaCompartilhadaId`; sem ele, `400`.
 - [ ] Retornar matriz densa: toda dimensão com valor em todos os 12 meses (zero quando ausente).
@@ -2900,6 +3121,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Consulta única, sem laço de N consultas.
 
 **Critérios de aceite**
+
 - [ ] Matriz densa: nenhuma célula ausente.
 - [ ] Dimensão `USUARIO` sem grupo responde `400`.
 - [ ] Mais de 15 dimensões agrupa o restante em "Outros".
@@ -2912,9 +3134,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 `M10` · **5 pts** · `backend` `feat` `relatorios` `p2-media` · Depende de: #111 · RF-76
 
-**Descrição.** Exportação com atenção ao que realmente atrapalha o usuário brasileiro: separador e *encoding* do CSV no Excel, e valores como número (não texto) no XLSX.
+**Descrição.** Exportação com atenção ao que realmente atrapalha o usuário brasileiro: separador e _encoding_ do CSV no Excel, e valores como número (não texto) no XLSX.
 
 **Checklist técnico**
+
 - [ ] `POST /relatorios/exportar` com `tipo`, `formato` e `parametros`.
 - [ ] CSV com **UTF-8 BOM** e separador `;` (padrão pt-BR do Excel).
 - [ ] XLSX via `exceljs`, com valores como **número**, formato de moeda aplicado e cabeçalho congelado.
@@ -2922,9 +3145,10 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Nome de arquivo descritivo: `pfm-relatorio-mensal-2026-07.xlsx`.
 - [ ] Cabeçalhos em pt-BR.
 - [ ] `Content-Disposition: attachment` com `filename*` para acentos.
-- [ ] *Rate limit* de 10 exportações/hora.
+- [ ] _Rate limit_ de 10 exportações/hora.
 
 **Critérios de aceite**
+
 - [ ] CSV abre no Excel pt-BR com colunas e acentos corretos, sem importação manual.
 - [ ] XLSX permite somar a coluna de valores diretamente na planilha.
 - [ ] Datas reconhecidas como data pela planilha.
@@ -2941,6 +3165,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** PDF com identidade visual, tabelas e gráficos renderizados no servidor.
 
 **Checklist técnico**
+
 - [ ] Geração com `pdfkit` ou `puppeteer` a partir de template HTML.
 - [ ] A4, cabeçalho com período, escopo e data de geração; rodapé com paginação.
 - [ ] Gráficos renderizados como imagem (SVG → PNG).
@@ -2950,6 +3175,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `incluirGraficos: false` gera versão só com tabelas (mais rápida).
 
 **Critérios de aceite**
+
 - [ ] PDF abre corretamente em leitores comuns.
 - [ ] Acentuação correta em todo o documento.
 - [ ] Cabeçalho de tabela repetido em cada página.
@@ -2965,6 +3191,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Relatórios acima de 5 000 linhas processados fora do ciclo de requisição, com entrega por e-mail — manter a conexão aberta por minutos é falha esperando acontecer.
 
 **Checklist técnico**
+
 - [ ] Estimar volume antes de processar; acima de 5 000 linhas, responder `202`.
 - [ ] Registro de processamento com situação (`PENDENTE`, `PROCESSANDO`, `CONCLUIDO`, `FALHOU`).
 - [ ] Fila em memória com processamento sequencial e limite de concorrência.
@@ -2975,6 +3202,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Falha no processamento notifica o usuário.
 
 **Critérios de aceite**
+
 - [ ] Relatório com mais de 5 000 linhas responde `202` com `processamentoId`.
 - [ ] E-mail chega com link funcional.
 - [ ] Link expira após 24 h respondendo `404`.
@@ -2991,6 +3219,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Página de análise avançada com filtros combináveis e os gráficos adicionais.
 
 **Checklist técnico**
+
 - [ ] Página com filtros de período, escopo, tipo e dimensão persistidos na URL.
 - [ ] `GraficoArea` (evolução patrimonial), `GraficoBarraEmpilhada` (12 meses por dimensão).
 - [ ] Cartões de indicadores derivados com explicação do cálculo em tooltip.
@@ -3000,6 +3229,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Todos os gráficos com tabela equivalente (A11Y-04).
 
 **Critérios de aceite**
+
 - [ ] Filtros combinados refletem em todos os gráficos.
 - [ ] Histórico insuficiente exibe mensagem, não gráfico vazio.
 - [ ] Legenda interativa acessível por teclado.
@@ -3015,6 +3245,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Mapa de calor de gastos por dia. Componente com risco de acessibilidade acima da média, por depender de gradiente de cor.
 
 **Checklist técnico**
+
 - [ ] `GraficoHeatmap` em grade de semanas × dias.
 - [ ] Escala sequencial de cor derivada do token `perigo`, com contraste verificado.
 - [ ] Tooltip com data, valor total e quantidade de lançamentos.
@@ -3025,6 +3256,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Dias sem gasto visualmente distintos de dias sem dados.
 
 **Critérios de aceite**
+
 - [ ] Escala de cor com contraste adequado nos dois temas.
 - [ ] Legenda com valores numéricos, não apenas gradiente.
 - [ ] Tabela equivalente presente e completa.
@@ -3040,6 +3272,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modal de exportação tratando os dois modos de resposta — download direto e processamento assíncrono.
 
 **Checklist técnico**
+
 - [ ] `DialogoExportar` com tipo, formato, período e opção de incluir gráficos.
 - [ ] Explicar cada formato ("CSV para planilhas, PDF para arquivar").
 - [ ] Tratar `200` com download imediato via blob.
@@ -3050,6 +3283,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Botão de exportar habilitado nas páginas de relatórios e análises.
 
 **Critérios de aceite**
+
 - [ ] Download direto funciona nos três formatos.
 - [ ] `202` exibe mensagem clara sobre a entrega por e-mail.
 - [ ] Painel de andamento reflete a situação real.
@@ -3065,6 +3299,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Cobertura dos cálculos analíticos e da integridade dos arquivos exportados.
 
 **Checklist técnico**
+
 - [ ] Base de teste determinística com 24 meses de histórico conhecido.
 - [ ] Testes de todos os indicadores derivados contra valores calculados manualmente.
 - [ ] Teste da matriz de 12 meses verificando densidade e totais.
@@ -3075,6 +3310,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste do fluxo assíncrono, do `202` até o arquivo pronto.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 80% em `relatorio.servico.ts` e `exportacao.servico.ts`.
 - [ ] CSV gerado contém BOM e separador correto.
 - [ ] XLSX tem valores como número, não texto.
@@ -3097,15 +3333,17 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Modelo `LogAuditoria` e a extensão `pg_trgm` com índice GIN para a pesquisa textual.
 
 **Checklist técnico**
+
 - [ ] Modelo `LogAuditoria` conforme [03-DATABASE.md §4](03-DATABASE.md#4-schema-prisma-completo), com `estadoAnterior`/`estadoNovo` como `Json`.
 - [ ] Enum `AcaoAuditoria` completo.
 - [ ] `CREATE EXTENSION IF NOT EXISTS pg_trgm`.
 - [ ] `idx_mov_descricao_trgm` (GIN) e índices trigram equivalentes em `categorias`, `contas` e `metas`.
 - [ ] Índices `(usuario_id, criado_em)`, `(conta_compartilhada_id, criado_em)`, `(entidade_tipo, entidade_id)`.
 - [ ] Migration `adiciona_indice_trgm_e_auditoria`.
-- [ ] Nenhum endpoint de `UPDATE` ou `DELETE` em auditoria — a tabela é *append-only* por design.
+- [ ] Nenhum endpoint de `UPDATE` ou `DELETE` em auditoria — a tabela é _append-only_ por design.
 
 **Critérios de aceite**
+
 - [ ] Extensão `pg_trgm` ativa.
 - [ ] Índices GIN existentes (verificado em `pg_indexes`).
 - [ ] `EXPLAIN` de busca por `ILIKE '%termo%'` usa o índice trigram.
@@ -3121,6 +3359,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Serviço de auditoria acoplado às operações sensíveis, registrando estado anterior e novo — sem isso, "quem excluiu esse lançamento?" fica sem resposta.
 
 **Checklist técnico**
+
 - [ ] `AuditoriaServico.registrar({ usuarioId, acao, entidadeTipo, entidadeId, estadoAnterior, estadoNovo, contexto })`.
 - [ ] Capturar IP, `userAgent` e `requestId` do contexto da requisição (`AsyncLocalStorage`).
 - [ ] Instrumentar: login, logout, alteração de senha, exclusão de movimentação, alteração de valor efetivado, gestão de membros, convites, transferência de administração, exclusão de grupo, exclusão de conta, exportação.
@@ -3130,6 +3369,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Falha ao auditar **não** silencia: loga erro em nível `error`.
 
 **Critérios de aceite**
+
 - [ ] Todas as ações listadas geram registro.
 - [ ] `estadoAnterior` e `estadoNovo` contêm apenas os campos relevantes.
 - [ ] Nenhum registro contém senha, hash ou token (teste varre a tabela).
@@ -3145,6 +3385,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Administrador consulta o histórico do próprio grupo. Nenhum acesso a auditoria de outros escopos.
 
 **Checklist técnico**
+
 - [ ] `GET /contas-compartilhadas/:id/auditoria` restrita a `ADMINISTRADOR`.
 - [ ] Filtros: `acao` (repetível), `usuarioId`, `entidadeTipo`, `dataInicio`, `dataFim`.
 - [ ] Paginação, ordenação por `criadoEm` decrescente.
@@ -3154,6 +3395,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Sem endpoint global de auditoria na v1.x/v2.0.
 
 **Critérios de aceite**
+
 - [ ] Participante e observador recebem `403`.
 - [ ] Não membro recebe `404`.
 - [ ] Filtros funcionam isolados e combinados.
@@ -3169,6 +3411,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Uma consulta encontrando qualquer coisa acessível ao usuário — e nada além disso. O escopo é a parte crítica.
 
 **Checklist técnico**
+
 - [ ] `GET /pesquisa` com `termo` (≥ 2 caracteres), `tipos` (repetível) e `limitePorTipo`.
 - [ ] Busca em movimentações, categorias, contas, cartões, grupos e metas, usando os índices trigram.
 - [ ] Bloco `usuarios` restrito a membros de grupos em comum — **nunca** a base de usuários.
@@ -3179,6 +3422,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] `totalEncontrado` agregado.
 
 **Critérios de aceite**
+
 - [ ] Usuário A jamais encontra recurso de usuário B (teste com dois usuários e dados homônimos).
 - [ ] Bloco `usuarios` traz somente membros de grupos em comum.
 - [ ] Termo de 1 caractere responde `400`.
@@ -3195,6 +3439,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Direito de eliminação preservando a integridade dos grupos: dados pessoais são anonimizados, registros financeiros compartilhados permanecem.
 
 **Checklist técnico**
+
 - [ ] `DELETE /perfil/conta` exigindo senha e a frase `EXCLUIR MINHA CONTA`.
 - [ ] Bloquear se o usuário for administrador único de algum grupo (`422 ADMINISTRADOR_UNICO`).
 - [ ] Anonimizar: nome → "Usuário removido", e-mail → hash irreversível, foto removida do disco.
@@ -3205,6 +3450,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Tudo em uma transação; e-mail de confirmação antes da anonimização.
 
 **Critérios de aceite**
+
 - [ ] Senha incorreta ou frase errada responde `400`.
 - [ ] Administrador único responde `422` indicando o caminho (transferir antes).
 - [ ] Após a exclusão, nome e e-mail não são recuperáveis.
@@ -3222,16 +3468,18 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Direito de acesso: tudo o que o usuário forneceu, em formato legível por máquina e por pessoa.
 
 **Checklist técnico**
+
 - [ ] `GET /perfil/exportar-dados` respondendo `202` e processando de forma assíncrona.
 - [ ] Incluir: perfil, contas, categorias, etiquetas, movimentações, transferências, cartões, faturas, metas, orçamentos, grupos e papéis, notificações.
 - [ ] JSON estruturado com dicionário de campos em pt-BR.
 - [ ] Anexos incluídos em um ZIP junto ao JSON.
 - [ ] **Nunca** incluir hash de senha nem tokens.
 - [ ] Link temporário de 24 h enviado por e-mail.
-- [ ] *Rate limit* de 1 exportação por dia.
+- [ ] _Rate limit_ de 1 exportação por dia.
 - [ ] Registro de auditoria da exportação.
 
 **Critérios de aceite**
+
 - [ ] Exportação contém todas as entidades do usuário.
 - [ ] Nenhum hash de senha ou token no arquivo.
 - [ ] Anexos presentes no ZIP.
@@ -3248,6 +3496,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Visibilidade operacional mínima: o que está lento, o que está falhando, se as tarefas rodaram.
 
 **Checklist técnico**
+
 - [ ] Coletor de métricas em memória: contagem por rota, latência p50/p95/p99, taxa de erro por código.
 - [ ] Métricas de tarefas agendadas: última execução, duração, registros afetados, falhas.
 - [ ] Métricas de banco: latência de consulta, uso do pool.
@@ -3257,6 +3506,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Alerta em log quando a taxa de erro passa de 5% em 5 minutos.
 
 **Critérios de aceite**
+
 - [ ] Métricas refletem o tráfego real (verificado com carga sintética).
 - [ ] `/metricas` sem token responde `401`.
 - [ ] Consumo de memória do coletor estável após 1 hora de carga.
@@ -3272,6 +3522,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Paleta de comando acessível de qualquer tela por `Ctrl/Cmd + K`.
 
 **Checklist técnico**
+
 - [ ] `PaletaPesquisa` em `Command` (cmdk), aberta por `Ctrl/Cmd + K` e por ícone no cabeçalho.
 - [ ] Debounce de 300 ms; mínimo 2 caracteres.
 - [ ] Resultados agrupados por tipo, com ícone e informação contextual.
@@ -3283,6 +3534,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Em mobile, ocupar a tela inteira.
 
 **Critérios de aceite**
+
 - [ ] `Ctrl/Cmd + K` abre a paleta de qualquer tela, inclusive com modal aberto.
 - [ ] Navegação completa por teclado, sem mouse.
 - [ ] Selecionar resultado navega para o recurso correto.
@@ -3299,6 +3551,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Auditoria legível para o administrador do grupo e a área de privacidade do perfil.
 
 **Checklist técnico**
+
 - [ ] Aba Auditoria no detalhe do grupo, visível só ao administrador.
 - [ ] Linha do tempo com autor, ação, entidade e horário.
 - [ ] Diferença legível entre estado anterior e novo (campo por campo, não JSON bruto).
@@ -3309,6 +3562,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Estado de exportação em andamento.
 
 **Critérios de aceite**
+
 - [ ] Aba Auditoria invisível para não administrador.
 - [ ] Diferenças legíveis sem interpretar JSON.
 - [ ] Diálogo de exclusão exige senha e frase exata.
@@ -3325,6 +3579,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Descrição.** Última rede de segurança do projeto, concentrada em isolamento de escopo — a falha mais grave possível aqui é um usuário encontrar dados de outro.
 
 **Checklist técnico**
+
 - [ ] Cenário com 3 usuários, 2 grupos e dados homônimos deliberados entre escopos.
 - [ ] Teste de isolamento da pesquisa para cada tipo de entidade.
 - [ ] Teste de que o bloco `usuarios` respeita a regra de grupos em comum.
@@ -3336,6 +3591,7 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 - [ ] Teste de `/metricas` sem token.
 
 **Critérios de aceite**
+
 - [ ] Cobertura ≥ 85% em `pesquisa.servico.ts`, `auditoria.servico.ts` e no serviço de privacidade.
 - [ ] **Zero** vazamento de escopo em qualquer tipo de entidade da pesquisa.
 - [ ] Nenhum segredo em `logs_auditoria`.
@@ -3347,31 +3603,31 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 
 ## Resumo de pontos por Milestone
 
-| Milestone | Issues | Pontos | Acumulado |
-| --------- | -----: | -----: | --------: |
-| M0 — Fundação e Infraestrutura | 9 | 34 | 34 |
-| M1 — Autenticação e Perfil | 12 | 55 | 89 |
-| M2 — Contas Financeiras e Categorias | 10 | 42 | 131 |
-| M3 — Movimentações e Transferências | 14 | 76 | 207 |
-| M4 — Dashboard e Relatórios | 10 | 50 | 257 |
-| M5 — CI/CD e Deploy em Produção | 10 | 42 | 299 |
-| M6 — Contas Compartilhadas | 13 | 71 | 370 |
-| M7 — Metas Financeiras | 7 | 29 | 399 |
-| M8 — Cartões, Faturas e Parcelamentos | 12 | 63 | 462 |
-| M9 — Orçamentos e Notificações | 11 | 52 | 514 |
-| M10 — Dashboard Analítico e Exportações | 10 | 47 | 561 |
-| M11 — Pesquisa, Auditoria e Observabilidade | 10 | 42 | **603** |
+| Milestone                                   | Issues | Pontos | Acumulado |
+| ------------------------------------------- | -----: | -----: | --------: |
+| M0 — Fundação e Infraestrutura              |      9 |     34 |        34 |
+| M1 — Autenticação e Perfil                  |     12 |     55 |        89 |
+| M2 — Contas Financeiras e Categorias        |     10 |     42 |       131 |
+| M3 — Movimentações e Transferências         |     14 |     76 |       207 |
+| M4 — Dashboard e Relatórios                 |     10 |     50 |       257 |
+| M5 — CI/CD e Deploy em Produção             |     10 |     42 |       299 |
+| M6 — Contas Compartilhadas                  |     13 |     71 |       370 |
+| M7 — Metas Financeiras                      |      7 |     29 |       399 |
+| M8 — Cartões, Faturas e Parcelamentos       |     12 |     63 |       462 |
+| M9 — Orçamentos e Notificações              |     11 |     52 |       514 |
+| M10 — Dashboard Analítico e Exportações     |     10 |     47 |       561 |
+| M11 — Pesquisa, Auditoria e Observabilidade |     10 |     42 |   **603** |
 
 ### Distribuição por camada
 
-| Camada | Issues | % |
-| ------ | -----: | -: |
-| `backend` | 62 | 48% |
-| `frontend` | 38 | 30% |
-| `banco` | 10 | 8% |
-| `infra` | 11 | 9% |
-| `docs` | 1 | 1% |
-| Somente teste (`test`) | 6 | 4% |
+| Camada                 | Issues |   % |
+| ---------------------- | -----: | --: |
+| `backend`              |     62 | 48% |
+| `frontend`             |     38 | 30% |
+| `banco`                |     10 |  8% |
+| `infra`                |     11 |  9% |
+| `docs`                 |      1 |  1% |
+| Somente teste (`test`) |      6 |  4% |
 
 Issues de teste dedicadas existem além dos testes escritos dentro de cada issue de implementação — a Definição de Pronto já exige testes em toda entrega. As issues `test(...)` cobrem suítes transversais, invariantes e matrizes de autorização que não pertencem a uma feature isolada.
 

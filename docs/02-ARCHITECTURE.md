@@ -72,14 +72,14 @@ O contrato entre os dois é o documento [04-API.md](04-API.md). Nenhum código �
 
 ### 1.2 Princípios arquiteturais
 
-| Princípio | Aplicação |
-| --------- | --------- |
-| **Separação de responsabilidades** | Cada camada tem uma razão para mudar. *Controller* muda por HTTP; *service* por regra de negócio; *repository* por persistência. |
-| **Dependência unidirecional** | O fluxo é sempre `rota → controlador → serviço → repositório → banco`. Nenhuma camada chama uma camada acima de si. |
-| **Regra de negócio isolada** | Serviços não conhecem `Request`, `Response`, `res.status` nem Prisma diretamente. |
-| **Validação na borda** | Nada entra no domínio sem passar por um *schema* Zod. |
-| **Erros como tipos** | Falhas de negócio são exceções tipadas, traduzidas para HTTP em um único ponto. |
-| **Transações explícitas** | Toda operação que altera saldo é atômica. |
+| Princípio                          | Aplicação                                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Separação de responsabilidades** | Cada camada tem uma razão para mudar. _Controller_ muda por HTTP; _service_ por regra de negócio; _repository_ por persistência. |
+| **Dependência unidirecional**      | O fluxo é sempre `rota → controlador → serviço → repositório → banco`. Nenhuma camada chama uma camada acima de si.              |
+| **Regra de negócio isolada**       | Serviços não conhecem `Request`, `Response`, `res.status` nem Prisma diretamente.                                                |
+| **Validação na borda**             | Nada entra no domínio sem passar por um _schema_ Zod.                                                                            |
+| **Erros como tipos**               | Falhas de negócio são exceções tipadas, traduzidas para HTTP em um único ponto.                                                  |
+| **Transações explícitas**          | Toda operação que altera saldo é atômica.                                                                                        |
 
 ---
 
@@ -159,14 +159,12 @@ export class MovimentacaoControlador {
 
   criar = async (req: Request, res: Response): Promise<void> => {
     const movimentacao = await this.servico.criar(req.usuario.id, req.body);
-    res.status(201).json(
-      respostaSucesso(movimentacao, 'Movimentação criada com sucesso.'),
-    );
+    res.status(201).json(respostaSucesso(movimentacao, 'Movimentação criada com sucesso.'));
   };
 }
 ```
 
-> Controladores usam **arrow functions atribuídas a propriedades** para preservar o `this` ao serem passadas como *handlers*. Erros assíncronos são capturados pelo `asyncHandler` aplicado globalmente no `Router` — nenhum `try/catch` em controlador.
+> Controladores usam **arrow functions atribuídas a propriedades** para preservar o `this` ao serem passadas como _handlers_. Erros assíncronos são capturados pelo `asyncHandler` aplicado globalmente no `Router` — nenhum `try/catch` em controlador.
 
 **Serviço** — decide, valida regra, orquestra.
 
@@ -343,16 +341,16 @@ backend/
 
 ### 3.1 Convenção de nomes de arquivo (backend)
 
-| Tipo | Padrão | Exemplo |
-| ---- | ------ | ------- |
-| Rota | `<recurso>.rotas.ts` | `movimentacoes.rotas.ts` |
-| Controlador | `<recurso>.controlador.ts` | `movimentacao.controlador.ts` |
-| Serviço | `<recurso>.servico.ts` | `movimentacao.servico.ts` |
-| Repositório | `<recurso>.repositorio.ts` | `movimentacao.repositorio.ts` |
-| Validador | `<recurso>.validador.ts` | `movimentacao.validador.ts` |
-| Middleware | `<acao>.middleware.ts` | `autenticar.middleware.ts` |
-| Tarefa | `<acao>.tarefa.ts` | `fechar-faturas.tarefa.ts` |
-| Teste | `<alvo>.spec.ts` | `movimentacao.servico.spec.ts` |
+| Tipo        | Padrão                     | Exemplo                        |
+| ----------- | -------------------------- | ------------------------------ |
+| Rota        | `<recurso>.rotas.ts`       | `movimentacoes.rotas.ts`       |
+| Controlador | `<recurso>.controlador.ts` | `movimentacao.controlador.ts`  |
+| Serviço     | `<recurso>.servico.ts`     | `movimentacao.servico.ts`      |
+| Repositório | `<recurso>.repositorio.ts` | `movimentacao.repositorio.ts`  |
+| Validador   | `<recurso>.validador.ts`   | `movimentacao.validador.ts`    |
+| Middleware  | `<acao>.middleware.ts`     | `autenticar.middleware.ts`     |
+| Tarefa      | `<acao>.tarefa.ts`         | `fechar-faturas.tarefa.ts`     |
+| Teste       | `<alvo>.spec.ts`           | `movimentacao.servico.spec.ts` |
 
 Arquivos em `kebab-case`; classes em `PascalCase`; rotas no **plural**, demais camadas no **singular**.
 
@@ -403,19 +401,19 @@ A ordem é significativa e não deve ser alterada sem justificativa registrada:
 
 ```ts
 // src/servidor.ts
-app.set('trust proxy', 1);           // 1. atrás do Nginx: IP real para rate limit
-app.use(correlacao);                 // 2. requestId antes de qualquer log
-app.use(helmet());                   // 3. cabeçalhos de segurança
-app.use(cors(opcoesCors));           // 4. CORS por origem permitida
+app.set('trust proxy', 1); // 1. atrás do Nginx: IP real para rate limit
+app.use(correlacao); // 2. requestId antes de qualquer log
+app.use(helmet()); // 3. cabeçalhos de segurança
+app.use(cors(opcoesCors)); // 4. CORS por origem permitida
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(registrador);                // 5. log estruturado da requisição
-app.use(limitadorGlobal);            // 6. rate limit geral
+app.use(registrador); // 5. log estruturado da requisição
+app.use(limitadorGlobal); // 6. rate limit geral
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(especificacao));
-app.use('/api/v1', rotas);           // 7. domínio
-app.use(naoEncontrado);              // 8. 404 padronizado
-app.use(tratadorErros);              // 9. SEMPRE o último
+app.use('/api/v1', rotas); // 7. domínio
+app.use(naoEncontrado); // 8. 404 padronizado
+app.use(tratadorErros); // 9. SEMPRE o último
 ```
 
 ---
@@ -440,22 +438,25 @@ export abstract class ErroAplicacao extends Error {
 }
 ```
 
-| Classe | HTTP | Código | Uso |
-| ------ | ---- | ------ | --- |
-| `ValidacaoErro` | 400 | `VALIDACAO` | Entrada inválida (Zod ou regra de formato) |
-| `NaoAutenticadoErro` | 401 | `NAO_AUTENTICADO` | Token ausente, inválido ou expirado |
-| `ProibidoErro` | 403 | `PROIBIDO` | Autenticado, mas sem permissão sobre o recurso |
-| `NaoEncontradoErro` | 404 | `NAO_ENCONTRADO` | Recurso inexistente ou fora do escopo do usuário |
-| `ConflitoErro` | 409 | `CONFLITO` | Violação de unicidade ou estado incompatível |
-| `RegraNegocioErro` | 422 | `REGRA_NEGOCIO` | Requisição bem formada, regra de domínio violada |
-| `LimiteExcedidoErro` | 429 | `LIMITE_EXCEDIDO` | *Rate limit* |
-| `ErroInterno` | 500 | `ERRO_INTERNO` | Falha inesperada |
+| Classe               | HTTP | Código            | Uso                                              |
+| -------------------- | ---- | ----------------- | ------------------------------------------------ |
+| `ValidacaoErro`      | 400  | `VALIDACAO`       | Entrada inválida (Zod ou regra de formato)       |
+| `NaoAutenticadoErro` | 401  | `NAO_AUTENTICADO` | Token ausente, inválido ou expirado              |
+| `ProibidoErro`       | 403  | `PROIBIDO`        | Autenticado, mas sem permissão sobre o recurso   |
+| `NaoEncontradoErro`  | 404  | `NAO_ENCONTRADO`  | Recurso inexistente ou fora do escopo do usuário |
+| `ConflitoErro`       | 409  | `CONFLITO`        | Violação de unicidade ou estado incompatível     |
+| `RegraNegocioErro`   | 422  | `REGRA_NEGOCIO`   | Requisição bem formada, regra de domínio violada |
+| `LimiteExcedidoErro` | 429  | `LIMITE_EXCEDIDO` | _Rate limit_                                     |
+| `ErroInterno`        | 500  | `ERRO_INTERNO`    | Falha inesperada                                 |
 
 ### 5.2 Tradutor único
 
 ```ts
 export function tratadorErros(
-  erro: unknown, req: Request, res: Response, _next: NextFunction,
+  erro: unknown,
+  req: Request,
+  res: Response,
+  _next: NextFunction,
 ): void {
   if (erro instanceof ZodError) {
     res.status(400).json(respostaErro('Dados inválidos.', mapearZod(erro), 'VALIDACAO'));
@@ -469,15 +470,15 @@ export function tratadorErros(
   }
 
   if (erro instanceof Prisma.PrismaClientKnownRequestError) {
-    const traduzido = traduzirErroPrisma(erro);   // P2002 → 409, P2025 → 404, ...
-    res.status(traduzido.status).json(respostaErro(traduzido.mensagem, undefined, traduzido.codigo));
+    const traduzido = traduzirErroPrisma(erro); // P2002 → 409, P2025 → 404, ...
+    res
+      .status(traduzido.status)
+      .json(respostaErro(traduzido.mensagem, undefined, traduzido.codigo));
     return;
   }
 
   registrador.error({ requestId: req.requestId, erro }, 'Erro não tratado');
-  res.status(500).json(
-    respostaErro('Erro interno do servidor.', undefined, 'ERRO_INTERNO'),
-  ); // RN-56: nunca expor stack em produção
+  res.status(500).json(respostaErro('Erro interno do servidor.', undefined, 'ERRO_INTERNO')); // RN-56: nunca expor stack em produção
 }
 ```
 
@@ -487,7 +488,7 @@ Ninguém mais no sistema chama `res.status(4xx)`. Erros nascem como exceção ti
 
 ## 6. Arquitetura do frontend
 
-### 6.1 Modelo *Feature Based*
+### 6.1 Modelo _Feature Based_
 
 Cada funcionalidade de negócio é uma pasta autocontida em `funcionalidades/`, com seus componentes, hooks, serviços de API, tipos e schemas. O que é genuinamente transversal vive nas pastas de topo.
 
@@ -505,27 +506,27 @@ Página (rota)
 
 ### 6.2 Camadas de estado
 
-| Tipo de estado | Ferramenta | Exemplo |
-| -------------- | ---------- | ------- |
-| Estado de servidor | **React Query** | movimentações, contas, saldos, relatórios |
-| Estado global de UI | **Context** | tema, usuário autenticado, filtros do dashboard |
-| Estado local | `useState` / `useReducer` | modal aberto, aba ativa |
-| Estado de formulário | **React Hook Form** | todos os formulários |
-| Estado de URL | React Router (`searchParams`) | período, página, filtros compartilháveis |
+| Tipo de estado       | Ferramenta                    | Exemplo                                         |
+| -------------------- | ----------------------------- | ----------------------------------------------- |
+| Estado de servidor   | **React Query**               | movimentações, contas, saldos, relatórios       |
+| Estado global de UI  | **Context**                   | tema, usuário autenticado, filtros do dashboard |
+| Estado local         | `useState` / `useReducer`     | modal aberto, aba ativa                         |
+| Estado de formulário | **React Hook Form**           | todos os formulários                            |
+| Estado de URL        | React Router (`searchParams`) | período, página, filtros compartilháveis        |
 
 **React Query não é substituído por Context.** Dados de servidor nunca são copiados para Context — a fonte de verdade é o cache do React Query.
 
 ### 6.3 Padrão de hook de dados
 
 ```ts
-// funcionalidades/movimentacoes/hooks/usarMovimentacoes.ts
+// funcionalidades/movimentacoes/hooks/useMovimentacoes.ts
 export const chavesMovimentacoes = {
   todas: ['movimentacoes'] as const,
   lista: (filtros: FiltroMovimentacao) => ['movimentacoes', 'lista', filtros] as const,
   detalhe: (id: string) => ['movimentacoes', 'detalhe', id] as const,
 };
 
-export function usarMovimentacoes(filtros: FiltroMovimentacao) {
+export function useMovimentacoes(filtros: FiltroMovimentacao) {
   return useQuery({
     queryKey: chavesMovimentacoes.lista(filtros),
     queryFn: () => movimentacaoServico.listar(filtros),
@@ -539,15 +540,15 @@ export function usarCriarMovimentacao() {
     mutationFn: movimentacaoServico.criar,
     onSuccess: () => {
       cliente.invalidateQueries({ queryKey: chavesMovimentacoes.todas });
-      cliente.invalidateQueries({ queryKey: chavesContas.todas });     // saldo mudou
-      cliente.invalidateQueries({ queryKey: chavesDashboard.todas });  // indicadores mudaram
+      cliente.invalidateQueries({ queryKey: chavesContas.todas }); // saldo mudou
+      cliente.invalidateQueries({ queryKey: chavesDashboard.todas }); // indicadores mudaram
       notificar.sucesso('Movimentação criada.');
     },
   });
 }
 ```
 
-**Invalidação em cascata é obrigatória:** criar ou alterar movimentação invalida `movimentacoes`, `contas`, `dashboard`, `relatorios` e, quando aplicável, `orcamentos` e `faturas`. Um saldo desatualizado na tela é considerado *bug* de severidade alta.
+**Invalidação em cascata é obrigatória:** criar ou alterar movimentação invalida `movimentacoes`, `contas`, `dashboard`, `relatorios` e, quando aplicável, `orcamentos` e `faturas`. Um saldo desatualizado na tela é considerado _bug_ de severidade alta.
 
 ### 6.4 Camada de acesso HTTP
 
@@ -555,7 +556,7 @@ export function usarCriarMovimentacao() {
 // servicos/api.ts
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,          // refresh token em cookie httpOnly
+  withCredentials: true, // refresh token em cookie httpOnly
   timeout: 20_000,
 });
 
@@ -569,7 +570,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(respostaOk, criarInterceptorRenovacao(api));
 ```
 
-O *interceptor* de renovação usa fila única: várias requisições que recebem 401 simultaneamente aguardam **um** `POST /autenticacao/renovar`, evitando tempestade de renovações e rotação múltipla do refresh token.
+O _interceptor_ de renovação usa fila única: várias requisições que recebem 401 simultaneamente aguardam **um** `POST /autenticacao/renovar`, evitando tempestade de renovações e rotação múltipla do refresh token.
 
 ---
 
@@ -680,15 +681,15 @@ frontend/
 
 ### 7.1 Convenção de nomes (frontend)
 
-| Tipo | Padrão | Exemplo |
-| ---- | ------ | ------- |
-| Componente | `PascalCase.tsx` | `CartaoResumoConta.tsx` |
-| Página | `PascalCase.tsx` | `Movimentacoes.tsx` |
-| Hook | `usar<Coisa>.ts` | `usarMovimentacoes.ts` |
-| Serviço | `<recurso>.servico.ts` | `movimentacao.servico.ts` |
-| Schema | `<coisa>.schema.ts` | `movimentacao.schema.ts` |
-| Tipo | `PascalCase` em `tipos/` | `Movimentacao` |
-| Constante | `SCREAMING_SNAKE_CASE` | `LIMITE_PAGINA_PADRAO` |
+| Tipo       | Padrão                   | Exemplo                   |
+| ---------- | ------------------------ | ------------------------- |
+| Componente | `PascalCase.tsx`         | `CartaoResumoConta.tsx`   |
+| Página     | `PascalCase.tsx`         | `Movimentacoes.tsx`       |
+| Hook       | `usar<Coisa>.ts`         | `useMovimentacoes.ts`     |
+| Serviço    | `<recurso>.servico.ts`   | `movimentacao.servico.ts` |
+| Schema     | `<coisa>.schema.ts`      | `movimentacao.schema.ts`  |
+| Tipo       | `PascalCase` em `tipos/` | `Movimentacao`            |
+| Constante  | `SCREAMING_SNAKE_CASE`   | `LIMITE_PAGINA_PADRAO`    |
 
 ---
 
@@ -696,10 +697,10 @@ frontend/
 
 ### 8.1 Estratégia de tokens
 
-| Token | Duração | Onde vive | Conteúdo |
-| ----- | ------- | --------- | -------- |
-| *Access token* | 15 min | Memória do JS (nunca `localStorage`) | `sub`, `email`, `iat`, `exp` |
-| *Refresh token* | 7 dias | Cookie `httpOnly` + `Secure` + `SameSite=Strict` | opaco (UUID); *hash* persistido no banco |
+| Token           | Duração | Onde vive                                        | Conteúdo                                 |
+| --------------- | ------- | ------------------------------------------------ | ---------------------------------------- |
+| _Access token_  | 15 min  | Memória do JS (nunca `localStorage`)             | `sub`, `email`, `iat`, `exp`             |
+| _Refresh token_ | 7 dias  | Cookie `httpOnly` + `Secure` + `SameSite=Strict` | opaco (UUID); _hash_ persistido no banco |
 
 O access token curto em memória e o refresh token em cookie `httpOnly` combinam-se para mitigar XSS (o token de longa duração é inacessível ao JS) e CSRF (`SameSite=Strict` + verificação de origem).
 
@@ -765,14 +766,14 @@ O frontend replica as permissões apenas para **esconder controles**. Nenhuma de
 
 Executadas por `node-cron` dentro do processo da API, em **uma única instância** do cluster PM2 (`NODE_APP_INSTANCE === '0'`), para evitar execução duplicada.
 
-| Tarefa | Agenda | Responsabilidade | Regra |
-| ------ | ------ | ---------------- | ----- |
-| `marcar-atrasadas` | 00:05 diário | Marca despesas pendentes vencidas como `ATRASADA` | RF-30 |
-| `gerar-recorrencias` | 00:15 diário | Reabastece ocorrências para os próximos 12 meses | RN-18 |
-| `fechar-faturas` | 00:30 diário | Fecha faturas cujo dia de fechamento é hoje | RN-44 |
-| `alertar-orcamentos` | 07:00 diário | Avalia limiares e cria notificações | RN-50 |
-| `notificar-vencimentos` | 07:05 diário | Avisa vencimentos em D-3 e D-0 | RF-69 |
-| `limpar-tokens` | 03:00 diário | Remove refresh tokens expirados e convites expirados | RN-35 |
+| Tarefa                  | Agenda       | Responsabilidade                                     | Regra |
+| ----------------------- | ------------ | ---------------------------------------------------- | ----- |
+| `marcar-atrasadas`      | 00:05 diário | Marca despesas pendentes vencidas como `ATRASADA`    | RF-30 |
+| `gerar-recorrencias`    | 00:15 diário | Reabastece ocorrências para os próximos 12 meses     | RN-18 |
+| `fechar-faturas`        | 00:30 diário | Fecha faturas cujo dia de fechamento é hoje          | RN-44 |
+| `alertar-orcamentos`    | 07:00 diário | Avalia limiares e cria notificações                  | RN-50 |
+| `notificar-vencimentos` | 07:05 diário | Avisa vencimentos em D-3 e D-0                       | RF-69 |
+| `limpar-tokens`         | 03:00 diário | Remove refresh tokens expirados e convites expirados | RN-35 |
 
 Toda tarefa é **idempotente** — reexecutar no mesmo dia não duplica efeitos — e registra início, fim e contagem de registros afetados.
 
@@ -780,14 +781,14 @@ Toda tarefa é **idempotente** — reexecutar no mesmo dia não duplica efeitos 
 
 ## 10. Arquivos e anexos
 
-| Aspecto | Decisão |
-| ------- | ------- |
-| Upload | Multer, armazenamento em disco |
-| Caminho | `/var/pfm/uploads/<usuarioId>/<ano>/<mes>/<uuid>.<ext>` |
-| Volume | *Bind mount* Docker, fora da imagem, incluído no backup |
-| Tipos aceitos | Anexos: PDF, JPEG, PNG (máx. 5 MB, até 5 por movimentação). Avatares: JPEG, PNG, WebP (máx. 2 MB) |
-| Validação | Extensão **e** *magic number*; nome original sanitizado e nunca usado no caminho de disco |
-| Entrega | Rota autenticada `GET /anexos/:id/conteudo` que valida propriedade e faz *stream*. Nenhum arquivo é servido diretamente pelo Nginx |
+| Aspecto       | Decisão                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Upload        | Multer, armazenamento em disco                                                                                                     |
+| Caminho       | `/var/pfm/uploads/<usuarioId>/<ano>/<mes>/<uuid>.<ext>`                                                                            |
+| Volume        | _Bind mount_ Docker, fora da imagem, incluído no backup                                                                            |
+| Tipos aceitos | Anexos: PDF, JPEG, PNG (máx. 5 MB, até 5 por movimentação). Avatares: JPEG, PNG, WebP (máx. 2 MB)                                  |
+| Validação     | Extensão **e** _magic number_; nome original sanitizado e nunca usado no caminho de disco                                          |
+| Entrega       | Rota autenticada `GET /anexos/:id/conteudo` que valida propriedade e faz _stream_. Nenhum arquivo é servido diretamente pelo Nginx |
 
 Servir anexos por rota autenticada é mais lento que servir estático, mas é a única forma de garantir RN-51 para comprovantes financeiros. A troca é deliberada.
 
@@ -812,16 +813,16 @@ Pino em JSON, um registro por requisição, com `requestId` (UUID v4) propagado 
 }
 ```
 
-**Nunca logados:** senha, *hash* de senha, tokens, cabeçalho `Authorization`, corpo de requisição de autenticação.
+**Nunca logados:** senha, _hash_ de senha, tokens, cabeçalho `Authorization`, corpo de requisição de autenticação.
 
 ### 11.2 Saúde
 
-| Endpoint | Verifica | Uso |
-| -------- | -------- | --- |
-| `GET /api/v1/saude` | Processo vivo | *Liveness* do Docker/PM2 |
-| `GET /api/v1/saude/prontidao` | `SELECT 1` no banco + migrations aplicadas | *Readiness* e *gate* do deploy |
+| Endpoint                      | Verifica                                   | Uso                            |
+| ----------------------------- | ------------------------------------------ | ------------------------------ |
+| `GET /api/v1/saude`           | Processo vivo                              | _Liveness_ do Docker/PM2       |
+| `GET /api/v1/saude/prontidao` | `SELECT 1` no banco + migrations aplicadas | _Readiness_ e _gate_ do deploy |
 
-O `/saude/prontidao` é o portão do deploy: se não responder `200` dentro da janela de verificação, o pipeline executa *rollback* (ver [08-CICD.md](08-CICD.md)).
+O `/saude/prontidao` é o portão do deploy: se não responder `200` dentro da janela de verificação, o pipeline executa _rollback_ (ver [08-CICD.md](08-CICD.md)).
 
 ---
 
@@ -856,7 +857,7 @@ Internet
         /var/pfm/backups   (dumps diários)
 ```
 
-O PostgreSQL **não** publica porta na interface pública. O frontend é servido como estático pelo Nginx, sem container próprio em produção — a imagem de frontend existe apenas para produzir o artefato de *build*.
+O PostgreSQL **não** publica porta na interface pública. O frontend é servido como estático pelo Nginx, sem container próprio em produção — a imagem de frontend existe apenas para produzir o artefato de _build_.
 
 ---
 
@@ -865,7 +866,7 @@ O PostgreSQL **não** publica porta na interface pública. O frontend é servido
 ### ADR-001 — Arquitetura em camadas, não Clean Architecture completa
 
 **Contexto.** A especificação pede SOLID e "Clean Architecture aplicada nas regras de negócio".
-**Decisão.** Adotar camadas (`controlador → serviço → repositório`) com regra de negócio concentrada nos serviços, sem *use cases* isolados por operação nem inversão de dependência por interfaces em todas as fronteiras.
+**Decisão.** Adotar camadas (`controlador → serviço → repositório`) com regra de negócio concentrada nos serviços, sem _use cases_ isolados por operação nem inversão de dependência por interfaces em todas as fronteiras.
 **Justificativa.** O ganho da Clean Architecture plena aparece quando há múltiplos adaptadores de entrada e troca real de infraestrutura. Aqui há um adaptador (REST) e um banco. O custo em cerimônia superaria o benefício. O isolamento essencial — regra de negócio que não conhece HTTP nem Prisma — é preservado.
 **Consequências.** Trocar de ORM exige reescrever repositórios (escopo contido). Serviços permanecem testáveis com repositórios mockados.
 
@@ -903,32 +904,32 @@ O PostgreSQL **não** publica porta na interface pública. O frontend é servido
 
 **Decisão.** Duas movimentações `TRANSFERENCIA` vinculadas por `transferenciaId`, criadas na mesma transação (RN-23, RN-26).
 **Justificativa.** Cada conta precisa ver seu próprio lançamento no extrato. Um registro único obrigaria consultas condicionais em toda listagem e agregação.
-**Consequências.** Todo somatório de receita/despesa precisa excluir `tipo = 'TRANSFERENCIA'` (RN-25) — encapsulado em *helper* de filtro único no repositório, não repetido em cada consulta.
+**Consequências.** Todo somatório de receita/despesa precisa excluir `tipo = 'TRANSFERENCIA'` (RN-25) — encapsulado em _helper_ de filtro único no repositório, não repetido em cada consulta.
 
 ### ADR-008 — Docker Compose com PM2 em modo cluster dentro do container
 
 **Contexto.** A stack define Docker **e** PM2, o que aparenta redundância: o Docker já supervisiona o processo.
-**Decisão.** Docker Compose orquestra os serviços (`api`, `postgres`). Dentro do container da API, o *entrypoint* é `pm2-runtime` em modo *cluster* com `instances: max`.
-**Justificativa.** As duas ferramentas resolvem problemas diferentes e complementares. O Docker dá reprodutibilidade de ambiente e isolamento; o PM2 dá uso de todos os núcleos da VPS em um processo Node *single-threaded* (RNF-09) e *reload* sem *downtime* (RNF-11) — que o Docker sozinho não oferece sem orquestrador. `pm2-runtime` (não `pm2 start`) mantém o PM2 em primeiro plano, preservando a semântica de PID 1, os sinais e os logs do container.
-**Alternativas descartadas.** (a) Só Docker com N réplicas + balanceamento no Nginx: mais memória e configuração para o mesmo efeito em VPS única. (b) Só PM2 no host: perde reprodutibilidade e torna o *rollback* de dependências manual. (c) Kubernetes: desproporcional a uma VPS.
-**Consequências.** Uma camada extra de supervisão. Tarefas agendadas exigem *guard* de instância única (§9).
+**Decisão.** Docker Compose orquestra os serviços (`api`, `postgres`). Dentro do container da API, o _entrypoint_ é `pm2-runtime` em modo _cluster_ com `instances: max`.
+**Justificativa.** As duas ferramentas resolvem problemas diferentes e complementares. O Docker dá reprodutibilidade de ambiente e isolamento; o PM2 dá uso de todos os núcleos da VPS em um processo Node _single-threaded_ (RNF-09) e _reload_ sem _downtime_ (RNF-11) — que o Docker sozinho não oferece sem orquestrador. `pm2-runtime` (não `pm2 start`) mantém o PM2 em primeiro plano, preservando a semântica de PID 1, os sinais e os logs do container.
+**Alternativas descartadas.** (a) Só Docker com N réplicas + balanceamento no Nginx: mais memória e configuração para o mesmo efeito em VPS única. (b) Só PM2 no host: perde reprodutibilidade e torna o _rollback_ de dependências manual. (c) Kubernetes: desproporcional a uma VPS.
+**Consequências.** Uma camada extra de supervisão. Tarefas agendadas exigem _guard_ de instância única (§9).
 
 ### ADR-009 — Frontend estático servido pelo Nginx
 
-**Decisão.** O *build* Vite é copiado para `/var/www/pfm` e servido pelo Nginx; não há container de frontend em produção.
+**Decisão.** O _build_ Vite é copiado para `/var/www/pfm` e servido pelo Nginx; não há container de frontend em produção.
 **Justificativa.** SPA é conteúdo estático. Um container Node só para servi-la adiciona memória, latência e superfície de falha sem benefício.
 **Consequências.** O deploy do frontend é sincronização de arquivos, não troca de imagem — mais rápido e trivialmente reversível.
 
 ### ADR-010 — React Query como única fonte de estado de servidor
 
 **Decisão.** Nenhum dado vindo da API é copiado para Context ou Redux.
-**Justificativa.** Duplicar estado de servidor em store local cria dois relógios que divergem. React Query já resolve cache, invalidação, *refetch*, estados de carregamento e concorrência.
+**Justificativa.** Duplicar estado de servidor em store local cria dois relógios que divergem. React Query já resolve cache, invalidação, _refetch_, estados de carregamento e concorrência.
 **Consequências.** Disciplina obrigatória de invalidação em cascata (§6.3). É o ponto de atenção número um em revisão de código de mutação.
 
 ### ADR-011 — Duas branches permanentes
 
 **Decisão.** `main` (produção) e `staging` (desenvolvimento/homologação). Branches de issue são efêmeras e opcionais.
-**Justificativa.** Substitui o fluxo `main`/`develop`/`feature`/`release`/`hotfix` da especificação original. Para o tamanho atual do time, o *overhead* de cinco tipos de branch não se paga. O gatilho de deploy fica inequívoco: merge em `main` publica.
+**Justificativa.** Substitui o fluxo `main`/`develop`/`feature`/`release`/`hotfix` da especificação original. Para o tamanho atual do time, o _overhead_ de cinco tipos de branch não se paga. O gatilho de deploy fica inequívoco: merge em `main` publica.
 **Consequências.** Sem branch de `release`, `staging` deve estar sempre em estado publicável. Ver [05-DEVELOPMENT.md](05-DEVELOPMENT.md).
 
 ### ADR-012 — `Decimal(14,2)` para valores monetários
