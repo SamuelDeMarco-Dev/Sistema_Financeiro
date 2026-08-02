@@ -24,8 +24,10 @@ export default defineConfig({
     include: ['testes/unitarios/**/*.spec.ts', 'testes/integracao/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.ts'],
+      exclude: ['src/tipos/**'],
+      all: true,
     },
   },
 });

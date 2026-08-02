@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [staging]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSAO: '22'
+
+jobs:
+  segredos:
+    name: Varredura de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pfm
+          POSTGRES_PASSWORD: pfm_teste
+          POSTGRES_DB: pfm_teste
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U pfm"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://pfm:pfm_teste@localhost:5433/pfm_teste?schema=public
+      JWT_SEGREDO: segredo-de-teste-com-mais-de-32-caracteres-aqui
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSAO }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # npm ci roda na raiz (workspaces com um unico package-lock.json):
+      # com working-directory apontando para backend/, o script "prepare"
+      # da raiz (husky) procuraria o binario em backend/node_modules/.bin
+      # e falharia com "husky: not found" (ver PR #137).
+      - run: npm ci
+      - run: npm run prisma:generate --workspace=backend
+      - run: npm run prisma:deploy --workspace=backend
+
+      - name: Checagem de tipos
+        run: npm run tipos --workspace=backend
+      - name: Lint
+        run: npm run lint --workspace=backend
+      - name: Formatação
+        run: npm run formatar:check --workspace=backend
+      - name: Testes com cobertura
+        run: npm run teste:cobertura --workspace=backend
+      - name: Build
+        run: npm run build --workspace=backend
+
+      - name: Portão de cobertura
+        run: |
+          node -e "
+          const c = require('./backend/coverage/coverage-summary.json').total;
+          const falhas = [];
+          if (c.statements.pct < 80) falhas.push('statements ' + c.statements.pct + '% < 80%');
+          if (c.branches.pct   < 75) falhas.push('branches '   + c.branches.pct   + '% < 75%');
+          if (falhas.length) { console.error('Cobertura insuficiente: ' + falhas.join(', ')); process.exit(1); }
+          console.log('Cobertura OK: ' + c.statements.pct + '% statements, ' + c.branches.pct + '% branches');
+          "
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura-backend
+          path: backend/coverage/
+          retention-days: 7
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSAO }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+      - name: Checagem de tipos
+        run: npm run tipos --workspace=frontend
+      - name: Lint
+        run: npm run lint --workspace=frontend
+      - name: Testes com cobertura
+        run: npm run teste:cobertura --workspace=frontend
+      - name: Build
+        run: npm run build --workspace=frontend
+        env:
+          VITE_API_URL: http://localhost:3333/api/v1
+          VITE_AMBIENTE: test
+
+      - name: Orçamento de bundle
+        run: |
+          TAMANHO=$(find frontend/dist/assets -name '*.js' -exec gzip -c {} \; | wc -c)
+          LIMITE=256000
+          echo "Bundle gzip: ${TAMANHO} bytes (limite ${LIMITE})"
+          if [ "$TAMANHO" -gt "$LIMITE" ]; then
+            echo "::error::Bundle excede o orçamento de 250 KB (RNF-04)"
+            exit 1
+          fi
+
+  resultado:
+    name: Resultado da CI
+    if: always()
+    needs: [segredos, backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consolidar
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "::error::Um ou mais jobs falharam"; exit 1
+          fi
+          echo "Todos os jobs passaram"
