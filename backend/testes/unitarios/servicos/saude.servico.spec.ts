@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as saudeRepositorio from '@/repositorios/saude.repositorio';
 import { obterStatusLiveness, obterStatusProntidao } from '@/servicos/saude.servico';
@@ -5,6 +7,16 @@ import { obterStatusLiveness, obterStatusProntidao } from '@/servicos/saude.serv
 vi.mock('@/repositorios/saude.repositorio');
 
 const repositorioMockado = vi.mocked(saudeRepositorio);
+
+// Mesmas migrations reais que o servico enxerga no disco (nao mockamos o
+// filesystem): mockar "todas aplicadas" assim mantem o teste correto
+// conforme novas migrations forem criadas, em vez de travar num numero fixo.
+function nomesDasMigrationsNoDisco(): string[] {
+  const diretorio = path.resolve(process.cwd(), 'prisma', 'migrations');
+  return readdirSync(diretorio, { withFileTypes: true })
+    .filter((entrada) => entrada.isDirectory())
+    .map((entrada) => entrada.name);
+}
 
 describe('saude.servico', () => {
   beforeEach(() => {
@@ -25,6 +37,7 @@ describe('saude.servico', () => {
   describe('obterStatusProntidao', () => {
     it('retorna "pronto" quando banco, migrations e armazenamento estao todos ok', async () => {
       repositorioMockado.verificarConexaoBanco.mockResolvedValue(undefined);
+      repositorioMockado.buscarMigrationsAplicadas.mockResolvedValue(nomesDasMigrationsNoDisco());
 
       const resultado = await obterStatusProntidao();
 

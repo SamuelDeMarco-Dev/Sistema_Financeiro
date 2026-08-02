@@ -1,7 +1,3 @@
-// Schema vazio nesta issue: apenas datasource e generator, para que
-// banco/cliente.ts tenha um PrismaClient valido a desconectar no
-// encerramento gracioso (issue #3). Os modelos de dominio entram na
-// primeira migration (issue #10).
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,4 +5,88 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+//  IDENTIDADE E ACESSO
+// ═══════════════════════════════════════════════════════════
+
+enum TemaPreferido {
+  CLARO
+  ESCURO
+  SISTEMA
+}
+
+model Usuario {
+  id        String @id @default(cuid())
+  nome      String @db.VarChar(120)
+  email     String @unique @db.VarChar(180)
+  senhaHash String @map("senha_hash") @db.VarChar(72)
+
+  emailVerificadoEm        DateTime? @map("email_verificado_em") @db.Timestamptz(3)
+  tokenVerificacao         String?   @unique @map("token_verificacao") @db.VarChar(128)
+  tokenVerificacaoExpiraEm DateTime? @map("token_verificacao_expira_em") @db.Timestamptz(3)
+
+  tokenRecuperacao         String?   @unique @map("token_recuperacao") @db.VarChar(128)
+  tokenRecuperacaoExpiraEm DateTime? @map("token_recuperacao_expira_em") @db.Timestamptz(3)
+
+  tentativasLogin Int       @default(0) @map("tentativas_login")
+  bloqueadoAte    DateTime? @map("bloqueado_ate") @db.Timestamptz(3)
+  ultimoLoginEm   DateTime? @map("ultimo_login_em") @db.Timestamptz(3)
+
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm    DateTime? @map("excluido_em") @db.Timestamptz(3)
+  anonimizadoEm DateTime? @map("anonimizado_em") @db.Timestamptz(3)
+
+  perfil          Perfil?
+  tokensRenovacao TokenRenovacao[]
+
+  @@index([excluidoEm])
+  @@map("usuarios")
+}
+
+model Perfil {
+  id        String @id @default(cuid())
+  usuarioId String @unique @map("usuario_id")
+
+  fotoUrl           String?       @map("foto_url") @db.VarChar(500)
+  moedaPadrao       String        @default("BRL") @map("moeda_padrao") @db.Char(3)
+  idioma            String        @default("pt-BR") @db.VarChar(10)
+  tema              TemaPreferido @default(SISTEMA)
+  timezone          String        @default("America/Sao_Paulo") @db.VarChar(64)
+  formatoData       String        @default("dd/MM/yyyy") @map("formato_data") @db.VarChar(20)
+  primeiroDiaSemana Int           @default(0) @map("primeiro_dia_semana")
+
+  notificacoesApp   Boolean @default(true) @map("notificacoes_app")
+  notificacoesEmail Boolean @default(true) @map("notificacoes_email")
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("perfis")
+}
+
+model TokenRenovacao {
+  id        String @id @default(cuid())
+  usuarioId String @map("usuario_id")
+  tokenHash String @unique @map("token_hash") @db.VarChar(128)
+
+  dispositivo String? @db.VarChar(120)
+  ip          String? @db.VarChar(64)
+  userAgent   String? @map("user_agent") @db.VarChar(300)
+
+  expiraEm         DateTime  @map("expira_em") @db.Timestamptz(3)
+  revogadoEm       DateTime? @map("revogado_em") @db.Timestamptz(3)
+  substituidoPorId String?   @map("substituido_por_id")
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revogadoEm])
+  @@index([expiraEm])
+  @@map("tokens_renovacao")
 }
