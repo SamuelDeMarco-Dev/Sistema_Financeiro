@@ -30,7 +30,7 @@ describe('registradorRequisicoes', () => {
     expect(espiao).toHaveBeenCalledOnce();
     const [dados] = espiao.mock.calls[0] as [Record<string, unknown>];
     expect(dados).toMatchObject({ metodo: 'GET', rota: '/api/v1/saude', status: 200 });
-    expect(typeof dados['duracaoMs']).toBe('number');
+    expect(typeof dados.duracaoMs).toBe('number');
   });
 
   it('nunca inclui req.body no registro, mesmo quando o corpo contem campos sensiveis', () => {

@@ -1,9 +1,11 @@
+import type { ReactElement } from 'react';
+
 interface EstadoErroProps {
   mensagem: string;
   onTentarNovamente?: () => void;
 }
 
-export function EstadoErro({ mensagem, onTentarNovamente }: EstadoErroProps): JSX.Element {
+export function EstadoErro({ mensagem, onTentarNovamente }: EstadoErroProps): ReactElement {
   return (
     <div
       role="alert"

@@ -33,7 +33,10 @@ export function normalizarErro(erro: unknown): ErroApi {
   }
 
   if (!erro.response) {
-    return new ErroApi('Nao foi possivel conectar ao servidor. Verifique sua conexao.', 'ERRO_REDE');
+    return new ErroApi(
+      'Nao foi possivel conectar ao servidor. Verifique sua conexao.',
+      'ERRO_REDE',
+    );
   }
 
   const corpo = erro.response.data as CorpoErroBackend | undefined;
@@ -46,5 +49,9 @@ export function normalizarErro(erro: unknown): ErroApi {
     );
   }
 
-  return new ErroApi('Erro inesperado ao comunicar com o servidor.', 'ERRO_DESCONHECIDO', erro.response.status);
+  return new ErroApi(
+    'Erro inesperado ao comunicar com o servidor.',
+    'ERRO_DESCONHECIDO',
+    erro.response.status,
+  );
 }

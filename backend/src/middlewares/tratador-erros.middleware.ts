@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { ErroAplicacao } from '@/erros';
+import type { CodigoErro } from '@/erros';
 import { mapearZod } from '@/utilitarios/mapear-zod';
 import { registrador } from '@/utilitarios/registrador';
 import { respostaErro } from '@/utilitarios/resposta';
-import type { CodigoErro } from '@/erros';
 import type { NextFunction, Request, Response } from 'express';
 
 interface ErroPrismaTraduzido {
@@ -18,7 +18,11 @@ interface ErroPrismaTraduzido {
 function traduzirErroPrisma(erro: Prisma.PrismaClientKnownRequestError): ErroPrismaTraduzido {
   switch (erro.code) {
     case 'P2002':
-      return { status: 409, mensagem: 'Ja existe um registro com esses dados.', codigo: 'CONFLITO' };
+      return {
+        status: 409,
+        mensagem: 'Ja existe um registro com esses dados.',
+        codigo: 'CONFLITO',
+      };
     case 'P2025':
       return { status: 404, mensagem: 'Registro nao encontrado.', codigo: 'NAO_ENCONTRADO' };
     default:
@@ -32,7 +36,7 @@ export function tratadorErros(
   erro: unknown,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- assinatura de 4 parametros exigida pelo Express para reconhecer middleware de erro
+
   _next: NextFunction,
 ): void {
   if (erro instanceof ZodError) {
@@ -48,7 +52,9 @@ export function tratadorErros(
 
   if (erro instanceof Prisma.PrismaClientKnownRequestError) {
     const traduzido = traduzirErroPrisma(erro);
-    res.status(traduzido.status).json(respostaErro(traduzido.mensagem, undefined, traduzido.codigo));
+    res
+      .status(traduzido.status)
+      .json(respostaErro(traduzido.mensagem, undefined, traduzido.codigo));
     return;
   }
 

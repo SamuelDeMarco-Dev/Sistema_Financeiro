@@ -54,23 +54,23 @@ flowchart TB
 
 ### 1.1 Gatilhos
 
-| Evento | Workflow | Efeito |
-| ------ | -------- | ------ |
-| `pull_request` → `staging` ou `main` | `ci.yml` | Verificação; merge bloqueado se falhar |
-| `push` → `staging` | `ci.yml` + `deploy-staging.yml` | Publica em homologação |
-| `push` → `main` | `deploy-producao.yml` | **Publica em produção** |
-| `workflow_dispatch` | `deploy-producao.yml` | Deploy manual (rollback, reexecução) |
+| Evento                               | Workflow                        | Efeito                                 |
+| ------------------------------------ | ------------------------------- | -------------------------------------- |
+| `pull_request` → `staging` ou `main` | `ci.yml`                        | Verificação; merge bloqueado se falhar |
+| `push` → `staging`                   | `ci.yml` + `deploy-staging.yml` | Publica em homologação                 |
+| `push` → `main`                      | `deploy-producao.yml`           | **Publica em produção**                |
+| `workflow_dispatch`                  | `deploy-producao.yml`           | Deploy manual (rollback, reexecução)   |
 
 ### 1.2 Princípios
 
-| Princípio | Aplicação |
-| --------- | --------- |
-| **Um só caminho para produção** | Merge em `main`. Não há deploy manual como rotina. |
-| **Portão automático** | `/saude/prontidao` decide se o deploy vale; não há verificação visual como critério. |
-| **Reversível** | Toda publicação guarda a versão anterior pronta para voltar. |
-| **Backup antes de migrar** | Nenhuma migration roda em produção sem dump imediatamente anterior. |
-| **Segredo fora do repositório** | Exclusivamente em GitHub Secrets e `.env` do servidor. |
-| **Migration nunca reverte sozinha** | Rollback automático cobre a aplicação, não o schema (§9.3). |
+| Princípio                           | Aplicação                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| **Um só caminho para produção**     | Merge em `main`. Não há deploy manual como rotina.                                   |
+| **Portão automático**               | `/saude/prontidao` decide se o deploy vale; não há verificação visual como critério. |
+| **Reversível**                      | Toda publicação guarda a versão anterior pronta para voltar.                         |
+| **Backup antes de migrar**          | Nenhuma migration roda em produção sem dump imediatamente anterior.                  |
+| **Segredo fora do repositório**     | Exclusivamente em GitHub Secrets e `.env` do servidor.                               |
+| **Migration nunca reverte sozinha** | Rollback automático cobre a aplicação, não o schema (§9.3).                          |
 
 ---
 
@@ -78,33 +78,33 @@ flowchart TB
 
 ### 2.1 Ambientes
 
-| Ambiente | URL | Branch | Banco | Backup |
-| -------- | --- | ------ | ----- | ------ |
-| Local | `localhost:5173` / `:3333` | qualquer | `pfm` (Docker) | — |
-| Homologação | `staging.<dominio>` | `staging` | `pfm_staging` | não |
-| Produção | `<dominio>` | `main` | `pfm` | diário |
+| Ambiente    | URL                        | Branch    | Banco          | Backup |
+| ----------- | -------------------------- | --------- | -------------- | ------ |
+| Local       | `localhost:5173` / `:3333` | qualquer  | `pfm` (Docker) | —      |
+| Homologação | `staging.<dominio>`        | `staging` | `pfm_staging`  | não    |
+| Produção    | `<dominio>`                | `main`    | `pfm`          | diário |
 
 Homologação e produção convivem na mesma VPS, com containers, portas, volumes e bancos separados. É a escolha econômica adequada ao porte do projeto; a separação lógica é rigorosa.
 
 ### 2.2 GitHub Secrets
 
-Configurados em **Settings → Secrets and variables → Actions**, com *environments* `producao` e `staging` distintos.
+Configurados em **Settings → Secrets and variables → Actions**, com _environments_ `producao` e `staging` distintos.
 
-| Secret | Escopo | Finalidade |
-| ------ | ------ | ---------- |
-| `VPS_HOST` | ambos | IP ou hostname da VPS |
-| `VPS_USUARIO` | ambos | Usuário de deploy (`deploy`) |
-| `VPS_CHAVE_SSH` | ambos | Chave privada SSH (ed25519) do usuário de deploy |
-| `VPS_PORTA_SSH` | ambos | Porta SSH |
-| `DATABASE_URL` | por ambiente | String de conexão do PostgreSQL |
-| `POSTGRES_SENHA` | por ambiente | Senha do banco |
-| `JWT_SEGREDO` | por ambiente | Segredo de assinatura do JWT (≥ 64 caracteres) |
-| `SMTP_HOST` `SMTP_PORTA` `SMTP_USUARIO` `SMTP_SENHA` | por ambiente | Envio de e-mail |
-| `EMAIL_REMETENTE` | por ambiente | Remetente exibido |
-| `URL_BASE_FRONTEND` | por ambiente | Base dos links em e-mails |
-| `ORIGENS_PERMITIDAS` | por ambiente | Origens de CORS |
-| `TOKEN_METRICAS` | por ambiente | Token da rota `/metricas` |
-| `GHCR_TOKEN` | ambos | Publicação de imagem no GitHub Container Registry |
+| Secret                                               | Escopo       | Finalidade                                        |
+| ---------------------------------------------------- | ------------ | ------------------------------------------------- |
+| `VPS_HOST`                                           | ambos        | IP ou hostname da VPS                             |
+| `VPS_USUARIO`                                        | ambos        | Usuário de deploy (`deploy`)                      |
+| `VPS_CHAVE_SSH`                                      | ambos        | Chave privada SSH (ed25519) do usuário de deploy  |
+| `VPS_PORTA_SSH`                                      | ambos        | Porta SSH                                         |
+| `DATABASE_URL`                                       | por ambiente | String de conexão do PostgreSQL                   |
+| `POSTGRES_SENHA`                                     | por ambiente | Senha do banco                                    |
+| `JWT_SEGREDO`                                        | por ambiente | Segredo de assinatura do JWT (≥ 64 caracteres)    |
+| `SMTP_HOST` `SMTP_PORTA` `SMTP_USUARIO` `SMTP_SENHA` | por ambiente | Envio de e-mail                                   |
+| `EMAIL_REMETENTE`                                    | por ambiente | Remetente exibido                                 |
+| `URL_BASE_FRONTEND`                                  | por ambiente | Base dos links em e-mails                         |
+| `ORIGENS_PERMITIDAS`                                 | por ambiente | Origens de CORS                                   |
+| `TOKEN_METRICAS`                                     | por ambiente | Token da rota `/metricas`                         |
+| `GHCR_TOKEN`                                         | ambos        | Publicação de imagem no GitHub Container Registry |
 
 **Regras.** Chave SSH dedicada ao deploy, sem uso humano. Segredos rotacionados a cada 6 meses ou imediatamente após qualquer suspeita. Nenhum `echo` de secret em step de workflow — o mascaramento do GitHub não cobre transformações como `base64`.
 
@@ -171,7 +171,7 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["pm2-runtime", "start", "ecosystem.config.cjs", "--env", "production"]
 ```
 
-**Por que `pm2-runtime` e não `pm2 start`.** `pm2 start` desacopla e retorna, deixando o container sem processo em primeiro plano — o Docker o consideraria encerrado. `pm2-runtime` permanece em *foreground*, propaga sinais corretamente e escreve os logs em `stdout`/`stderr`, preservando a semântica de PID 1.
+**Por que `pm2-runtime` e não `pm2 start`.** `pm2 start` desacopla e retorna, deixando o container sem processo em primeiro plano — o Docker o consideraria encerrado. `pm2-runtime` permanece em _foreground_, propaga sinais corretamente e escreve os logs em `stdout`/`stderr`, preservando a semântica de PID 1.
 
 ### 3.2 Configuração do PM2
 
@@ -184,16 +184,16 @@ module.exports = {
       name: 'pfm-api',
       script: './dist/index.js',
       exec_mode: 'cluster',
-      instances: 'max',              // um processo por núcleo (RNF-09)
+      instances: 'max', // um processo por núcleo (RNF-09)
       max_memory_restart: '400M',
-      kill_timeout: 35000,           // > 30s do encerramento gracioso da aplicação
+      kill_timeout: 35000, // > 30s do encerramento gracioso da aplicação
       listen_timeout: 10000,
-      wait_ready: true,              // aguarda process.send('ready')
+      wait_ready: true, // aguarda process.send('ready')
       autorestart: true,
       max_restarts: 10,
       min_uptime: '20s',
       merge_logs: true,
-      time: false,                   // timestamp já vem do Pino (JSON)
+      time: false, // timestamp já vem do Pino (JSON)
       env_production: {
         NODE_ENV: 'production',
         PORTA: 3333,
@@ -203,7 +203,7 @@ module.exports = {
 };
 ```
 
-`kill_timeout` maior que a janela de encerramento gracioso da aplicação (30 s) evita que o PM2 mate um processo que ainda está finalizando requisições. `wait_ready` faz o PM2 só considerar a instância viva depois de ela sinalizar prontidão — sem isso, o *reload* colocaria tráfego em processos que ainda não conectaram ao banco.
+`kill_timeout` maior que a janela de encerramento gracioso da aplicação (30 s) evita que o PM2 mate um processo que ainda está finalizando requisições. `wait_ready` faz o PM2 só considerar a instância viva depois de ela sinalizar prontidão — sem isso, o _reload_ colocaria tráfego em processos que ainda não conectaram ao banco.
 
 **Tarefas agendadas.** Rodam apenas na instância `0` (`process.env.NODE_APP_INSTANCE === '0'`). Sem esse guard, N instâncias executariam a mesma tarefa N vezes.
 
@@ -217,7 +217,7 @@ services:
     restart: unless-stopped
     env_file: [.env]
     ports:
-      - "127.0.0.1:3333:3333"        # nunca 0.0.0.0
+      - '127.0.0.1:3333:3333' # nunca 0.0.0.0
     volumes:
       - /var/pfm/uploads:/app/uploads
     depends_on:
@@ -225,11 +225,11 @@ services:
         condition: service_healthy
     deploy:
       resources:
-        limits:   { cpus: "1.5", memory: 1G }
+        limits: { cpus: '1.5', memory: 1G }
         reservations: { memory: 256M }
     logging:
       driver: json-file
-      options: { max-size: "10m", max-file: "5" }
+      options: { max-size: '10m', max-file: '5' }
     networks: [pfm]
 
   postgres:
@@ -242,11 +242,11 @@ services:
       POSTGRES_DB: ${POSTGRES_BANCO}
       TZ: America/Sao_Paulo
     ports:
-      - "127.0.0.1:5432:5432"        # apenas loopback
+      - '127.0.0.1:5432:5432' # apenas loopback
     volumes:
       - pfm_dados_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USUARIO} -d ${POSTGRES_BANCO}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USUARIO} -d ${POSTGRES_BANCO}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -259,7 +259,7 @@ services:
       - shared_buffers=256MB
     logging:
       driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+      options: { max-size: '10m', max-file: '3' }
     networks: [pfm]
 
 volumes:
@@ -280,33 +280,33 @@ O `ports` com prefixo `127.0.0.1` é deliberado: sem ele, o Docker abre a porta 
 services:
   postgres:
     image: postgres:16-alpine
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
     environment:
       POSTGRES_USER: pfm
       POSTGRES_PASSWORD: pfm_local
       POSTGRES_DB: pfm
     volumes: [pfm_dev:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pfm"]
+      test: ['CMD-SHELL', 'pg_isready -U pfm']
       interval: 5s
       retries: 10
 
   postgres_teste:
     image: postgres:16-alpine
-    ports: ["5433:5432"]
+    ports: ['5433:5432']
     environment:
       POSTGRES_USER: pfm
       POSTGRES_PASSWORD: pfm_local
       POSTGRES_DB: pfm_teste
-    tmpfs: [/var/lib/postgresql/data]   # em memória: testes rápidos, dados descartáveis
+    tmpfs: [/var/lib/postgresql/data] # em memória: testes rápidos, dados descartáveis
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pfm"]
+      test: ['CMD-SHELL', 'pg_isready -U pfm']
       interval: 5s
       retries: 10
 
   mailpit:
     image: axllent/mailpit:latest
-    ports: ["1025:1025", "8025:8025"]   # SMTP · interface web
+    ports: ['1025:1025', '8025:8025'] # SMTP · interface web
 
 volumes:
   pfm_dev:
@@ -337,7 +337,7 @@ FROM scratch AS artefato
 COPY --from=build /app/dist /dist
 ```
 
-As variáveis `VITE_*` são resolvidas em **tempo de build** e ficam no *bundle*. Tudo que entra aqui é público — nenhum segredo, em nenhuma hipótese.
+As variáveis `VITE_*` são resolvidas em **tempo de build** e ficam no _bundle_. Tudo que entra aqui é público — nenhum segredo, em nenhuma hipótese.
 
 ---
 
@@ -443,8 +443,8 @@ server {
 
 Duas configurações merecem atenção porque sua ausência produz falhas confusas:
 
-- **`X-Forwarded-For` + `trust proxy` na aplicação.** Sem os dois, todo o *rate limit* vê o IP do proxy e um único usuário mal-intencionado bloqueia a aplicação para todos.
-- **`index.html` sem cache.** Com cache, o navegador continua pedindo *chunks* da versão antiga após o deploy e a aplicação quebra com erro de módulo não encontrado.
+- **`X-Forwarded-For` + `trust proxy` na aplicação.** Sem os dois, todo o _rate limit_ vê o IP do proxy e um único usuário mal-intencionado bloqueia a aplicação para todos.
+- **`index.html` sem cache.** Com cache, o navegador continua pedindo _chunks_ da versão antiga após o deploy e a aplicação quebra com erro de módulo não encontrado.
 
 ### 4.2 Homologação
 
@@ -481,7 +481,7 @@ Hook de recarga do Nginx após a renovação:
 systemctl reload nginx
 ```
 
-Sem esse hook, o certificado renova mas o Nginx continua servindo o antigo até o próximo *reload* — e o problema só aparece quando o certificado antigo expira.
+Sem esse hook, o certificado renova mas o Nginx continua servindo o antigo até o próximo _reload_ — e o problema só aparece quando o certificado antigo expira.
 
 ---
 
@@ -563,7 +563,7 @@ systemctl enable --now nginx
 echo "✔ Provisionamento concluído"
 ```
 
-O swap de 2 GB não é luxo: uma VPS de 2 GB de RAM rodando build, PostgreSQL e N processos Node encontra o *OOM killer* sem ele — e o processo morto é normalmente o PostgreSQL.
+O swap de 2 GB não é luxo: uma VPS de 2 GB de RAM rodando build, PostgreSQL e N processos Node encontra o _OOM killer_ sem ele — e o processo morto é normalmente o PostgreSQL.
 
 ---
 
@@ -709,7 +709,7 @@ jobs:
           echo "Todos os jobs passaram"
 ```
 
-O job `resultado` existe para dar à proteção de branch um único *status check* obrigatório — sem ele, acrescentar um job novo exige reconfigurar a proteção manualmente e o novo job vira opcional por descuido.
+O job `resultado` existe para dar à proteção de branch um único _status check_ obrigatório — sem ele, acrescentar um job novo exige reconfigurar a proteção manualmente e o novo job vira opcional por descuido.
 
 ---
 
@@ -731,7 +731,7 @@ on:
 
 concurrency:
   group: deploy-producao
-  cancel-in-progress: false        # nunca cancelar um deploy em andamento
+  cancel-in-progress: false # nunca cancelar um deploy em andamento
 
 env:
   NODE_VERSAO: '22'
@@ -939,15 +939,15 @@ Detalhes que evitam problemas reais:
 
 `.github/workflows/deploy-staging.yml` reproduz a estrutura de produção com quatro diferenças:
 
-| Aspecto | Produção | Homologação |
-| ------- | -------- | ----------- |
-| Gatilho | `push` em `main` | `push` em `staging` |
-| Diretório | `/var/pfm/producao` | `/var/pfm/staging` |
-| Porta da API | 3333 | 3334 |
-| Backup pré-migration | obrigatório | dispensado |
-| Rollback automático | sim | não (falha apenas alerta) |
-| Banco | `pfm` | `pfm_staging` |
-| Frontend | `/var/www/pfm` | `/var/www/pfm-staging` |
+| Aspecto              | Produção            | Homologação               |
+| -------------------- | ------------------- | ------------------------- |
+| Gatilho              | `push` em `main`    | `push` em `staging`       |
+| Diretório            | `/var/pfm/producao` | `/var/pfm/staging`        |
+| Porta da API         | 3333                | 3334                      |
+| Backup pré-migration | obrigatório         | dispensado                |
+| Rollback automático  | sim                 | não (falha apenas alerta) |
+| Banco                | `pfm`               | `pfm_staging`             |
+| Frontend             | `/var/www/pfm`      | `/var/www/pfm-staging`    |
 
 Rollback automático em homologação seria contraproducente: o objetivo do ambiente é justamente expor a versão quebrada para diagnóstico.
 
@@ -1180,10 +1180,10 @@ docker exec -i pfm-postgres psql -U pfm -d postgres \
   -c "DROP DATABASE pfm_verificacao;"
 ```
 
-| Objetivo | Alvo |
-| -------- | ---- |
-| RPO — perda máxima aceitável | 24 h |
-| RTO — tempo máximo de recuperação | 2 h |
+| Objetivo                          | Alvo |
+| --------------------------------- | ---- |
+| RPO — perda máxima aceitável      | 24 h |
+| RTO — tempo máximo de recuperação | 2 h  |
 
 ---
 
@@ -1251,31 +1251,37 @@ docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate api
 ### 11.4 Cenários de falha
 
 **A API não sobe.**
+
 1. `docker logs pfm-api --tail 100` — geralmente é variável de ambiente inválida (a validação Zod aborta com a mensagem exata) ou banco inacessível.
 2. Conferir `.env`: `grep -c '=' /var/pfm/producao/.env`.
 3. Testar o banco: `docker exec pfm-postgres pg_isready -U pfm`.
 4. Migrations pendentes: `docker compose ... run --rm --entrypoint "npx prisma migrate status" api`.
 
 **Banco inacessível.**
+
 1. `docker compose ps postgres` e `docker logs pfm-postgres --tail 100`.
-2. Se houve *OOM kill*: `dmesg | grep -i "killed process"` — confirmar que o swap está ativo (`swapon --show`).
+2. Se houve _OOM kill_: `dmesg | grep -i "killed process"` — confirmar que o swap está ativo (`swapon --show`).
 3. Se o volume corrompeu: parar tudo, restaurar o último dump em banco novo, repontar `DATABASE_URL`.
 
 **Disco cheio.**
+
 ```bash
 du -sh /var/lib/docker /var/pfm/* /var/log | sort -h
 docker system prune -af --volumes    # ATENÇÃO: --volumes remove volumes órfãos
 journalctl --vacuum-size=200M
 ls -1t /var/pfm/backups/* | tail -n +10 | xargs -r rm -f
 ```
+
 Causa mais comum: imagens antigas acumuladas e logs sem rotação. A rotação em `docker-compose.prod.yml` previne o segundo caso.
 
 **Certificado expirado.**
+
 ```bash
 sudo certbot certificates
 sudo certbot renew --force-renewal
 sudo systemctl reload nginx
 ```
+
 Se a renovação automática falhou silenciosamente, verificar `systemctl status certbot.timer` e se a porta 80 está acessível (o desafio ACME precisa dela).
 
 **Deploy travado.** O `concurrency` impede paralelismo. Cancelar o workflow e, no servidor, `docker compose ps` para verificar o estado; se ficou meio publicado, executar `reverter.sh`.
@@ -1305,7 +1311,7 @@ Rotacionar `JWT_SEGREDO` invalida **todos** os access tokens em circulação; os
 - [ ] Chave SSH de deploy gerada (`ssh-keygen -t ed25519`), pública em `~deploy/.ssh/authorized_keys`.
 - [ ] Login SSH com a chave testado; login por senha e por root rejeitados.
 - [ ] `ufw status` mostra apenas 22, 80 e 443.
-- [ ] Todos os GitHub Secrets configurados nos *environments* `producao` e `staging`.
+- [ ] Todos os GitHub Secrets configurados nos _environments_ `producao` e `staging`.
 - [ ] `JWT_SEGREDO` com ≥ 64 caracteres aleatórios (não reaproveitado de desenvolvimento).
 - [ ] Credenciais SMTP validadas com envio de teste.
 - [ ] Proteção de `main` e `staging` ativa.

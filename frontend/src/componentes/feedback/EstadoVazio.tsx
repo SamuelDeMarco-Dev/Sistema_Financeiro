@@ -1,3 +1,5 @@
+import type { ReactElement } from 'react';
+
 interface EstadoVazioProps {
   titulo: string;
   descricao?: string;
@@ -7,7 +9,7 @@ interface EstadoVazioProps {
   };
 }
 
-export function EstadoVazio({ titulo, descricao, acao }: EstadoVazioProps): JSX.Element {
+export function EstadoVazio({ titulo, descricao, acao }: EstadoVazioProps): ReactElement {
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-borda bg-superficie px-6 py-10 text-center">
       <p className="font-semibold text-texto">{titulo}</p>

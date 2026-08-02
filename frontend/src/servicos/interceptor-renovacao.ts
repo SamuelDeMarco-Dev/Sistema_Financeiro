@@ -33,7 +33,9 @@ export function criarInterceptorRenovacao(instancia: AxiosInstance) {
     const requisicaoOriginal = erro.config as RequisicaoComRetentativa | undefined;
 
     const naoRenovavel =
-      erro.response?.status !== 401 || !requisicaoOriginal || requisicaoOriginal._jaTentouRenovar === true;
+      erro.response?.status !== 401 ||
+      !requisicaoOriginal ||
+      requisicaoOriginal._jaTentouRenovar === true;
     if (naoRenovavel) {
       return Promise.reject(normalizarErro(erro));
     }

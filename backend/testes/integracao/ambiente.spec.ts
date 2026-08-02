@@ -20,7 +20,7 @@ function rodarComAmbiente(env: NodeJS.ProcessEnv): { status: number | null; stde
 }
 
 const AMBIENTE_BASE = {
-  PATH: process.env['PATH'],
+  PATH: process.env.PATH,
   URL_BASE_API: 'http://localhost:3333',
   URL_BASE_FRONTEND: 'http://localhost:5173',
   DATABASE_URL: 'postgresql://pfm:pfm_local@localhost:5432/pfm?schema=public',

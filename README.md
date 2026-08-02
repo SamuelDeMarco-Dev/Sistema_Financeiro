@@ -12,11 +12,11 @@ no mesmo sistema das finanças individuais.
 
 ## Stack
 
-| Camada | Tecnologia |
-| ------ | ---------- |
-| Backend | Node.js 22 LTS · Express · TypeScript estrito · Prisma 6 · PostgreSQL 16 · Zod · Vitest |
+| Camada   | Tecnologia                                                                                |
+| -------- | ----------------------------------------------------------------------------------------- |
+| Backend  | Node.js 22 LTS · Express · TypeScript estrito · Prisma 6 · PostgreSQL 16 · Zod · Vitest   |
 | Frontend | React 18 · Vite 5 · TailwindCSS · Shadcn/UI · React Query v5 · React Hook Form · Recharts |
-| Infra | Docker · PM2 (cluster) · Nginx · GitHub Actions · VPS Hostinger |
+| Infra    | Docker · PM2 (cluster) · Nginx · GitHub Actions · VPS Hostinger                           |
 
 Monorepo com dois pacotes independentes (`backend/`, `frontend/`), sem dependência de build
 entre si. O contrato entre eles é [`docs/04-API.md`](docs/04-API.md).
@@ -69,26 +69,26 @@ docker compose down -v         # derruba e remove os volumes (perde dados locais
 As credenciais (`pfm` / `pfm_local`) e os bancos (`pfm`, `pfm_teste`) estão alinhados com
 `backend/.env.exemplo`.
 
-| Serviço | Endereço |
-| ------- | -------- |
-| API | http://localhost:3333 |
-| Documentação da API | http://localhost:3333/api/docs |
-| Frontend | http://localhost:5173 |
-| PostgreSQL (dev) | localhost:5432 |
-| PostgreSQL (teste) | localhost:5433 |
-| Prisma Studio | http://localhost:5555 |
-| Mailpit (e-mails capturados) | http://localhost:8025 |
+| Serviço                      | Endereço                       |
+| ---------------------------- | ------------------------------ |
+| API                          | http://localhost:3333          |
+| Documentação da API          | http://localhost:3333/api/docs |
+| Frontend                     | http://localhost:5173          |
+| PostgreSQL (dev)             | localhost:5432                 |
+| PostgreSQL (teste)           | localhost:5433                 |
+| Prisma Studio                | http://localhost:5555          |
+| Mailpit (e-mails capturados) | http://localhost:8025          |
 
 ---
 
 ## Scripts da raiz
 
-| Script | Efeito |
-| ------ | ------ |
-| `npm run dev` | Sobe backend e frontend em paralelo |
-| `npm run build` | Build dos dois pacotes |
-| `npm run verificar` | **Portão**: tipos + lint + formato + testes nos dois pacotes |
-| `npm run lint` / `npm run formatar` | Lint e formatação nos dois pacotes |
+| Script                              | Efeito                                                       |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `npm run dev`                       | Sobe backend e frontend em paralelo                          |
+| `npm run build`                     | Build dos dois pacotes                                       |
+| `npm run verificar`                 | **Portão**: tipos + lint + formato + testes nos dois pacotes |
+| `npm run lint` / `npm run formatar` | Lint e formatação nos dois pacotes                           |
 
 Cada pacote também expõe seus próprios scripts — ver [`docs/05-DEVELOPMENT.md §3`](docs/05-DEVELOPMENT.md#3-scripts-npm).
 

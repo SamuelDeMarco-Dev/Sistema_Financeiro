@@ -1,8 +1,10 @@
+import type { ReactElement } from 'react';
+
 interface CarregandoProps {
   rotulo?: string;
 }
 
-export function Carregando({ rotulo = 'Carregando...' }: CarregandoProps): JSX.Element {
+export function Carregando({ rotulo = 'Carregando...' }: CarregandoProps): ReactElement {
   return (
     <div role="status" className="flex items-center justify-center gap-2 py-8 text-textoSuave">
       <span

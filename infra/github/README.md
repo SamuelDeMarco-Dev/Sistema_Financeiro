@@ -4,11 +4,11 @@ Cria no GitHub os **34 rótulos**, as **12 Milestones** e as **128 issues** desc
 
 O documento é a fonte única de verdade. O script apenas o traduz para o GitHub — nunca o contrário.
 
-| Arquivo | Papel |
-| ------- | ----- |
-| `importar-issues.mjs` | Script de importação |
-| `verificar-parsing.mjs` | Valida o documento sem tocar na rede |
-| `rotulos.json` | Nome, cor e descrição de cada rótulo |
+| Arquivo                   | Papel                                 |
+| ------------------------- | ------------------------------------- |
+| `importar-issues.mjs`     | Script de importação                  |
+| `verificar-parsing.mjs`   | Valida o documento sem tocar na rede  |
+| `rotulos.json`            | Nome, cor e descrição de cada rótulo  |
 | `.estado-importacao.json` | Progresso (gerado; **não versionar**) |
 
 ---
@@ -113,17 +113,17 @@ Leva cerca de **3 minutos** (pausa de 1,2 s entre criações, para não bater no
 
 ## Opções
 
-| Opção | Efeito |
-| ----- | ------ |
-| `--aplicar` | Efetiva as escritas. Sem ela, apenas simula |
+| Opção                 | Efeito                                                 |
+| --------------------- | ------------------------------------------------------ |
+| `--aplicar`           | Efetiva as escritas. Sem ela, apenas simula            |
 | `--repo <owner/nome>` | Repositório alvo. Padrão: detectado por `gh repo view` |
-| `--somente <lista>` | Só as Milestones indicadas: `--somente M0,M1,M2` |
-| `--pausa <ms>` | Intervalo entre criações. Padrão `1200` |
-| `--branch <nome>` | Branch usada nos links dos corpos. Padrão `main` |
-| `--sem-rotulos` | Não cria nem atualiza rótulos |
-| `--sem-milestones` | Não cria nem atualiza Milestones |
-| `--forcar` | Ignora o aborto por desalinhamento de numeração |
-| `--ajuda` | Mostra a ajuda |
+| `--somente <lista>`   | Só as Milestones indicadas: `--somente M0,M1,M2`       |
+| `--pausa <ms>`        | Intervalo entre criações. Padrão `1200`                |
+| `--branch <nome>`     | Branch usada nos links dos corpos. Padrão `main`       |
+| `--sem-rotulos`       | Não cria nem atualiza rótulos                          |
+| `--sem-milestones`    | Não cria nem atualiza Milestones                       |
+| `--forcar`            | Ignora o aborto por desalinhamento de numeração        |
+| `--ajuda`             | Mostra a ajuda                                         |
 
 ---
 

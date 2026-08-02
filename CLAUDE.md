@@ -18,17 +18,17 @@ Gerenciador de Finanças (PFM) — plataforma web de gestão financeira pessoal 
 
 ## Documentação
 
-| Documento | Quando consultar |
-| --------- | ---------------- |
+| Documento                                              | Quando consultar                               |
+| ------------------------------------------------------ | ---------------------------------------------- |
 | [`docs/01-SPECIFICATION.md`](docs/01-SPECIFICATION.md) | Requisitos, regras de negócio, glossário pt-BR |
-| [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md) | Camadas, estrutura de pastas, ADRs |
-| [`docs/03-DATABASE.md`](docs/03-DATABASE.md) | Schema Prisma, constraints, índices, consultas |
-| [`docs/04-API.md`](docs/04-API.md) | Contrato REST — divergir dele é defeito |
-| [`docs/05-DEVELOPMENT.md`](docs/05-DEVELOPMENT.md) | Convenções, Git, testes, antipadrões |
-| [`docs/06-MILESTONES.md`](docs/06-MILESTONES.md) | Roadmap e dependências entre entregas |
-| [`docs/07-ISSUES.md`](docs/07-ISSUES.md) | As 128 issues detalhadas |
-| [`docs/08-CICD.md`](docs/08-CICD.md) | Docker, deploy, Nginx, runbook |
-| [`docs/09-CLAUDE.md`](docs/09-CLAUDE.md) | **Diretrizes normativas de geração de código** |
+| [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md)   | Camadas, estrutura de pastas, ADRs             |
+| [`docs/03-DATABASE.md`](docs/03-DATABASE.md)           | Schema Prisma, constraints, índices, consultas |
+| [`docs/04-API.md`](docs/04-API.md)                     | Contrato REST — divergir dele é defeito        |
+| [`docs/05-DEVELOPMENT.md`](docs/05-DEVELOPMENT.md)     | Convenções, Git, testes, antipadrões           |
+| [`docs/06-MILESTONES.md`](docs/06-MILESTONES.md)       | Roadmap e dependências entre entregas          |
+| [`docs/07-ISSUES.md`](docs/07-ISSUES.md)               | As 128 issues detalhadas                       |
+| [`docs/08-CICD.md`](docs/08-CICD.md)                   | Docker, deploy, Nginx, runbook                 |
+| [`docs/09-CLAUDE.md`](docs/09-CLAUDE.md)               | **Diretrizes normativas de geração de código** |
 
 ## Stack
 

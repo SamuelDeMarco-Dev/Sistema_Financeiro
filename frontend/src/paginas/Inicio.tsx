@@ -1,6 +1,7 @@
-import { TEMAS, usarTema } from '@/contextos/ContextoTema';
-import { cn } from '@/utilitarios/cn';
+import { TEMAS, useTema } from '@/contextos/ContextoTema';
 import type { Tema } from '@/contextos/ContextoTema';
+import { cn } from '@/utilitarios/cn';
+import type { ReactElement } from 'react';
 
 // Classes escritas por extenso (nao interpoladas) para o scanner do Tailwind
 // conseguir encontra-las — `text-${token}` seria descartado no build.
@@ -17,8 +18,8 @@ const RETULOS_TEMA: Record<Tema, string> = {
   SISTEMA: 'Sistema',
 };
 
-export function Inicio(): JSX.Element {
-  const { tema, temaEfetivo, definirTema } = usarTema();
+export function Inicio(): ReactElement {
+  const { tema, temaEfetivo, definirTema } = useTema();
 
   return (
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-[1440px] flex-col gap-6 bg-fundo px-4 py-6 text-texto md:px-8">
@@ -29,7 +30,8 @@ export function Inicio(): JSX.Element {
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-texto">Gerenciador de Finanças</h1>
           <p className="text-sm text-textoSuave">
-            Esqueleto do Design System — tema efetivo atual: <strong>{RETULOS_TEMA[temaEfetivo]}</strong>
+            Esqueleto do Design System — tema efetivo atual:{' '}
+            <strong>{RETULOS_TEMA[temaEfetivo]}</strong>
           </p>
         </div>
 
@@ -39,7 +41,9 @@ export function Inicio(): JSX.Element {
               key={opcao}
               type="button"
               aria-pressed={tema === opcao}
-              onClick={() => definirTema(opcao)}
+              onClick={() => {
+                definirTema(opcao);
+              }}
               className={cn(
                 'rounded-md border px-3 py-2 text-sm text-texto transition-colors',
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
@@ -56,7 +60,10 @@ export function Inicio(): JSX.Element {
         </div>
       </header>
 
-      <section aria-label="Resumo de sinais financeiros" className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <section
+        aria-label="Resumo de sinais financeiros"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+      >
         {RESUMO_SINAIS.map(({ rotulo, classeTexto, sinal }) => (
           <article
             key={rotulo}
