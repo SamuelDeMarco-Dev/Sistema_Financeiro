@@ -10,6 +10,7 @@ build/
 .env
 .env.local
 .env.*.local
+docker-compose.override.yml
 
 # Uploads locais (backend)
 backend/uploads/

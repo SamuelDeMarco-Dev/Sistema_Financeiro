@@ -17,7 +17,10 @@ export default defineConfig({
       NODE_ENV: 'test',
       URL_BASE_API: 'http://localhost:3333',
       URL_BASE_FRONTEND: 'http://localhost:5173',
-      DATABASE_URL: 'postgresql://pfm:pfm_local@localhost:5432/pfm?schema=public',
+      // Porta 5433/pfm_teste (docker-compose.yml), nunca a de dev (5432/pfm):
+      // limparBanco() apaga tudo, e testes de integracao nao podem arriscar
+      // limpar o banco de desenvolvimento por engano.
+      DATABASE_URL: 'postgresql://pfm:pfm_local@localhost:5433/pfm_teste?schema=public',
       JWT_SEGREDO: 'x'.repeat(32),
       ORIGENS_PERMITIDAS: 'http://localhost:5173',
     },
