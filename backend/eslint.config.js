@@ -184,16 +184,22 @@ export default tseslint.config(
       ],
     },
   },
-  // configuracao/ambiente.ts e o unico arquivo autorizado a ler process.env.
+  // configuracao/ambiente.ts e o unico arquivo de codigo de aplicacao
+  // autorizado a ler process.env — os demais importam `ambiente`.
   {
     files: ['src/configuracao/ambiente.ts'],
     rules: { 'no-restricted-properties': 'off' },
   },
   // Arquivos de configuracao na raiz do pacote nao fazem parte do
   // tsconfig.json (src/testes/prisma) — sem type-checking para eles.
+  // vitest.config.ts tambem le process.env.DATABASE_URL diretamente: e
+  // config de teste, nao codigo de aplicacao, e precisa decidir entre o
+  // valor que a CI ja injetou no ambiente e o padrao local antes de
+  // `ambiente` sequer existir.
   {
     files: ['eslint.config.js', 'vitest.config.ts'],
     extends: [tseslint.configs.disableTypeChecked],
+    rules: { 'no-restricted-properties': 'off' },
   },
   // Testes: console e liberado (falhas de teste imprimem contexto);
   // objetos mockados (`res.status = vi.fn()`) disparam falso-positivo em

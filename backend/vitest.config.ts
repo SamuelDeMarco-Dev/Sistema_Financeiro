@@ -17,10 +17,17 @@ export default defineConfig({
       NODE_ENV: 'test',
       URL_BASE_API: 'http://localhost:3333',
       URL_BASE_FRONTEND: 'http://localhost:5173',
-      // Porta 5433/pfm_teste (docker-compose.yml), nunca a de dev (5432/pfm):
-      // limparBanco() apaga tudo, e testes de integracao nao podem arriscar
-      // limpar o banco de desenvolvimento por engano.
-      DATABASE_URL: 'postgresql://pfm:pfm_local@localhost:5433/pfm_teste?schema=public',
+      // So usa o padrao local quando DATABASE_URL ainda nao veio do ambiente
+      // (ao contrario dos demais valores deste bloco, que sempre sobrescrevem):
+      // a CI define suas proprias credenciais do servico Postgres via env do
+      // job, diferentes das do docker-compose.yml local, e um valor fixo
+      // aqui quebraria uma das duas pontas. Em qualquer caso e sempre a
+      // porta 5433/pfm_teste, nunca a de dev (5432/pfm) — limparBanco()
+      // apaga tudo, e testes de integracao nao podem arriscar limpar o
+      // banco de desenvolvimento por engano.
+      DATABASE_URL:
+        process.env.DATABASE_URL ??
+        'postgresql://pfm:pfm_local@localhost:5433/pfm_teste?schema=public',
       JWT_SEGREDO: 'x'.repeat(32),
       ORIGENS_PERMITIDAS: 'http://localhost:5173',
     },
