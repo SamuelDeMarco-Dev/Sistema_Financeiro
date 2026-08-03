@@ -49,3 +49,13 @@ export async function cadastrar(dados: DadosCadastro): Promise<UsuarioCadastrado
 export async function sair(): Promise<void> {
   await api.post('/autenticacao/sair');
 }
+
+export async function verificarEmail(token: string): Promise<void> {
+  await api.post('/autenticacao/verificar-email', { token });
+}
+
+// Sempre 200 com a mesma mensagem, exista ou nao a conta — o backend nao
+// revela quais e-mails estao cadastrados (mesmo padrao de esqueci-senha).
+export async function reenviarVerificacao(email: string): Promise<void> {
+  await api.post('/autenticacao/reenviar-verificacao', { email });
+}

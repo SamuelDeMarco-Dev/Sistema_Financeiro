@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
-import { cadastrar, entrar, sair } from './autenticacao.servico';
+import {
+  cadastrar,
+  entrar,
+  reenviarVerificacao,
+  sair,
+  verificarEmail,
+} from './autenticacao.servico';
 
 vi.mock('./api', () => ({
   api: { post: vi.fn(), get: vi.fn() },
@@ -73,5 +79,25 @@ describe('autenticacao.servico', () => {
     await sair();
 
     expect(api.post).toHaveBeenCalledWith('/autenticacao/sair');
+  });
+
+  it('verificarEmail() posta o token em /autenticacao/verificar-email', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: undefined });
+
+    await verificarEmail('token-bruto');
+
+    expect(api.post).toHaveBeenCalledWith('/autenticacao/verificar-email', {
+      token: 'token-bruto',
+    });
+  });
+
+  it('reenviarVerificacao() posta o e-mail em /autenticacao/reenviar-verificacao', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: undefined });
+
+    await reenviarVerificacao('samuel@exemplo.com');
+
+    expect(api.post).toHaveBeenCalledWith('/autenticacao/reenviar-verificacao', {
+      email: 'samuel@exemplo.com',
+    });
   });
 });
