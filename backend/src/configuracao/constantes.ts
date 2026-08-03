@@ -12,3 +12,10 @@ export const CAMINHO_COOKIE_REFRESH = '/api/v1/autenticacao';
 /** Rate limit de POST /autenticacao/renovar (issue #13), por IP. */
 export const LIMITE_RENOVACAO_POR_IP = 30;
 export const MINUTOS_JANELA_RENOVACAO = 15;
+
+/** RF-07: validade do token de recuperacao de senha. */
+export const HORAS_EXPIRACAO_TOKEN_RECUPERACAO = 1;
+
+/** Rate limit de POST /autenticacao/reenviar-verificacao, por IP+e-mail. */
+export const LIMITE_REENVIO_VERIFICACAO = 3;
+export const MINUTOS_JANELA_REENVIO_VERIFICACAO = 60;

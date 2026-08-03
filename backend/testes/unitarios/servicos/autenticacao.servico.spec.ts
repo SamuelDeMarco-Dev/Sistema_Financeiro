@@ -6,6 +6,7 @@ import {
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
   NaoAutenticadoErro,
+  ValidacaoErro,
 } from '@/erros';
 import {
   type TokenRenovacaoComUsuario,
@@ -408,6 +409,173 @@ describe('AutenticacaoServico.sair / sairTodos / buscarUsuarioPorId', () => {
 
       await expect(servico.buscarUsuarioPorId('usuario-1')).resolves.toEqual(usuario);
       expect(repositorio.buscarPorId).toHaveBeenCalledWith('usuario-1');
+    });
+  });
+});
+
+describe('AutenticacaoServico — verificacao, recuperacao e alteracao de senha', () => {
+  let servico: AutenticacaoServico;
+  let repositorio: MockProxy<UsuarioRepositorio>;
+  let tokenRepositorio: MockProxy<TokenRenovacaoRepositorio>;
+
+  beforeEach(() => {
+    repositorio = mock();
+    tokenRepositorio = mock();
+    servico = new AutenticacaoServico(repositorio, tokenRepositorio);
+    enviarEmailMockado.mockReset().mockResolvedValue(undefined);
+  });
+
+  describe('verificarEmail', () => {
+    it('confirma o e-mail quando o token e valido', async () => {
+      repositorio.buscarPorTokenVerificacao.mockResolvedValue(
+        fabricarUsuario({ tokenVerificacaoExpiraEm: new Date(Date.now() + 60_000) }),
+      );
+
+      await servico.verificarEmail({ token: 'token-valido' });
+
+      expect(repositorio.confirmarEmail).toHaveBeenCalledWith('usuario-1');
+    });
+
+    it('lanca ValidacaoErro (400) quando o token nao e encontrado (ex.: ja usado)', async () => {
+      repositorio.buscarPorTokenVerificacao.mockResolvedValue(null);
+
+      await expect(servico.verificarEmail({ token: 'token-usado' })).rejects.toThrow(ValidacaoErro);
+      expect(repositorio.confirmarEmail).not.toHaveBeenCalled();
+    });
+
+    it('lanca ValidacaoErro quando o token esta expirado', async () => {
+      repositorio.buscarPorTokenVerificacao.mockResolvedValue(
+        fabricarUsuario({ tokenVerificacaoExpiraEm: new Date(Date.now() - 1000) }),
+      );
+
+      await expect(servico.verificarEmail({ token: 'token-velho' })).rejects.toThrow(ValidacaoErro);
+      expect(repositorio.confirmarEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reenviarVerificacao', () => {
+    it('gera novo token e envia e-mail quando o usuario existe e nao esta verificado', async () => {
+      repositorio.buscarPorEmail.mockResolvedValue(fabricarUsuario({ emailVerificadoEm: null }));
+
+      await servico.reenviarVerificacao({ email: 'samuel@exemplo.com' });
+
+      expect(repositorio.definirTokenVerificacao).toHaveBeenCalledOnce();
+      expect(enviarEmailMockado).toHaveBeenCalledOnce();
+    });
+
+    it('nao faz nada quando o e-mail nao existe (sem revelar isso)', async () => {
+      repositorio.buscarPorEmail.mockResolvedValue(null);
+
+      await servico.reenviarVerificacao({ email: 'nao-existe@exemplo.com' });
+
+      expect(repositorio.definirTokenVerificacao).not.toHaveBeenCalled();
+      expect(enviarEmailMockado).not.toHaveBeenCalled();
+    });
+
+    it('nao faz nada quando o e-mail ja esta verificado', async () => {
+      repositorio.buscarPorEmail.mockResolvedValue(
+        fabricarUsuario({ emailVerificadoEm: new Date() }),
+      );
+
+      await servico.reenviarVerificacao({ email: 'samuel@exemplo.com' });
+
+      expect(repositorio.definirTokenVerificacao).not.toHaveBeenCalled();
+      expect(enviarEmailMockado).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('esqueciSenha', () => {
+    it('gera token de recuperacao e envia e-mail quando o usuario existe', async () => {
+      repositorio.buscarPorEmail.mockResolvedValue(fabricarUsuario());
+
+      await servico.esqueciSenha({ email: 'samuel@exemplo.com' });
+
+      expect(repositorio.definirTokenRecuperacao).toHaveBeenCalledOnce();
+      expect(enviarEmailMockado).toHaveBeenCalledOnce();
+    });
+
+    it('nao faz nada quando o e-mail nao existe (resposta neutra e responsabilidade do controlador)', async () => {
+      repositorio.buscarPorEmail.mockResolvedValue(null);
+
+      await servico.esqueciSenha({ email: 'nao-existe@exemplo.com' });
+
+      expect(repositorio.definirTokenRecuperacao).not.toHaveBeenCalled();
+      expect(enviarEmailMockado).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('redefinirSenha', () => {
+    const dados = {
+      token: 'token-recuperacao',
+      senha: 'NovaSenha@2026',
+      confirmacaoSenha: 'NovaSenha@2026',
+    };
+
+    it('troca a senha e revoga TODAS as sessoes quando o token e valido', async () => {
+      repositorio.buscarPorTokenRecuperacao.mockResolvedValue(
+        fabricarUsuario({ tokenRecuperacaoExpiraEm: new Date(Date.now() + 60_000) }),
+      );
+
+      await servico.redefinirSenha(dados);
+
+      expect(repositorio.redefinirSenha).toHaveBeenCalledWith(
+        'usuario-1',
+        expect.any(String),
+        undefined,
+      );
+      expect(tokenRepositorio.revogarTodosDoUsuario).toHaveBeenCalledWith('usuario-1', undefined);
+    });
+
+    it('lanca ValidacaoErro quando o token e invalido ou ja foi usado', async () => {
+      repositorio.buscarPorTokenRecuperacao.mockResolvedValue(null);
+
+      await expect(servico.redefinirSenha(dados)).rejects.toThrow(ValidacaoErro);
+      expect(repositorio.redefinirSenha).not.toHaveBeenCalled();
+    });
+
+    it('lanca ValidacaoErro quando o token esta expirado (> 1h)', async () => {
+      repositorio.buscarPorTokenRecuperacao.mockResolvedValue(
+        fabricarUsuario({ tokenRecuperacaoExpiraEm: new Date(Date.now() - 1000) }),
+      );
+
+      await expect(servico.redefinirSenha(dados)).rejects.toThrow(ValidacaoErro);
+      expect(repositorio.redefinirSenha).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('alterarSenha', () => {
+    const dados = {
+      senhaAtual: 'SenhaForte@2026',
+      senhaNova: 'OutraSenha@2026',
+      confirmacaoSenha: 'OutraSenha@2026',
+    };
+
+    it('altera a senha e revoga as OUTRAS sessoes, preservando a atual', async () => {
+      repositorio.buscarPorId.mockResolvedValue(fabricarUsuario());
+      compararMockado.mockResolvedValue(true);
+
+      await servico.alterarSenha('usuario-1', dados, 'token-da-sessao-atual');
+
+      expect(repositorio.atualizarSenha).toHaveBeenCalledWith(
+        'usuario-1',
+        expect.any(String),
+        undefined,
+      );
+      expect(tokenRepositorio.revogarTodosDoUsuarioExceto).toHaveBeenCalledWith(
+        'usuario-1',
+        expect.any(String),
+        undefined,
+      );
+    });
+
+    it('lanca ValidacaoErro quando a senha atual esta incorreta', async () => {
+      repositorio.buscarPorId.mockResolvedValue(fabricarUsuario());
+      compararMockado.mockResolvedValue(false);
+
+      await expect(servico.alterarSenha('usuario-1', dados, 'token')).rejects.toThrow(
+        ValidacaoErro,
+      );
+      expect(repositorio.atualizarSenha).not.toHaveBeenCalled();
     });
   });
 });

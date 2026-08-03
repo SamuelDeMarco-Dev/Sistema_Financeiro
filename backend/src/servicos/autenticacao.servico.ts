@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { executarTransacao } from '@/banco/transacao';
 import { ambiente } from '@/configuracao/ambiente';
 import {
+  HORAS_EXPIRACAO_TOKEN_RECUPERACAO,
   HORAS_EXPIRACAO_TOKEN_VERIFICACAO,
   LIMITE_TENTATIVAS_LOGIN,
   MINUTOS_BLOQUEIO_LOGIN,
@@ -12,16 +13,26 @@ import {
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
   NaoAutenticadoErro,
+  ValidacaoErro,
 } from '@/erros';
 import { TokenRenovacaoRepositorio } from '@/repositorios/token-renovacao.repositorio';
 import { UsuarioRepositorio } from '@/repositorios/usuario.repositorio';
 import { enviarEmail } from '@/utilitarios/email/enviador';
+import { modeloRecuperacaoSenha } from '@/utilitarios/email/modelos/recuperacao-senha';
 import { modeloVerificacaoEmail } from '@/utilitarios/email/modelos/verificacao-email';
 import { assinarAccessToken, duracaoEmSegundos } from '@/utilitarios/jwt';
 import { registrador } from '@/utilitarios/registrador';
 import { comparar, gerarHash } from '@/utilitarios/senha';
 import { gerarTokenOpaco, hashToken } from '@/utilitarios/token';
-import type { CadastrarDTO, EntrarDTO } from '@/validadores/autenticacao.validador';
+import type {
+  AlterarSenhaDTO,
+  CadastrarDTO,
+  EntrarDTO,
+  EsqueciSenhaDTO,
+  ReenviarVerificacaoDTO,
+  RedefinirSenhaDTO,
+  VerificarEmailDTO,
+} from '@/validadores/autenticacao.validador';
 import type { Perfil, Usuario } from '@prisma/client';
 
 const UMA_HORA_MS = 1000 * 60 * 60;
@@ -234,5 +245,117 @@ export class AutenticacaoServico {
    * importar repositorio diretamente (fronteiras de camada, issue #8). */
   async buscarUsuarioPorId(id: string): Promise<Usuario | null> {
     return this.repositorio.buscarPorId(id);
+  }
+
+  /** RF-02: token de 24h, uso unico — confirmarEmail ja o limpa, entao
+   * usar o mesmo token de novo cai no ramo "nao encontrado" abaixo. */
+  async verificarEmail(dados: VerificarEmailDTO): Promise<void> {
+    const usuario = await this.repositorio.buscarPorTokenVerificacao(dados.token);
+
+    if (
+      !usuario?.tokenVerificacaoExpiraEm ||
+      usuario.tokenVerificacaoExpiraEm.getTime() <= Date.now()
+    ) {
+      throw new ValidacaoErro('Token de verificação inválido ou expirado.');
+    }
+
+    await this.repositorio.confirmarEmail(usuario.id);
+  }
+
+  /** Silencioso como esqueciSenha: nao revela se o e-mail existe, nem se
+   * ja foi verificado — o rate limit de 3/hora (rotas) e a defesa real
+   * contra abuso, nao a resposta. */
+  async reenviarVerificacao(dados: ReenviarVerificacaoDTO): Promise<void> {
+    const usuario = await this.repositorio.buscarPorEmail(dados.email.toLowerCase());
+    if (!usuario || usuario.emailVerificadoEm) return;
+
+    const tokenVerificacao = gerarToken();
+    const tokenVerificacaoExpiraEm = new Date(
+      Date.now() + HORAS_EXPIRACAO_TOKEN_VERIFICACAO * UMA_HORA_MS,
+    );
+    await this.repositorio.definirTokenVerificacao(
+      usuario.id,
+      tokenVerificacao,
+      tokenVerificacaoExpiraEm,
+    );
+
+    const linkVerificacao = `${ambiente.URL_BASE_FRONTEND}/verificar-email?token=${tokenVerificacao}`;
+    void enviarEmail({
+      para: usuario.email,
+      ...modeloVerificacaoEmail({ nome: usuario.nome, linkVerificacao }),
+    });
+  }
+
+  /** 04-API.md §7.6: responde sempre a mesma coisa exista ou nao o
+   * e-mail — a neutralidade e responsabilidade do controlador, que nunca
+   * inspeciona o resultado desta chamada. */
+  async esqueciSenha(dados: EsqueciSenhaDTO): Promise<void> {
+    const usuario = await this.repositorio.buscarPorEmail(dados.email.toLowerCase());
+    if (!usuario) return;
+
+    const tokenRecuperacao = gerarToken();
+    const tokenRecuperacaoExpiraEm = new Date(
+      Date.now() + HORAS_EXPIRACAO_TOKEN_RECUPERACAO * UMA_HORA_MS,
+    );
+    await this.repositorio.definirTokenRecuperacao(
+      usuario.id,
+      tokenRecuperacao,
+      tokenRecuperacaoExpiraEm,
+    );
+
+    const linkRecuperacao = `${ambiente.URL_BASE_FRONTEND}/redefinir-senha?token=${tokenRecuperacao}`;
+    void enviarEmail({
+      para: usuario.email,
+      ...modeloRecuperacaoSenha({ nome: usuario.nome, linkRecuperacao }),
+    });
+  }
+
+  /** RF-07: token de 1h, uso unico, e derruba TODAS as sessoes — se
+   * alguem redefiniu a senha por e-mail, nenhuma sessao antiga (talvez de
+   * quem invadiu a conta) deve continuar valida. */
+  async redefinirSenha(dados: RedefinirSenhaDTO): Promise<void> {
+    const usuario = await this.repositorio.buscarPorTokenRecuperacao(dados.token);
+
+    if (
+      !usuario?.tokenRecuperacaoExpiraEm ||
+      usuario.tokenRecuperacaoExpiraEm.getTime() <= Date.now()
+    ) {
+      throw new ValidacaoErro('Token de recuperação inválido ou expirado.');
+    }
+
+    const senhaHash = await gerarHash(dados.senha);
+
+    await executarTransacao(async (tx) => {
+      await this.repositorio.redefinirSenha(usuario.id, senhaHash, tx);
+      await this.tokenRepositorio.revogarTodosDoUsuario(usuario.id, tx);
+    });
+  }
+
+  /** RF-08: exige a senha atual; revoga as OUTRAS sessoes e preserva a
+   * que fez a requisicao (identificada pelo proprio cookie de refresh). */
+  async alterarSenha(
+    usuarioId: string,
+    dados: AlterarSenhaDTO,
+    tokenAtualBruto: string | undefined,
+  ): Promise<void> {
+    const usuario = await this.repositorio.buscarPorId(usuarioId);
+    if (!usuario) {
+      throw new NaoAutenticadoErro('Sessão inválida.');
+    }
+
+    const senhaCorreta = await comparar(dados.senhaAtual, usuario.senhaHash);
+    if (!senhaCorreta) {
+      throw new ValidacaoErro('Senha atual incorreta.', [
+        { campo: 'senhaAtual', mensagem: 'Senha atual incorreta.' },
+      ]);
+    }
+
+    const senhaHash = await gerarHash(dados.senhaNova);
+    const tokenHashAtual = tokenAtualBruto ? hashToken(tokenAtualBruto) : undefined;
+
+    await executarTransacao(async (tx) => {
+      await this.repositorio.atualizarSenha(usuarioId, senhaHash, tx);
+      await this.tokenRepositorio.revogarTodosDoUsuarioExceto(usuarioId, tokenHashAtual, tx);
+    });
   }
 }

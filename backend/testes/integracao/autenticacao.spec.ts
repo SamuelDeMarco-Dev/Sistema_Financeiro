@@ -408,3 +408,197 @@ describe('POST /api/v1/autenticacao/sair e /sair-todos', () => {
     expect(renovarSessao2.status).toBe(401);
   });
 });
+
+describe('POST /api/v1/autenticacao/verificar-email', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('verifica o e-mail com um token valido', async () => {
+    await request(app)
+      .post('/api/v1/autenticacao/cadastrar')
+      .send({ ...CADASTRO_VALIDO, email: 'verificar@exemplo.com' });
+    const usuario = await prisma.usuario.findUniqueOrThrow({
+      where: { email: 'verificar@exemplo.com' },
+    });
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/verificar-email')
+      .send({ token: usuario.tokenVerificacao });
+
+    expect(resposta.status).toBe(200);
+    const atualizado = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } });
+    expect(atualizado.emailVerificadoEm).toBeTruthy();
+    expect(atualizado.tokenVerificacao).toBeNull();
+  });
+
+  it('responde 400 VALIDACAO na segunda vez que o mesmo token e usado', async () => {
+    await request(app)
+      .post('/api/v1/autenticacao/cadastrar')
+      .send({ ...CADASTRO_VALIDO, email: 'duplo-uso@exemplo.com' });
+    const usuario = await prisma.usuario.findUniqueOrThrow({
+      where: { email: 'duplo-uso@exemplo.com' },
+    });
+
+    await request(app)
+      .post('/api/v1/autenticacao/verificar-email')
+      .send({ token: usuario.tokenVerificacao });
+    const segundaVez = await request(app)
+      .post('/api/v1/autenticacao/verificar-email')
+      .send({ token: usuario.tokenVerificacao });
+
+    expect(segundaVez.status).toBe(400);
+    expect(segundaVez.body).toMatchObject({ codigo: 'VALIDACAO' });
+  });
+});
+
+describe('POST /api/v1/autenticacao/esqueci-senha e /redefinir-senha', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('esqueci-senha responde 200 com a MESMA mensagem para e-mail existente e inexistente', async () => {
+    await criarUsuarioVerificado({ email: 'existe@exemplo.com' });
+
+    const respostaExistente = await request(app)
+      .post('/api/v1/autenticacao/esqueci-senha')
+      .send({ email: 'existe@exemplo.com' });
+    const respostaInexistente = await request(app)
+      .post('/api/v1/autenticacao/esqueci-senha')
+      .send({ email: 'nao-existe-mesmo@exemplo.com' });
+
+    expect(respostaExistente.status).toBe(200);
+    expect(respostaInexistente.status).toBe(200);
+    const corpoExistente = respostaExistente.body as { message: string };
+    const corpoInexistente = respostaInexistente.body as { message: string };
+    expect(corpoExistente.message).toBe(corpoInexistente.message);
+  });
+
+  it('redefine a senha com token valido e revoga TODAS as sessoes', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'redefinir@exemplo.com' });
+    await logar(email, senha);
+    await logar(email, senha);
+
+    await request(app).post('/api/v1/autenticacao/esqueci-senha').send({ email });
+    const usuario = await prisma.usuario.findUniqueOrThrow({ where: { email } });
+
+    const resposta = await request(app).post('/api/v1/autenticacao/redefinir-senha').send({
+      token: usuario.tokenRecuperacao,
+      senha: 'SenhaNova@2026',
+      confirmacaoSenha: 'SenhaNova@2026',
+    });
+    expect(resposta.status).toBe(200);
+
+    const tokensAtivos = await prisma.tokenRenovacao.count({
+      where: { usuarioId: usuario.id, revogadoEm: null },
+    });
+    expect(tokensAtivos).toBe(0);
+
+    // A senha antiga nao funciona mais; a nova sim.
+    const loginComSenhaAntiga = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email, senha });
+    expect(loginComSenhaAntiga.status).toBe(401);
+
+    const loginComSenhaNova = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email, senha: 'SenhaNova@2026' });
+    expect(loginComSenhaNova.status).toBe(200);
+  });
+
+  it('responde 400 quando o token de recuperacao esta expirado (> 1h)', async () => {
+    const { email } = await criarUsuarioVerificado({ email: 'token-velho@exemplo.com' });
+    await request(app).post('/api/v1/autenticacao/esqueci-senha').send({ email });
+    await prisma.usuario.updateMany({
+      where: { email },
+      data: { tokenRecuperacaoExpiraEm: new Date(Date.now() - 1000) },
+    });
+    const usuario = await prisma.usuario.findUniqueOrThrow({ where: { email } });
+
+    const resposta = await request(app).post('/api/v1/autenticacao/redefinir-senha').send({
+      token: usuario.tokenRecuperacao,
+      senha: 'SenhaNova@2026',
+      confirmacaoSenha: 'SenhaNova@2026',
+    });
+
+    expect(resposta.status).toBe(400);
+  });
+});
+
+describe('PATCH /api/v1/autenticacao/alterar-senha', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('altera a senha, mantem a sessao atual e revoga as outras', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'alterar-senha@exemplo.com' });
+    const sessaoAtual = await logar(email, senha);
+    const outraSessao = await logar(email, senha);
+
+    const resposta = await request(app)
+      .patch('/api/v1/autenticacao/alterar-senha')
+      .set('Authorization', `Bearer ${sessaoAtual.accessToken}`)
+      .set('Cookie', `refreshToken=${sessaoAtual.refreshToken}`)
+      .send({
+        senhaAtual: senha,
+        senhaNova: 'OutraSenha@2026',
+        confirmacaoSenha: 'OutraSenha@2026',
+      });
+
+    expect(resposta.status).toBe(200);
+
+    // A sessao atual continua renovando; a outra, nao.
+    const renovarAtual = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${sessaoAtual.refreshToken}`);
+    const renovarOutra = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${outraSessao.refreshToken}`);
+
+    expect(renovarAtual.status).toBe(200);
+    expect(renovarOutra.status).toBe(401);
+  });
+
+  it('responde 400 quando a senha atual esta incorreta', async () => {
+    const { email, senha } = await criarUsuarioVerificado({
+      email: 'senha-atual-errada@exemplo.com',
+    });
+    const sessao = await logar(email, senha);
+
+    const resposta = await request(app)
+      .patch('/api/v1/autenticacao/alterar-senha')
+      .set('Authorization', `Bearer ${sessao.accessToken}`)
+      .send({
+        senhaAtual: 'SenhaErrada@2026',
+        senhaNova: 'OutraSenha@2026',
+        confirmacaoSenha: 'OutraSenha@2026',
+      });
+
+    expect(resposta.status).toBe(400);
+  });
+
+  it('rejeita sem token de acesso (401 NAO_AUTENTICADO)', async () => {
+    const resposta = await request(app).patch('/api/v1/autenticacao/alterar-senha').send({
+      senhaAtual: 'Qualquer@123',
+      senhaNova: 'OutraSenha@2026',
+      confirmacaoSenha: 'OutraSenha@2026',
+    });
+
+    expect(resposta.status).toBe(401);
+  });
+});

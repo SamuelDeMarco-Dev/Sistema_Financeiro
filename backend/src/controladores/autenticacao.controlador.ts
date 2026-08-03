@@ -4,7 +4,15 @@ import { asyncHandler } from '@/middlewares/async-handler';
 import { AutenticacaoServico } from '@/servicos/autenticacao.servico';
 import { mapearUsuarioComPerfil, mapearUsuarioPublico } from '@/utilitarios/mapear-usuario';
 import { respostaSucesso } from '@/utilitarios/resposta';
-import type { CadastrarDTO, EntrarDTO } from '@/validadores/autenticacao.validador';
+import type {
+  AlterarSenhaDTO,
+  CadastrarDTO,
+  EntrarDTO,
+  EsqueciSenhaDTO,
+  ReenviarVerificacaoDTO,
+  RedefinirSenhaDTO,
+  VerificarEmailDTO,
+} from '@/validadores/autenticacao.validador';
 import type { Request, Response } from 'express';
 
 function definirCookieRefresh(res: Response, tokenBruto: string, expiraEm: Date): void {
@@ -86,5 +94,57 @@ export class AutenticacaoControlador {
 
     res.clearCookie(NOME_COOKIE_REFRESH, { path: CAMINHO_COOKIE_REFRESH });
     res.status(204).send();
+  });
+
+  verificarEmail = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.verificarEmail(req.body as VerificarEmailDTO);
+
+    res.status(200).json(respostaSucesso({}, 'E-mail verificado com sucesso.'));
+  });
+
+  reenviarVerificacao = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.reenviarVerificacao(req.body as ReenviarVerificacaoDTO);
+
+    // Mesma mensagem exista ou nao a conta, ou ja esteja verificada —
+    // o servico decide silenciosamente o que fazer de verdade.
+    res
+      .status(200)
+      .json(
+        respostaSucesso(
+          {},
+          'Se o e-mail estiver cadastrado e pendente de verificação, você receberá um novo link em instantes.',
+        ),
+      );
+  });
+
+  esqueciSenha = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.esqueciSenha(req.body as EsqueciSenhaDTO);
+
+    // 04-API.md §7.6: sempre 200, sempre a mesma mensagem.
+    res
+      .status(200)
+      .json(
+        respostaSucesso(
+          {},
+          'Se o e-mail estiver cadastrado, você receberá as instruções em instantes.',
+        ),
+      );
+  });
+
+  redefinirSenha = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.redefinirSenha(req.body as RedefinirSenhaDTO);
+
+    res.status(200).json(respostaSucesso({}, 'Senha redefinida com sucesso.'));
+  });
+
+  alterarSenha = asyncHandler(async (req: Request, res: Response) => {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    await this.servico.alterarSenha(
+      req.usuario.id,
+      req.body as AlterarSenhaDTO,
+      cookies[NOME_COOKIE_REFRESH],
+    );
+
+    res.status(200).json(respostaSucesso({}, 'Senha alterada com sucesso.'));
   });
 }

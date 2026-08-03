@@ -46,4 +46,21 @@ export class TokenRenovacaoRepositorio {
       data: { revogadoEm: new Date() },
     });
   }
+
+  /** RF-08: alterar-senha revoga as OUTRAS sessoes, preservando a atual —
+   * `tokenHashAtual` ausente (sem cookie na requisicao) revoga todas. */
+  async revogarTodosDoUsuarioExceto(
+    usuarioId: string,
+    tokenHashAtual: string | undefined,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? prisma).tokenRenovacao.updateMany({
+      where: {
+        usuarioId,
+        revogadoEm: null,
+        ...(tokenHashAtual ? { tokenHash: { not: tokenHashAtual } } : {}),
+      },
+      data: { revogadoEm: new Date() },
+    });
+  }
 }

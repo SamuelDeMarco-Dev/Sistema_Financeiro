@@ -24,6 +24,20 @@ export class UsuarioRepositorio {
     return prisma.usuario.findFirst({ where: { id, excluidoEm: null }, include: { perfil: true } });
   }
 
+  async buscarPorTokenVerificacao(token: string): Promise<UsuarioComPerfil | null> {
+    return prisma.usuario.findFirst({
+      where: { tokenVerificacao: token, excluidoEm: null },
+      include: { perfil: true },
+    });
+  }
+
+  async buscarPorTokenRecuperacao(token: string): Promise<UsuarioComPerfil | null> {
+    return prisma.usuario.findFirst({
+      where: { tokenRecuperacao: token, excluidoEm: null },
+      include: { perfil: true },
+    });
+  }
+
   /** Usuario + Perfil (com os padroes do schema) em uma unica escrita
    * atomica — o create aninhado do Prisma cobre as duas tabelas. */
   async criar(dados: DadosCriarUsuario, tx?: Prisma.TransactionClient): Promise<Usuario> {
@@ -53,5 +67,53 @@ export class UsuarioRepositorio {
       where: { id },
       data: { tentativasLogin: 0, bloqueadoAte: null, ultimoLoginEm: new Date() },
     });
+  }
+
+  /** RF-02: token de uso unico invalidado no proprio consumo. */
+  async confirmarEmail(id: string): Promise<void> {
+    await prisma.usuario.update({
+      where: { id },
+      data: {
+        emailVerificadoEm: new Date(),
+        tokenVerificacao: null,
+        tokenVerificacaoExpiraEm: null,
+      },
+    });
+  }
+
+  async definirTokenVerificacao(id: string, token: string, expiraEm: Date): Promise<void> {
+    await prisma.usuario.update({
+      where: { id },
+      data: { tokenVerificacao: token, tokenVerificacaoExpiraEm: expiraEm },
+    });
+  }
+
+  async definirTokenRecuperacao(id: string, token: string, expiraEm: Date): Promise<void> {
+    await prisma.usuario.update({
+      where: { id },
+      data: { tokenRecuperacao: token, tokenRecuperacaoExpiraEm: expiraEm },
+    });
+  }
+
+  /** RF-07: troca a senha e invalida o token de recuperacao no mesmo
+   * update — uso unico. */
+  async redefinirSenha(
+    id: string,
+    senhaHash: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? prisma).usuario.update({
+      where: { id },
+      data: { senhaHash, tokenRecuperacao: null, tokenRecuperacaoExpiraEm: null },
+    });
+  }
+
+  /** RF-08: alteracao de senha autenticada — sem token para invalidar. */
+  async atualizarSenha(
+    id: string,
+    senhaHash: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    await (tx ?? prisma).usuario.update({ where: { id }, data: { senhaHash } });
   }
 }

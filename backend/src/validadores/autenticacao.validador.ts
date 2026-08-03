@@ -38,3 +38,51 @@ export const entrarSchema = z.object({
 });
 
 export type EntrarDTO = z.infer<typeof entrarSchema>['body'];
+
+export const verificarEmailSchema = z.object({
+  body: z.object({ token: z.string().min(1, 'Token invalido.') }),
+});
+
+export type VerificarEmailDTO = z.infer<typeof verificarEmailSchema>['body'];
+
+export const reenviarVerificacaoSchema = z.object({
+  body: z.object({ email: z.string().trim().email('E-mail invalido.') }),
+});
+
+export type ReenviarVerificacaoDTO = z.infer<typeof reenviarVerificacaoSchema>['body'];
+
+export const esqueciSenhaSchema = z.object({
+  body: z.object({ email: z.string().trim().email('E-mail invalido.') }),
+});
+
+export type EsqueciSenhaDTO = z.infer<typeof esqueciSenhaSchema>['body'];
+
+export const redefinirSenhaSchema = z.object({
+  body: z
+    .object({
+      token: z.string().min(1, 'Token invalido.'),
+      senha: senhaSchema,
+      confirmacaoSenha: z.string(),
+    })
+    .refine((dados) => dados.senha === dados.confirmacaoSenha, {
+      message: 'A confirmacao de senha nao corresponde a senha informada.',
+      path: ['confirmacaoSenha'],
+    }),
+});
+
+export type RedefinirSenhaDTO = z.infer<typeof redefinirSenhaSchema>['body'];
+
+export const alterarSenhaSchema = z.object({
+  body: z
+    .object({
+      senhaAtual: z.string().min(1, 'Informe a senha atual.'),
+      senhaNova: senhaSchema,
+      confirmacaoSenha: z.string(),
+    })
+    .refine((dados) => dados.senhaNova === dados.confirmacaoSenha, {
+      message: 'A confirmacao de senha nao corresponde a senha informada.',
+      path: ['confirmacaoSenha'],
+    }),
+});
+
+export type AlterarSenhaDTO = z.infer<typeof alterarSenhaSchema>['body'];
