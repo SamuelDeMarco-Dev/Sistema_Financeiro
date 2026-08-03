@@ -1,22 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 import {
+  alterarSenha,
   cadastrar,
   entrar,
   esqueciSenha,
+  listarSessoes,
   reenviarVerificacao,
   redefinirSenha,
+  revogarSessao,
   sair,
   verificarEmail,
 } from './autenticacao.servico';
 
 vi.mock('./api', () => ({
-  api: { post: vi.fn(), get: vi.fn() },
+  api: { post: vi.fn(), get: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
 describe('autenticacao.servico', () => {
   beforeEach(() => {
     vi.mocked(api.post).mockReset();
+    vi.mocked(api.get).mockReset();
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.delete).mockReset();
   });
 
   it('entrar() posta as credenciais em /autenticacao/entrar e devolve data.data desempacotado', async () => {
@@ -124,5 +130,47 @@ describe('autenticacao.servico', () => {
     await redefinirSenha(dados);
 
     expect(api.post).toHaveBeenCalledWith('/autenticacao/redefinir-senha', dados);
+  });
+
+  it('alterarSenha() envia PATCH /autenticacao/alterar-senha', async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: undefined });
+
+    const dados = {
+      senhaAtual: 'SenhaForte@2026',
+      senhaNova: 'OutraSenha@2026',
+      confirmacaoSenha: 'OutraSenha@2026',
+    };
+    await alterarSenha(dados);
+
+    expect(api.patch).toHaveBeenCalledWith('/autenticacao/alterar-senha', dados);
+  });
+
+  it('listarSessoes() busca GET /autenticacao/sessoes e devolve a lista desempacotada', async () => {
+    const sessoesFake = [
+      {
+        id: 'sessao-1',
+        dispositivo: 'Chrome · Windows',
+        ip: '189.0.0.1',
+        criadoEm: '2026-07-28T09:11:00.000Z',
+        expiraEm: '2026-08-04T09:11:00.000Z',
+        atual: true,
+      },
+    ];
+    vi.mocked(api.get).mockResolvedValue({
+      data: { success: true, message: 'Sessões ativas listadas.', data: { sessoes: sessoesFake } },
+    });
+
+    const resultado = await listarSessoes();
+
+    expect(api.get).toHaveBeenCalledWith('/autenticacao/sessoes');
+    expect(resultado).toEqual(sessoesFake);
+  });
+
+  it('revogarSessao() envia DELETE /autenticacao/sessoes/:id', async () => {
+    vi.mocked(api.delete).mockResolvedValue({ data: undefined });
+
+    await revogarSessao('sessao-1');
+
+    expect(api.delete).toHaveBeenCalledWith('/autenticacao/sessoes/sessao-1');
   });
 });

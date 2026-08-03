@@ -57,3 +57,16 @@ export const redefinirSenhaSchema = z
   });
 
 export type RedefinirSenhaFormulario = z.infer<typeof redefinirSenhaSchema>;
+
+export const alterarSenhaSchema = z
+  .object({
+    senhaAtual: z.string().min(1, 'Informe a senha atual.'),
+    senhaNova: senhaSchema,
+    confirmacaoSenha: z.string().min(1, 'Confirme a senha.'),
+  })
+  .refine((dados) => dados.senhaNova === dados.confirmacaoSenha, {
+    message: 'A confirmacao de senha nao corresponde a senha informada.',
+    path: ['confirmacaoSenha'],
+  });
+
+export type AlterarSenhaFormulario = z.infer<typeof alterarSenhaSchema>;

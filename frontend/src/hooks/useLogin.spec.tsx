@@ -28,6 +28,7 @@ describe('useLogin', () => {
       carregando: false,
       entrar: entrarFake,
       sair: vi.fn(),
+      atualizarUsuario: vi.fn(),
     });
 
     const { result } = renderHook(() => useLogin(), { wrapper: Wrapper });
@@ -53,6 +54,7 @@ describe('useLogin', () => {
       carregando: false,
       entrar: entrarFake,
       sair: vi.fn(),
+      atualizarUsuario: vi.fn(),
     });
 
     const { result } = renderHook(() => useLogin(), { wrapper: Wrapper });

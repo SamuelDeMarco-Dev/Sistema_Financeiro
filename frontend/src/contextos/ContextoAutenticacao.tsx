@@ -6,7 +6,7 @@ import type { CredenciaisLogin } from '@/servicos/autenticacao.servico';
 import { inscreverSessaoExpirada } from '@/servicos/evento-sessao-expirada';
 import { consultarPerfil } from '@/servicos/perfil.servico';
 import { renovarSessao } from '@/servicos/renovar-sessao';
-import type { Usuario } from '@/tipos/usuario';
+import type { PerfilResumo, Usuario } from '@/tipos/usuario';
 import { mapearPerfilParaUsuario } from '@/utilitarios/mapear-usuario';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -17,6 +17,10 @@ interface ContextoAutenticacaoValor {
   carregando: boolean;
   entrar: (credenciais: CredenciaisLogin) => Promise<void>;
   sair: () => Promise<void>;
+  /** Mescla campos alterados na pagina de configuracoes (issue #21) no
+   * usuario da sessao — sem isto, o cabecalho (nome/avatar/tema) ficaria
+   * com dado velho ate o proximo boot. */
+  atualizarUsuario: (parcial: Partial<PerfilResumo> & { nome?: string }) => void;
 }
 
 const ContextoAutenticacao = createContext<ContextoAutenticacaoValor | null>(null);
@@ -86,9 +90,31 @@ export function ProvedorAutenticacao({ children }: ProvedorAutenticacaoProps): R
     }
   }, []);
 
+  const atualizarUsuario = useCallback(
+    (parcial: Partial<PerfilResumo> & { nome?: string }): void => {
+      setUsuario((atual) => {
+        if (!atual) return atual;
+        const { nome, ...perfilParcial } = parcial;
+        return {
+          ...atual,
+          nome: nome ?? atual.nome,
+          perfil: { ...atual.perfil, ...perfilParcial },
+        };
+      });
+    },
+    [],
+  );
+
   const valor = useMemo<ContextoAutenticacaoValor>(
-    () => ({ usuario, estaAutenticado: usuario !== null, carregando, entrar, sair }),
-    [usuario, carregando, entrar, sair],
+    () => ({
+      usuario,
+      estaAutenticado: usuario !== null,
+      carregando,
+      entrar,
+      sair,
+      atualizarUsuario,
+    }),
+    [usuario, carregando, entrar, sair, atualizarUsuario],
   );
 
   return <ContextoAutenticacao.Provider value={valor}>{children}</ContextoAutenticacao.Provider>;

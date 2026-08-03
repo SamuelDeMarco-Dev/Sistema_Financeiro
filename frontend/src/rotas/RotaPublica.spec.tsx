@@ -18,6 +18,7 @@ function mockarSessao(
     carregando: false,
     entrar: vi.fn(),
     sair: vi.fn(),
+    atualizarUsuario: vi.fn(),
     ...sobrescritas,
   });
 }

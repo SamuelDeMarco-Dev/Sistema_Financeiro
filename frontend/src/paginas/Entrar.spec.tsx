@@ -26,6 +26,7 @@ function mockarEntrar(entrarFake: EntrarMock): void {
     carregando: false,
     entrar: entrarFake,
     sair: vi.fn(),
+    atualizarUsuario: vi.fn(),
   });
 }
 

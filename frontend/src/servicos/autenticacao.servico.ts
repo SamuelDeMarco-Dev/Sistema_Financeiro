@@ -1,4 +1,5 @@
 import type { RespostaSucesso } from '@/tipos/api';
+import type { SessaoAtiva } from '@/tipos/sessao';
 import type { Usuario } from '@/tipos/usuario';
 import { api } from './api';
 
@@ -75,4 +76,25 @@ export interface DadosRedefinicaoSenha {
 // — login e' obrigatorio depois). 400 VALIDACAO: token invalido/expirado (1h).
 export async function redefinirSenha(dados: DadosRedefinicaoSenha): Promise<void> {
   await api.post('/autenticacao/redefinir-senha', dados);
+}
+
+export interface DadosAlterarSenha {
+  senhaAtual: string;
+  senhaNova: string;
+  confirmacaoSenha: string;
+}
+
+// 200 revoga as demais sessoes, mantem a atual (04-API.md §7.8).
+export async function alterarSenha(dados: DadosAlterarSenha): Promise<void> {
+  await api.patch('/autenticacao/alterar-senha', dados);
+}
+
+export async function listarSessoes(): Promise<SessaoAtiva[]> {
+  const resposta =
+    await api.get<RespostaSucesso<{ sessoes: SessaoAtiva[] }>>('/autenticacao/sessoes');
+  return resposta.data.data.sessoes;
+}
+
+export async function revogarSessao(id: string): Promise<void> {
+  await api.delete(`/autenticacao/sessoes/${id}`);
 }

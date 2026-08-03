@@ -25,6 +25,7 @@ function renderizar(entrarFake: EntrarMock) {
     carregando: false,
     entrar: entrarFake,
     sair: vi.fn(),
+    atualizarUsuario: vi.fn(),
   });
 
   const onSucesso = vi.fn();

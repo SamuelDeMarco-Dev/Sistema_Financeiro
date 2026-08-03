@@ -1,14 +1,22 @@
 import { Outlet } from 'react-router-dom';
+import { Cabecalho } from '@/componentes/layout/Cabecalho';
+import { MenuLateral } from '@/componentes/layout/MenuLateral';
+import { NavegacaoInferior } from '@/componentes/layout/NavegacaoInferior';
 import type { ReactElement } from 'react';
 
-// Cabecalho e MenuLateral chegam com as issues que constroem a casca
-// autenticada (componentes/layout/). Por ora, so o espaco de conteudo.
 export function LayoutAutenticado(): ReactElement {
   return (
-    <div className="flex min-h-screen bg-fundo text-texto">
-      <main className="flex-1 p-4 md:p-8">
-        <Outlet />
-      </main>
+    <div className="flex min-h-screen flex-col bg-fundo text-texto">
+      <Cabecalho />
+      <div className="flex flex-1">
+        <MenuLateral />
+        {/* pb-16 no mobile: espaco para a NavegacaoInferior fixa nao cobrir o
+            fim do conteudo. */}
+        <main className="min-w-0 flex-1 p-4 pb-20 md:p-8 lg:pb-8">
+          <Outlet />
+        </main>
+      </div>
+      <NavegacaoInferior />
     </div>
   );
 }

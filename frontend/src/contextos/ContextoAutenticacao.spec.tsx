@@ -150,6 +150,39 @@ describe('ProvedorAutenticacao / useSessao', () => {
     });
   });
 
+  it('atualizarUsuario() mescla campos alterados na pagina de configuracoes (issue #21) sem sobrescrever o resto', async () => {
+    vi.mocked(renovarSessaoServico.renovarSessao).mockResolvedValue({
+      accessToken: 'token-1',
+      expiraEm: 900,
+    });
+    vi.mocked(perfilServico.consultarPerfil).mockResolvedValue(PERFIL_FAKE);
+
+    const { result } = renderHook(() => useSessao(), { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(result.current.estaAutenticado).toBe(true);
+    });
+
+    act(() => {
+      result.current.atualizarUsuario({ fotoUrl: 'https://exemplo.com/nova.webp' });
+    });
+
+    expect(result.current.usuario?.perfil.fotoUrl).toBe('https://exemplo.com/nova.webp');
+    expect(result.current.usuario?.nome).toBe('Samuel De Marco');
+    expect(result.current.usuario?.perfil.moedaPadrao).toBe('BRL');
+  });
+
+  it('atualizarUsuario() nao faz nada quando ainda nao ha usuario (evita criar sessao "fantasma")', () => {
+    vi.mocked(renovarSessaoServico.renovarSessao).mockRejectedValue(new Error('sem cookie'));
+
+    const { result } = renderHook(() => useSessao(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.atualizarUsuario({ fotoUrl: 'https://exemplo.com/nova.webp' });
+    });
+
+    expect(result.current.usuario).toBeNull();
+  });
+
   it('lanca erro quando useSessao e usado fora de <ProvedorAutenticacao>', () => {
     expect(() => renderHook(() => useSessao())).toThrow(
       'useSessao deve ser usado dentro de <ProvedorAutenticacao>.',

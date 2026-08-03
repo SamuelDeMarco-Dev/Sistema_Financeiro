@@ -27,6 +27,9 @@ const EsqueciSenha = lazy(() =>
 const RedefinirSenha = lazy(() =>
   import('@/paginas/RedefinirSenha').then((modulo) => ({ default: modulo.RedefinirSenha })),
 );
+const Configuracoes = lazy(() =>
+  import('@/paginas/Configuracoes').then((modulo) => ({ default: modulo.Configuracoes })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -105,9 +108,18 @@ export const rotas = createBrowserRouter([
     children: [
       {
         element: <LayoutAutenticado />,
-        // Paginas autenticadas (Dashboard, Movimentacoes, ...) entram aqui
-        // conforme cada funcionalidade chega, uma issue por vez.
-        children: [],
+        // Demais paginas autenticadas (Dashboard, Movimentacoes, ...) entram
+        // aqui conforme cada funcionalidade chega, uma issue por vez.
+        children: [
+          {
+            path: 'configuracoes',
+            element: (
+              <ComSuspense>
+                <Configuracoes />
+              </ComSuspense>
+            ),
+          },
+        ],
       },
     ],
   },
