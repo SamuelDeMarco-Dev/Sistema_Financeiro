@@ -59,3 +59,20 @@ export async function verificarEmail(token: string): Promise<void> {
 export async function reenviarVerificacao(email: string): Promise<void> {
   await api.post('/autenticacao/reenviar-verificacao', { email });
 }
+
+// Idem: sempre 200 com a mesma mensagem, exista ou nao o e-mail (RF-07).
+export async function esqueciSenha(email: string): Promise<void> {
+  await api.post('/autenticacao/esqueci-senha', { email });
+}
+
+export interface DadosRedefinicaoSenha {
+  token: string;
+  senha: string;
+  confirmacaoSenha: string;
+}
+
+// 200 revoga TODOS os refresh tokens do usuario (sessao anterior invalidada
+// — login e' obrigatorio depois). 400 VALIDACAO: token invalido/expirado (1h).
+export async function redefinirSenha(dados: DadosRedefinicaoSenha): Promise<void> {
+  await api.post('/autenticacao/redefinir-senha', dados);
+}

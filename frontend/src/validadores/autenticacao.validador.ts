@@ -39,3 +39,21 @@ export const cadastroSchema = z
   });
 
 export type CadastroFormulario = z.infer<typeof cadastroSchema>;
+
+export const esqueciSenhaSchema = z.object({
+  email: z.string().trim().min(1, 'Informe o e-mail.').email('E-mail invalido.'),
+});
+
+export type EsqueciSenhaFormulario = z.infer<typeof esqueciSenhaSchema>;
+
+export const redefinirSenhaSchema = z
+  .object({
+    senha: senhaSchema,
+    confirmacaoSenha: z.string().min(1, 'Confirme a senha.'),
+  })
+  .refine((dados) => dados.senha === dados.confirmacaoSenha, {
+    message: 'A confirmacao de senha nao corresponde a senha informada.',
+    path: ['confirmacaoSenha'],
+  });
+
+export type RedefinirSenhaFormulario = z.infer<typeof redefinirSenhaSchema>;

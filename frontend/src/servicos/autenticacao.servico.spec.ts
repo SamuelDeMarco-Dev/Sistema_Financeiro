@@ -3,7 +3,9 @@ import { api } from './api';
 import {
   cadastrar,
   entrar,
+  esqueciSenha,
   reenviarVerificacao,
+  redefinirSenha,
   sair,
   verificarEmail,
 } from './autenticacao.servico';
@@ -99,5 +101,28 @@ describe('autenticacao.servico', () => {
     expect(api.post).toHaveBeenCalledWith('/autenticacao/reenviar-verificacao', {
       email: 'samuel@exemplo.com',
     });
+  });
+
+  it('esqueciSenha() posta o e-mail em /autenticacao/esqueci-senha', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: undefined });
+
+    await esqueciSenha('samuel@exemplo.com');
+
+    expect(api.post).toHaveBeenCalledWith('/autenticacao/esqueci-senha', {
+      email: 'samuel@exemplo.com',
+    });
+  });
+
+  it('redefinirSenha() posta token/senha/confirmacaoSenha em /autenticacao/redefinir-senha', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: undefined });
+
+    const dados = {
+      token: 'token-bruto',
+      senha: 'NovaSenha@2026',
+      confirmacaoSenha: 'NovaSenha@2026',
+    };
+    await redefinirSenha(dados);
+
+    expect(api.post).toHaveBeenCalledWith('/autenticacao/redefinir-senha', dados);
   });
 });

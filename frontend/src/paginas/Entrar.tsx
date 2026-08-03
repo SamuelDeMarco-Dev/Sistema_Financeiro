@@ -36,6 +36,12 @@ export function Entrar(): ReactElement {
             <p className="text-sm text-textoSuave">Acesse sua conta para continuar.</p>
           </div>
           <FormularioLogin onSucesso={aoAutenticar} onEmailNaoVerificado={setEmailNaoVerificado} />
+          <Link
+            to="/esqueci-senha"
+            className="text-center text-sm font-medium text-primaria hover:underline"
+          >
+            Esqueci minha senha
+          </Link>
           <p className="text-center text-sm text-textoSuave">
             Não tem conta?{' '}
             <Link to="/cadastrar" className="font-medium text-primaria hover:underline">

@@ -21,6 +21,12 @@ const Cadastro = lazy(() =>
 const VerificarEmail = lazy(() =>
   import('@/paginas/VerificarEmail').then((modulo) => ({ default: modulo.VerificarEmail })),
 );
+const EsqueciSenha = lazy(() =>
+  import('@/paginas/EsqueciSenha').then((modulo) => ({ default: modulo.EsqueciSenha })),
+);
+const RedefinirSenha = lazy(() =>
+  import('@/paginas/RedefinirSenha').then((modulo) => ({ default: modulo.RedefinirSenha })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -53,6 +59,17 @@ export const rotas = createBrowserRouter([
         ),
       },
       {
+        // Mesmo raciocinio de /verificar-email: o link de redefinicao de
+        // senha precisa funcionar mesmo com uma sessao antiga ainda ativa
+        // no navegador (RF-07).
+        path: 'redefinir-senha',
+        element: (
+          <ComSuspense>
+            <RedefinirSenha />
+          </ComSuspense>
+        ),
+      },
+      {
         element: <RotaPublica />,
         children: [
           {
@@ -68,6 +85,14 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Cadastro />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'esqueci-senha',
+            element: (
+              <ComSuspense>
+                <EsqueciSenha />
               </ComSuspense>
             ),
           },

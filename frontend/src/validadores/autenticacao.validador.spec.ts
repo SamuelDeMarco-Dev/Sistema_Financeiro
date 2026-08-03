@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { cadastroSchema, loginSchema } from './autenticacao.validador';
+import {
+  cadastroSchema,
+  esqueciSenhaSchema,
+  loginSchema,
+  redefinirSenhaSchema,
+} from './autenticacao.validador';
 
 describe('loginSchema', () => {
   it('aceita credenciais validas', () => {
@@ -76,6 +81,49 @@ describe('cadastroSchema', () => {
 
   it('rejeita confirmacao de senha diferente, apontando o erro para o campo certo', () => {
     const resultado = cadastroSchema.safeParse({ ...BASE, confirmacaoSenha: 'Outra@2026' });
+    expect(resultado.success).toBe(false);
+    if (!resultado.success) {
+      expect(resultado.error.issues[0]?.path).toEqual(['confirmacaoSenha']);
+    }
+  });
+});
+
+describe('esqueciSenhaSchema', () => {
+  it('aceita um e-mail valido', () => {
+    expect(esqueciSenhaSchema.safeParse({ email: 'samuel@exemplo.com' }).success).toBe(true);
+  });
+
+  it('rejeita e-mail invalido', () => {
+    expect(esqueciSenhaSchema.safeParse({ email: 'nao-e-email' }).success).toBe(false);
+  });
+
+  it('rejeita e-mail vazio', () => {
+    expect(esqueciSenhaSchema.safeParse({ email: '' }).success).toBe(false);
+  });
+});
+
+describe('redefinirSenhaSchema', () => {
+  it('aceita senha forte com confirmacao igual', () => {
+    const resultado = redefinirSenhaSchema.safeParse({
+      senha: 'NovaSenha@2026',
+      confirmacaoSenha: 'NovaSenha@2026',
+    });
+    expect(resultado.success).toBe(true);
+  });
+
+  it('rejeita senha fraca (mesmas regras do cadastro)', () => {
+    const resultado = redefinirSenhaSchema.safeParse({
+      senha: 'fraca',
+      confirmacaoSenha: 'fraca',
+    });
+    expect(resultado.success).toBe(false);
+  });
+
+  it('rejeita confirmacao diferente, apontando o erro para o campo certo', () => {
+    const resultado = redefinirSenhaSchema.safeParse({
+      senha: 'NovaSenha@2026',
+      confirmacaoSenha: 'Diferente@2026',
+    });
     expect(resultado.success).toBe(false);
     if (!resultado.success) {
       expect(resultado.error.issues[0]?.path).toEqual(['confirmacaoSenha']);
