@@ -46,7 +46,9 @@ export function tratadorErros(
 
   if (erro instanceof ErroAplicacao) {
     registrador.warn({ requestId: req.requestId, codigo: erro.codigo }, erro.message);
-    res.status(erro.statusHttp).json(respostaErro(erro.message, erro.detalhes, erro.codigo));
+    res
+      .status(erro.statusHttp)
+      .json(respostaErro(erro.message, erro.detalhes, erro.codigo, erro.meta));
     return;
   }
 

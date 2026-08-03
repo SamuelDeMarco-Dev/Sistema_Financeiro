@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@/banco/cliente';
 import { criarServidor } from '@/servidor';
+import { hashToken } from '@/utilitarios/token';
 import { limparBanco } from '../configuracao/banco-teste';
 
 const app = criarServidor();
@@ -12,6 +13,20 @@ const CADASTRO_VALIDO = {
   senha: 'SenhaForte@2026',
   confirmacaoSenha: 'SenhaForte@2026',
 };
+
+/** As rotas de verificacao de e-mail chegam na issue #15 — ate la, testes
+ * que precisam de um usuario ja verificado ajustam o banco diretamente. */
+async function criarUsuarioVerificado(
+  sobrescritas: Partial<typeof CADASTRO_VALIDO> = {},
+): Promise<{ email: string; senha: string }> {
+  const dados = { ...CADASTRO_VALIDO, ...sobrescritas };
+  await request(app).post('/api/v1/autenticacao/cadastrar').send(dados);
+  await prisma.usuario.update({
+    where: { email: dados.email.toLowerCase() },
+    data: { emailVerificadoEm: new Date() },
+  });
+  return { email: dados.email, senha: dados.senha };
+}
 
 describe('POST /api/v1/autenticacao/cadastrar', () => {
   beforeEach(async () => {
@@ -89,5 +104,119 @@ describe('POST /api/v1/autenticacao/cadastrar', () => {
         expect.objectContaining({ campo: 'confirmacaoSenha' }),
       ]) as unknown,
     });
+  });
+});
+
+describe('POST /api/v1/autenticacao/entrar', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('autentica com sucesso: 200, cookie httpOnly/SameSite=Strict/Path correto e refresh token hasheado no banco', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'login-sucesso@exemplo.com' });
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email, senha, lembrarMe: false });
+
+    expect(resposta.status).toBe(200);
+    expect(resposta.body).toMatchObject({
+      success: true,
+      data: {
+        expiraEm: 900,
+        usuario: { email: 'login-sucesso@exemplo.com', perfil: { moedaPadrao: 'BRL' } },
+      },
+    });
+    expect(resposta.body).not.toHaveProperty('data.usuario.senhaHash');
+
+    const cookies = resposta.headers['set-cookie'] as unknown as string[];
+    const cookieRefresh = cookies.find((c) => c.startsWith('refreshToken=')) ?? '';
+    expect(cookieRefresh).toBeTruthy();
+    expect(cookieRefresh).toContain('HttpOnly');
+    expect(cookieRefresh).toContain('SameSite=Strict');
+    expect(cookieRefresh).toContain('Path=/api/v1/autenticacao');
+
+    const tokenBruto = /refreshToken=([^;]+)/.exec(cookieRefresh)?.[1] ?? '';
+    expect(tokenBruto).toBeTruthy();
+    const tokenNoBanco = await prisma.tokenRenovacao.findFirst();
+    expect(tokenNoBanco?.tokenHash).toBe(hashToken(tokenBruto));
+    expect(tokenNoBanco?.tokenHash).not.toBe(tokenBruto);
+  });
+
+  it('responde 401 CREDENCIAIS_INVALIDAS com a MESMA mensagem para e-mail inexistente e senha errada', async () => {
+    await criarUsuarioVerificado({ email: 'senha-errada@exemplo.com' });
+
+    const respostaEmailInexistente = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email: 'nao-existe-nunca@exemplo.com', senha: 'Qualquer@123' });
+
+    const respostaSenhaErrada = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email: 'senha-errada@exemplo.com', senha: 'SenhaErrada@2026' });
+
+    expect(respostaEmailInexistente.status).toBe(401);
+    expect(respostaSenhaErrada.status).toBe(401);
+    expect(respostaEmailInexistente.body).toMatchObject({ codigo: 'CREDENCIAIS_INVALIDAS' });
+
+    const corpoEmailInexistente = respostaEmailInexistente.body as { message: string };
+    const corpoSenhaErrada = respostaSenhaErrada.body as { message: string };
+    expect(corpoEmailInexistente.message).toBe(corpoSenhaErrada.message);
+  });
+
+  it('responde 403 EMAIL_NAO_VERIFICADO quando a senha esta certa mas a conta nao foi verificada', async () => {
+    await request(app)
+      .post('/api/v1/autenticacao/cadastrar')
+      .send({ ...CADASTRO_VALIDO, email: 'nao-verificado@exemplo.com' });
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email: 'nao-verificado@exemplo.com', senha: CADASTRO_VALIDO.senha });
+
+    expect(resposta.status).toBe(403);
+    expect(resposta.body).toMatchObject({ codigo: 'EMAIL_NAO_VERIFICADO' });
+  });
+
+  it('bloqueia a conta apos 5 tentativas falhas e responde 403 CONTA_BLOQUEADA com meta.desbloqueiaEm', async () => {
+    const { email } = await criarUsuarioVerificado({ email: 'bloqueio@exemplo.com' });
+
+    // 5 tentativas falhas da mesma origem (consome o limitador por IP+e-mail tambem).
+    for (let i = 0; i < 5; i += 1) {
+      await request(app)
+        .post('/api/v1/autenticacao/entrar')
+        .send({ email, senha: 'SenhaErrada@2026' });
+    }
+
+    // 6a tentativa de outra origem (X-Forwarded-For): passa pelo limitador
+    // por IP (chave diferente) e alcanca o bloqueio por conta no servico.
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .set('X-Forwarded-For', '203.0.113.9')
+      .send({ email, senha: 'SenhaErrada@2026' });
+
+    expect(resposta.status).toBe(403);
+    expect(resposta.body).toMatchObject({ codigo: 'CONTA_BLOQUEADA' });
+    const corpo = resposta.body as { meta?: { desbloqueiaEm?: string } };
+    expect(corpo.meta?.desbloqueiaEm).toBeTruthy();
+  });
+
+  it('responde 429 LIMITE_EXCEDIDO com Retry-After apos exceder o limite por IP+e-mail', async () => {
+    const email = 'limite-taxa@exemplo.com';
+
+    for (let i = 0; i < 5; i += 1) {
+      await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha: 'Qualquer@123' });
+    }
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email, senha: 'Qualquer@123' });
+
+    expect(resposta.status).toBe(429);
+    expect(resposta.body).toMatchObject({ codigo: 'LIMITE_EXCEDIDO' });
+    expect(resposta.headers['retry-after']).toBeTruthy();
   });
 });

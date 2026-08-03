@@ -44,6 +44,29 @@ export class EmailJaCadastradoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'EMAIL_JA_CADASTRADO';
 }
 
+/** 401 — e-mail inexistente ou senha errada. Mesma mensagem para os dois
+ * casos (RN): nao da para um atacante distinguir se o e-mail existe. */
+export class CredenciaisInvalidasErro extends ErroAplicacao {
+  readonly statusHttp = 401;
+  readonly codigo: CodigoErro = 'CREDENCIAIS_INVALIDAS';
+}
+
+/** 403 — RF-02: acesso bloqueado ate a confirmacao do e-mail. */
+export class EmailNaoVerificadoErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'EMAIL_NAO_VERIFICADO';
+}
+
+/** 403 — RN-54: bloqueio temporario por excesso de tentativas de login. */
+export class ContaBloqueadaErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'CONTA_BLOQUEADA';
+
+  constructor(mensagem: string, desbloqueiaEm: Date) {
+    super(mensagem, undefined, { desbloqueiaEm: desbloqueiaEm.toISOString() });
+  }
+}
+
 /** 422 — requisicao bem formada, regra de dominio violada. */
 export class RegraNegocioErro extends ErroAplicacao {
   readonly statusHttp = 422;

@@ -26,3 +26,15 @@ export const cadastrarSchema = z.object({
 });
 
 export type CadastrarDTO = z.infer<typeof cadastrarSchema>['body'];
+
+export const entrarSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('E-mail invalido.'),
+    // Nao aplica as regras de forca aqui: e login, nao cadastro — a senha
+    // ja e o que o usuario tem, nao o que o sistema esta validando agora.
+    senha: z.string().min(1, 'Informe a senha.'),
+    lembrarMe: z.boolean().default(false),
+  }),
+});
+
+export type EntrarDTO = z.infer<typeof entrarSchema>['body'];
