@@ -1,6 +1,7 @@
 import axios, { AxiosHeaders } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { armazenamentoToken } from './armazenamento-token';
+import { inscreverSessaoExpirada } from './evento-sessao-expirada';
 import { criarInterceptorRenovacao } from './interceptor-renovacao';
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
@@ -12,9 +13,10 @@ vi.mock('axios', async (importarOriginal) => {
   };
 });
 
-function fabricarErro401(): AxiosError {
+function fabricarErro401(url?: string): AxiosError {
   const config: InternalAxiosRequestConfig = {
     headers: new AxiosHeaders(),
+    url,
   } as InternalAxiosRequestConfig;
 
   return {
@@ -82,5 +84,39 @@ describe('criarInterceptorRenovacao', () => {
 
     await expect(interceptor(erro)).rejects.toMatchObject({ name: 'ErroApi' });
     expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('nao tenta renovar um 401 em rota publica de autenticacao (ex.: senha errada em /entrar)', async () => {
+    const instanciaFake = vi.fn() as unknown as AxiosInstance;
+    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = {
+      baseURL: 'http://x',
+    };
+    const interceptor = criarInterceptorRenovacao(instanciaFake);
+
+    const erro = fabricarErro401('/autenticacao/entrar');
+
+    await expect(interceptor(erro)).rejects.toMatchObject({ name: 'ErroApi' });
+    expect(axios.post).not.toHaveBeenCalled();
+    expect(instanciaFake).not.toHaveBeenCalled();
+  });
+
+  it('emite sessao-expirada quando a renovacao reativa falha', async () => {
+    vi.mocked(axios.post).mockRejectedValue(new Error('refresh token revogado'));
+    const ouvinte = vi.fn();
+    const cancelarInscricao = inscreverSessaoExpirada(ouvinte);
+
+    const instanciaFake = vi.fn() as unknown as AxiosInstance;
+    (instanciaFake as unknown as { defaults: { baseURL: string } }).defaults = {
+      baseURL: 'http://localhost:3333/api/v1',
+    };
+    const interceptor = criarInterceptorRenovacao(instanciaFake);
+
+    await expect(interceptor(fabricarErro401('/movimentacoes'))).rejects.toMatchObject({
+      name: 'ErroApi',
+    });
+
+    expect(ouvinte).toHaveBeenCalledTimes(1);
+    expect(armazenamentoToken.obter()).toBeNull();
+    cancelarInscricao();
   });
 });

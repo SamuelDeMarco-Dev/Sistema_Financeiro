@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
-import { Esqueleto } from '@/componentes/feedback';
+import { EsqueletoPagina } from '@/componentes/feedback';
 import { LayoutAutenticado } from '@/layouts/LayoutAutenticado';
 import { LayoutPublico } from '@/layouts/LayoutPublico';
 import { RotaProtegida } from './RotaProtegida';
@@ -14,16 +14,6 @@ const Inicio = lazy(() =>
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
-
-function EsqueletoPagina(): ReactElement {
-  return (
-    <div className="flex min-h-screen flex-col gap-4 bg-fundo p-8">
-      <Esqueleto className="h-8 w-48" />
-      <Esqueleto className="h-4 w-full max-w-md" />
-      <Esqueleto className="h-40 w-full" />
-    </div>
-  );
-}
 
 function ComSuspense({ children }: { children: ReactNode }): ReactElement {
   return <Suspense fallback={<EsqueletoPagina />}>{children}</Suspense>;
