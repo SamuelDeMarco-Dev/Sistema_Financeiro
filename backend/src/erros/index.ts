@@ -38,6 +38,12 @@ export class ConflitoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'CONFLITO';
 }
 
+/** 409 — e-mail ja pertence a outro cadastro. */
+export class EmailJaCadastradoErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'EMAIL_JA_CADASTRADO';
+}
+
 /** 422 — requisicao bem formada, regra de dominio violada. */
 export class RegraNegocioErro extends ErroAplicacao {
   readonly statusHttp = 422;
