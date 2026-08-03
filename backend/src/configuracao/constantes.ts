@@ -8,3 +8,7 @@ export const MINUTOS_BLOQUEIO_LOGIN = 15;
 /** 05-DEVELOPMENT.md / 04-API.md §5: cookie do refresh token. */
 export const NOME_COOKIE_REFRESH = 'refreshToken';
 export const CAMINHO_COOKIE_REFRESH = '/api/v1/autenticacao';
+
+/** Rate limit de POST /autenticacao/renovar (issue #13), por IP. */
+export const LIMITE_RENOVACAO_POR_IP = 30;
+export const MINUTOS_JANELA_RENOVACAO = 15;

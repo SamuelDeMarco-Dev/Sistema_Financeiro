@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { LIMITE_TENTATIVAS_LOGIN, MINUTOS_BLOQUEIO_LOGIN } from '@/configuracao/constantes';
+import {
+  LIMITE_RENOVACAO_POR_IP,
+  LIMITE_TENTATIVAS_LOGIN,
+  MINUTOS_BLOQUEIO_LOGIN,
+  MINUTOS_JANELA_RENOVACAO,
+} from '@/configuracao/constantes';
 import { AutenticacaoControlador } from '@/controladores/autenticacao.controlador';
 import { limitador } from '@/middlewares/limitador.middleware';
 import { validar } from '@/middlewares/validar.middleware';
@@ -20,6 +25,11 @@ const limitadorLogin = limitador({
   chaveExtra: (req) => (req.body as EntrarDTO).email.toLowerCase(),
 });
 
+const limitadorRenovacao = limitador({
+  janelaMinutos: MINUTOS_JANELA_RENOVACAO,
+  maximo: LIMITE_RENOVACAO_POR_IP,
+});
+
 autenticacaoRotas.post('/autenticacao/cadastrar', validar(cadastrarSchema), controlador.cadastrar);
 autenticacaoRotas.post(
   '/autenticacao/entrar',
@@ -27,3 +37,4 @@ autenticacaoRotas.post(
   limitadorLogin,
   controlador.entrar,
 );
+autenticacaoRotas.post('/autenticacao/renovar', limitadorRenovacao, controlador.renovar);

@@ -28,6 +28,12 @@ async function criarUsuarioVerificado(
   return { email: dados.email, senha: dados.senha };
 }
 
+function extrairTokenDoCookie(headers: Record<string, unknown>): string {
+  const cookies = headers['set-cookie'] as string[] | undefined;
+  const cookieRefresh = cookies?.find((c) => c.startsWith('refreshToken=')) ?? '';
+  return /refreshToken=([^;]+)/.exec(cookieRefresh)?.[1] ?? '';
+}
+
 describe('POST /api/v1/autenticacao/cadastrar', () => {
   beforeEach(async () => {
     await limparBanco();
@@ -218,5 +224,114 @@ describe('POST /api/v1/autenticacao/entrar', () => {
     expect(resposta.status).toBe(429);
     expect(resposta.body).toMatchObject({ codigo: 'LIMITE_EXCEDIDO' });
     expect(resposta.headers['retry-after']).toBeTruthy();
+  });
+});
+
+describe('POST /api/v1/autenticacao/renovar', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('renova com sucesso: 200, novo access token, novo cookie, e o token antigo fica revogado', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'renovar@exemplo.com' });
+    const login = await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+    const tokenAntigo = extrairTokenDoCookie(login.headers);
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${tokenAntigo}`);
+
+    expect(resposta.status).toBe(200);
+    expect(resposta.body).toMatchObject({ success: true, data: { expiraEm: 900 } });
+
+    const tokenNovo = extrairTokenDoCookie(resposta.headers);
+    expect(tokenNovo).toBeTruthy();
+    expect(tokenNovo).not.toBe(tokenAntigo);
+
+    const registroAntigo = await prisma.tokenRenovacao.findFirst({
+      where: { tokenHash: hashToken(tokenAntigo) },
+    });
+    const registroNovo = await prisma.tokenRenovacao.findFirst({
+      where: { tokenHash: hashToken(tokenNovo) },
+    });
+    expect(registroAntigo?.revogadoEm).toBeTruthy();
+    expect(registroAntigo?.substituidoPorId).toBe(registroNovo?.id);
+    expect(registroNovo?.revogadoEm).toBeNull();
+  });
+
+  it('o token antigo deixa de funcionar imediatamente apos a rotacao', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'rotacao@exemplo.com' });
+    const login = await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+    const tokenAntigo = extrairTokenDoCookie(login.headers);
+
+    await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${tokenAntigo}`);
+
+    const segundaTentativa = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${tokenAntigo}`);
+
+    expect(segundaTentativa.status).toBe(401);
+    expect(segundaTentativa.body).toMatchObject({ codigo: 'NAO_AUTENTICADO' });
+  });
+
+  it('reuso de token revogado invalida TODA a familia (04-API.md §7.3)', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'reuso@exemplo.com' });
+    const login = await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+    const token1 = extrairTokenDoCookie(login.headers);
+
+    const renovacao1 = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${token1}`);
+    const token2 = extrairTokenDoCookie(renovacao1.headers);
+
+    // Reusa o token1, ja revogado pela rotacao anterior.
+    const reuso = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${token1}`);
+    expect(reuso.status).toBe(401);
+
+    // token2 era valido ate agora, mas a familia inteira foi revogada.
+    const tentativaComToken2 = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${token2}`);
+    expect(tentativaComToken2.status).toBe(401);
+
+    const usuario = await prisma.usuario.findUniqueOrThrow({ where: { email } });
+    const tokensAtivos = await prisma.tokenRenovacao.count({
+      where: { usuarioId: usuario.id, revogadoEm: null },
+    });
+    expect(tokensAtivos).toBe(0);
+  });
+
+  it('responde 401 NAO_AUTENTICADO quando o cookie esta ausente', async () => {
+    const resposta = await request(app).post('/api/v1/autenticacao/renovar');
+
+    expect(resposta.status).toBe(401);
+    expect(resposta.body).toMatchObject({ codigo: 'NAO_AUTENTICADO' });
+  });
+
+  it('responde 401 (nao 500) quando o token esta expirado', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'expirado@exemplo.com' });
+    const login = await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+    const token = extrairTokenDoCookie(login.headers);
+
+    await prisma.tokenRenovacao.updateMany({
+      where: { tokenHash: hashToken(token) },
+      data: { expiraEm: new Date(Date.now() - 1000) },
+    });
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${token}`);
+
+    expect(resposta.status).toBe(401);
+    expect(resposta.body).toMatchObject({ codigo: 'NAO_AUTENTICADO' });
   });
 });

@@ -7,6 +7,16 @@ import { respostaSucesso } from '@/utilitarios/resposta';
 import type { CadastrarDTO, EntrarDTO } from '@/validadores/autenticacao.validador';
 import type { Request, Response } from 'express';
 
+function definirCookieRefresh(res: Response, tokenBruto: string, expiraEm: Date): void {
+  res.cookie(NOME_COOKIE_REFRESH, tokenBruto, {
+    httpOnly: true,
+    secure: ambiente.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: CAMINHO_COOKIE_REFRESH,
+    maxAge: expiraEm.getTime() - Date.now(),
+  });
+}
+
 export class AutenticacaoControlador {
   private readonly servico = new AutenticacaoServico();
 
@@ -30,13 +40,7 @@ export class AutenticacaoControlador {
       userAgent: req.get('user-agent') ?? null,
     });
 
-    res.cookie(NOME_COOKIE_REFRESH, resultado.refreshTokenBruto, {
-      httpOnly: true,
-      secure: ambiente.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: CAMINHO_COOKIE_REFRESH,
-      maxAge: resultado.refreshTokenExpiraEm.getTime() - Date.now(),
-    });
+    definirCookieRefresh(res, resultado.refreshTokenBruto, resultado.refreshTokenExpiraEm);
 
     res.status(200).json(
       respostaSucesso(
@@ -48,5 +52,24 @@ export class AutenticacaoControlador {
         'Autenticado com sucesso.',
       ),
     );
+  });
+
+  renovar = asyncHandler(async (req: Request, res: Response) => {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    const resultado = await this.servico.renovar(cookies[NOME_COOKIE_REFRESH], {
+      ip: req.ip ?? '',
+      userAgent: req.get('user-agent') ?? null,
+    });
+
+    definirCookieRefresh(res, resultado.refreshTokenBruto, resultado.refreshTokenExpiraEm);
+
+    res
+      .status(200)
+      .json(
+        respostaSucesso(
+          { accessToken: resultado.accessToken, expiraEm: resultado.expiraEmSegundos },
+          'Sessão renovada.',
+        ),
+      );
   });
 }

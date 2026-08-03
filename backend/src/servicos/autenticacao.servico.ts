@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { executarTransacao } from '@/banco/transacao';
 import { ambiente } from '@/configuracao/ambiente';
 import {
   HORAS_EXPIRACAO_TOKEN_VERIFICACAO,
@@ -10,12 +11,14 @@ import {
   CredenciaisInvalidasErro,
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
+  NaoAutenticadoErro,
 } from '@/erros';
 import { TokenRenovacaoRepositorio } from '@/repositorios/token-renovacao.repositorio';
 import { UsuarioRepositorio } from '@/repositorios/usuario.repositorio';
 import { enviarEmail } from '@/utilitarios/email/enviador';
 import { modeloVerificacaoEmail } from '@/utilitarios/email/modelos/verificacao-email';
 import { assinarAccessToken, duracaoEmSegundos } from '@/utilitarios/jwt';
+import { registrador } from '@/utilitarios/registrador';
 import { comparar, gerarHash } from '@/utilitarios/senha';
 import { gerarTokenOpaco, hashToken } from '@/utilitarios/token';
 import type { CadastrarDTO, EntrarDTO } from '@/validadores/autenticacao.validador';
@@ -28,7 +31,7 @@ function gerarToken(): string {
   return randomBytes(32).toString('hex');
 }
 
-export interface ContextoLogin {
+export interface ContextoRequisicao {
   ip: string;
   userAgent: string | null;
 }
@@ -36,6 +39,13 @@ export interface ContextoLogin {
 export interface ResultadoLogin {
   usuario: Usuario;
   perfil: Perfil | null;
+  accessToken: string;
+  expiraEmSegundos: number;
+  refreshTokenBruto: string;
+  refreshTokenExpiraEm: Date;
+}
+
+export interface ResultadoRenovacao {
   accessToken: string;
   expiraEmSegundos: number;
   refreshTokenBruto: string;
@@ -82,7 +92,7 @@ export class AutenticacaoServico {
     return usuario;
   }
 
-  async entrar(dados: EntrarDTO, contexto: ContextoLogin): Promise<ResultadoLogin> {
+  async entrar(dados: EntrarDTO, contexto: ContextoRequisicao): Promise<ResultadoLogin> {
     const email = dados.email.toLowerCase();
     const usuario = await this.repositorio.buscarPorEmail(email);
 
@@ -139,6 +149,64 @@ export class AutenticacaoServico {
       usuario,
       perfil: usuario.perfil,
       accessToken: assinarAccessToken({ sub: usuario.id, email: usuario.email }),
+      expiraEmSegundos: duracaoEmSegundos(ambiente.JWT_EXPIRACAO),
+      refreshTokenBruto,
+      refreshTokenExpiraEm,
+    };
+  }
+
+  async renovar(
+    tokenBruto: string | undefined,
+    contexto: ContextoRequisicao,
+  ): Promise<ResultadoRenovacao> {
+    if (!tokenBruto) {
+      throw new NaoAutenticadoErro('Sessão inválida.');
+    }
+
+    const registro = await this.tokenRepositorio.buscarPorHash(hashToken(tokenBruto));
+
+    if (!registro) {
+      throw new NaoAutenticadoErro('Sessão inválida.');
+    }
+
+    if (registro.revogadoEm) {
+      // RN-53: reuso de um token ja revogado e indicio de vazamento —
+      // revoga a familia inteira, nao so este token.
+      await this.tokenRepositorio.revogarTodosDoUsuario(registro.usuarioId);
+      registrador.warn(
+        { usuarioId: registro.usuarioId, ip: contexto.ip },
+        'Reuso de refresh token revogado detectado — familia de tokens revogada.',
+      );
+      throw new NaoAutenticadoErro('Sessão inválida.');
+    }
+
+    if (registro.expiraEm.getTime() <= Date.now()) {
+      throw new NaoAutenticadoErro('Sessão expirada.');
+    }
+
+    const refreshTokenBruto = gerarTokenOpaco();
+    // Preserva a duracao original da sessao (7 ou 30 dias, conforme
+    // lembrarMe no login) atraves das rotacoes seguintes, sem precisar
+    // persistir esse booleano em lugar nenhum.
+    const duracaoMs = registro.expiraEm.getTime() - registro.criadoEm.getTime();
+    const refreshTokenExpiraEm = new Date(Date.now() + duracaoMs);
+
+    await executarTransacao(async (tx) => {
+      const novo = await this.tokenRepositorio.criar(
+        {
+          usuarioId: registro.usuarioId,
+          tokenHash: hashToken(refreshTokenBruto),
+          ip: contexto.ip,
+          userAgent: contexto.userAgent,
+          expiraEm: refreshTokenExpiraEm,
+        },
+        tx,
+      );
+      await this.tokenRepositorio.revogar(registro.id, novo.id, tx);
+    });
+
+    return {
+      accessToken: assinarAccessToken({ sub: registro.usuario.id, email: registro.usuario.email }),
       expiraEmSegundos: duracaoEmSegundos(ambiente.JWT_EXPIRACAO),
       refreshTokenBruto,
       refreshTokenExpiraEm,

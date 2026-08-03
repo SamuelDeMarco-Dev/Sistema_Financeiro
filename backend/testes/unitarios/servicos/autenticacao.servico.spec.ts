@@ -5,8 +5,12 @@ import {
   CredenciaisInvalidasErro,
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
+  NaoAutenticadoErro,
 } from '@/erros';
-import { TokenRenovacaoRepositorio } from '@/repositorios/token-renovacao.repositorio';
+import {
+  type TokenRenovacaoComUsuario,
+  TokenRenovacaoRepositorio,
+} from '@/repositorios/token-renovacao.repositorio';
 import {
   type DadosCriarUsuario,
   type UsuarioComPerfil,
@@ -22,6 +26,11 @@ vi.mock('@/utilitarios/senha', async (importarOriginal) => {
   const real = await importarOriginal<typeof import('@/utilitarios/senha')>();
   return { ...real, comparar: vi.fn() };
 });
+// Sem isto, renovar() chamaria o prisma.$transaction REAL (precisaria de
+// banco) so para invocar callbacks cujo corpo ja e 100% mockado por fora.
+vi.mock('@/banco/transacao', () => ({
+  executarTransacao: vi.fn((fn: (tx: undefined) => Promise<unknown>) => fn(undefined)),
+}));
 
 const enviarEmailMockado = vi.mocked(enviarEmail);
 const compararMockado = vi.mocked(comparar);
@@ -64,6 +73,26 @@ function fabricarUsuario(sobrescritas: Partial<UsuarioComPerfil> = {}): UsuarioC
     excluidoEm: null,
     anonimizadoEm: null,
     perfil: fabricarPerfil(),
+    ...sobrescritas,
+  };
+}
+
+function fabricarTokenRenovacao(
+  sobrescritas: Partial<TokenRenovacaoComUsuario> = {},
+): TokenRenovacaoComUsuario {
+  const agora = new Date();
+  return {
+    id: 'token-1',
+    usuarioId: 'usuario-1',
+    tokenHash: 'hash-do-token',
+    dispositivo: null,
+    ip: '127.0.0.1',
+    userAgent: 'vitest',
+    expiraEm: new Date(agora.getTime() + 7 * 86_400_000),
+    revogadoEm: null,
+    substituidoPorId: null,
+    criadoEm: agora,
+    usuario: fabricarUsuario(),
     ...sobrescritas,
   };
 }
@@ -239,6 +268,78 @@ describe('AutenticacaoServico.entrar', () => {
 
     const antes = Date.now();
     const resultado = await servico.entrar({ ...dadosLogin, lembrarMe: true }, contexto);
+    const dias = Math.round((resultado.refreshTokenExpiraEm.getTime() - antes) / 86_400_000);
+
+    expect(dias).toBe(30);
+  });
+});
+
+describe('AutenticacaoServico.renovar', () => {
+  let servico: AutenticacaoServico;
+  let repositorio: MockProxy<UsuarioRepositorio>;
+  let tokenRepositorio: MockProxy<TokenRenovacaoRepositorio>;
+
+  beforeEach(() => {
+    repositorio = mock();
+    tokenRepositorio = mock();
+    servico = new AutenticacaoServico(repositorio, tokenRepositorio);
+  });
+
+  const contexto = { ip: '127.0.0.1', userAgent: 'vitest' };
+
+  it('lanca NaoAutenticadoErro quando o cookie esta ausente', async () => {
+    await expect(servico.renovar(undefined, contexto)).rejects.toThrow(NaoAutenticadoErro);
+    expect(tokenRepositorio.buscarPorHash).not.toHaveBeenCalled();
+  });
+
+  it('lanca NaoAutenticadoErro quando o hash nao e reconhecido', async () => {
+    tokenRepositorio.buscarPorHash.mockResolvedValue(null);
+
+    await expect(servico.renovar('token-bruto', contexto)).rejects.toThrow(NaoAutenticadoErro);
+  });
+
+  it('lanca NaoAutenticadoErro quando o token esta expirado', async () => {
+    tokenRepositorio.buscarPorHash.mockResolvedValue(
+      fabricarTokenRenovacao({ expiraEm: new Date(Date.now() - 1000) }),
+    );
+
+    await expect(servico.renovar('token-bruto', contexto)).rejects.toThrow(NaoAutenticadoErro);
+    expect(tokenRepositorio.revogarTodosDoUsuario).not.toHaveBeenCalled();
+  });
+
+  it('detecta reuso de token revogado: revoga a familia inteira e lanca NaoAutenticadoErro', async () => {
+    tokenRepositorio.buscarPorHash.mockResolvedValue(
+      fabricarTokenRenovacao({ revogadoEm: new Date() }),
+    );
+
+    await expect(servico.renovar('token-bruto', contexto)).rejects.toThrow(NaoAutenticadoErro);
+    expect(tokenRepositorio.revogarTodosDoUsuario).toHaveBeenCalledWith('usuario-1');
+    expect(tokenRepositorio.criar).not.toHaveBeenCalled();
+  });
+
+  it('rotaciona com sucesso: revoga o antigo, cria um novo e assina outro access token', async () => {
+    tokenRepositorio.buscarPorHash.mockResolvedValue(fabricarTokenRenovacao());
+    tokenRepositorio.criar.mockResolvedValue(
+      fabricarTokenRenovacao({ id: 'token-2', tokenHash: 'hash-do-token-novo' }),
+    );
+
+    const resultado = await servico.renovar('token-bruto', contexto);
+
+    expect(resultado.accessToken).toBeTruthy();
+    expect(resultado.refreshTokenBruto).toBeTruthy();
+    expect(tokenRepositorio.revogar).toHaveBeenCalledWith('token-1', 'token-2', undefined);
+  });
+
+  it('preserva a duracao original do token (lembrarMe) atraves da rotacao', async () => {
+    const criadoEm = new Date(Date.now() - 2 * 86_400_000);
+    const expiraEm = new Date(criadoEm.getTime() + 30 * 86_400_000); // sessao de 30 dias
+    tokenRepositorio.buscarPorHash.mockResolvedValue(
+      fabricarTokenRenovacao({ criadoEm, expiraEm }),
+    );
+    tokenRepositorio.criar.mockResolvedValue(fabricarTokenRenovacao({ id: 'token-2' }));
+
+    const antes = Date.now();
+    const resultado = await servico.renovar('token-bruto', contexto);
     const dias = Math.round((resultado.refreshTokenExpiraEm.getTime() - antes) / 86_400_000);
 
     expect(dias).toBe(30);
