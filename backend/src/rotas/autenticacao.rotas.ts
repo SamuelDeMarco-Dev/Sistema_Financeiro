@@ -6,6 +6,7 @@ import {
   MINUTOS_JANELA_RENOVACAO,
 } from '@/configuracao/constantes';
 import { AutenticacaoControlador } from '@/controladores/autenticacao.controlador';
+import { autenticar } from '@/middlewares/autenticar.middleware';
 import { limitador } from '@/middlewares/limitador.middleware';
 import { validar } from '@/middlewares/validar.middleware';
 import {
@@ -38,3 +39,5 @@ autenticacaoRotas.post(
   controlador.entrar,
 );
 autenticacaoRotas.post('/autenticacao/renovar', limitadorRenovacao, controlador.renovar);
+autenticacaoRotas.post('/autenticacao/sair', autenticar, controlador.sair);
+autenticacaoRotas.post('/autenticacao/sair-todos', autenticar, controlador.sairTodos);

@@ -345,3 +345,69 @@ describe('AutenticacaoServico.renovar', () => {
     expect(dias).toBe(30);
   });
 });
+
+describe('AutenticacaoServico.sair / sairTodos / buscarUsuarioPorId', () => {
+  let servico: AutenticacaoServico;
+  let repositorio: MockProxy<UsuarioRepositorio>;
+  let tokenRepositorio: MockProxy<TokenRenovacaoRepositorio>;
+
+  beforeEach(() => {
+    repositorio = mock();
+    tokenRepositorio = mock();
+    servico = new AutenticacaoServico(repositorio, tokenRepositorio);
+  });
+
+  describe('sair', () => {
+    it('nao faz nada quando nao ha cookie', async () => {
+      await servico.sair(undefined, 'usuario-1');
+      expect(tokenRepositorio.buscarPorHash).not.toHaveBeenCalled();
+    });
+
+    it('revoga so o token da sessao atual, do proprio usuario', async () => {
+      tokenRepositorio.buscarPorHash.mockResolvedValue(
+        fabricarTokenRenovacao({ id: 'token-1', usuarioId: 'usuario-1' }),
+      );
+
+      await servico.sair('token-bruto', 'usuario-1');
+
+      expect(tokenRepositorio.revogar).toHaveBeenCalledWith('token-1', null);
+    });
+
+    it('nao revoga um token que pertence a outro usuario', async () => {
+      tokenRepositorio.buscarPorHash.mockResolvedValue(
+        fabricarTokenRenovacao({ id: 'token-1', usuarioId: 'outro-usuario' }),
+      );
+
+      await servico.sair('token-bruto', 'usuario-1');
+
+      expect(tokenRepositorio.revogar).not.toHaveBeenCalled();
+    });
+
+    it('nao revoga de novo um token ja revogado', async () => {
+      tokenRepositorio.buscarPorHash.mockResolvedValue(
+        fabricarTokenRenovacao({ id: 'token-1', usuarioId: 'usuario-1', revogadoEm: new Date() }),
+      );
+
+      await servico.sair('token-bruto', 'usuario-1');
+
+      expect(tokenRepositorio.revogar).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sairTodos', () => {
+    it('revoga todos os tokens do usuario', async () => {
+      await servico.sairTodos('usuario-1');
+      expect(tokenRepositorio.revogarTodosDoUsuario).toHaveBeenCalledWith('usuario-1');
+    });
+  });
+
+  describe('buscarUsuarioPorId', () => {
+    it('delega ao repositorio', async () => {
+      const usuario = fabricarUsuario();
+      repositorio.buscarPorId.mockResolvedValue(usuario);
+
+      await expect(servico.buscarUsuarioPorId('usuario-1')).resolves.toEqual(usuario);
+      expect(repositorio.buscarPorId).toHaveBeenCalledWith('usuario-1');
+    });
+  });
+});

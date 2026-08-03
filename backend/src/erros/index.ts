@@ -57,6 +57,13 @@ export class EmailNaoVerificadoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'EMAIL_NAO_VERIFICADO';
 }
 
+/** 401 — access token expirado: distinto de NAO_AUTENTICADO porque o
+ * cliente deve reagir diferente (tentar renovar, nao encerrar a sessao). */
+export class TokenExpiradoErro extends ErroAplicacao {
+  readonly statusHttp = 401;
+  readonly codigo: CodigoErro = 'TOKEN_EXPIRADO';
+}
+
 /** 403 — RN-54: bloqueio temporario por excesso de tentativas de login. */
 export class ContaBloqueadaErro extends ErroAplicacao {
   readonly statusHttp = 403;

@@ -212,4 +212,27 @@ export class AutenticacaoServico {
       refreshTokenExpiraEm,
     };
   }
+
+  /** RF-05: revoga so a sessao do cookie apresentado. Sem cookie ou cookie
+   * de outro usuario: nao ha nada para revogar, mas o logout local (limpar
+   * o cookie) e responsabilidade do controlador de qualquer forma. */
+  async sair(tokenBruto: string | undefined, usuarioId: string): Promise<void> {
+    if (!tokenBruto) return;
+
+    const registro = await this.tokenRepositorio.buscarPorHash(hashToken(tokenBruto));
+    if (registro?.usuarioId === usuarioId && !registro.revogadoEm) {
+      await this.tokenRepositorio.revogar(registro.id, null);
+    }
+  }
+
+  /** RF-06: revoga todas as sessoes do usuario autenticado. */
+  async sairTodos(usuarioId: string): Promise<void> {
+    await this.tokenRepositorio.revogarTodosDoUsuario(usuarioId);
+  }
+
+  /** Usado por middlewares/autenticar.middleware.ts — middleware nao pode
+   * importar repositorio diretamente (fronteiras de camada, issue #8). */
+  async buscarUsuarioPorId(id: string): Promise<Usuario | null> {
+    return this.repositorio.buscarPorId(id);
+  }
 }

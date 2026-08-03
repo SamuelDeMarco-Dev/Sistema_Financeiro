@@ -72,4 +72,19 @@ export class AutenticacaoControlador {
         ),
       );
   });
+
+  sair = asyncHandler(async (req: Request, res: Response) => {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    await this.servico.sair(cookies[NOME_COOKIE_REFRESH], req.usuario.id);
+
+    res.clearCookie(NOME_COOKIE_REFRESH, { path: CAMINHO_COOKIE_REFRESH });
+    res.status(204).send();
+  });
+
+  sairTodos = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.sairTodos(req.usuario.id);
+
+    res.clearCookie(NOME_COOKIE_REFRESH, { path: CAMINHO_COOKIE_REFRESH });
+    res.status(204).send();
+  });
 }

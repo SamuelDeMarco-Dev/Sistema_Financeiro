@@ -335,3 +335,76 @@ describe('POST /api/v1/autenticacao/renovar', () => {
     expect(resposta.body).toMatchObject({ codigo: 'NAO_AUTENTICADO' });
   });
 });
+
+async function logar(
+  email: string,
+  senha: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const resposta = await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+  const corpo = resposta.body as { data: { accessToken: string } };
+  return {
+    accessToken: corpo.data.accessToken,
+    refreshToken: extrairTokenDoCookie(resposta.headers),
+  };
+}
+
+describe('POST /api/v1/autenticacao/sair e /sair-todos', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('rejeita sem token de acesso (401 NAO_AUTENTICADO)', async () => {
+    const resposta = await request(app).post('/api/v1/autenticacao/sair');
+
+    expect(resposta.status).toBe(401);
+    expect(resposta.body).toMatchObject({ codigo: 'NAO_AUTENTICADO' });
+  });
+
+  it('sair: 204, limpa o cookie e o refresh token nao renova mais', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'sair@exemplo.com' });
+    const { accessToken, refreshToken } = await logar(email, senha);
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/sair')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Cookie', `refreshToken=${refreshToken}`);
+
+    expect(resposta.status).toBe(204);
+    const cookieLimpo = (resposta.headers['set-cookie'] as unknown as string[]).find((c) =>
+      c.startsWith('refreshToken='),
+    );
+    expect(cookieLimpo).toMatch(/refreshToken=;/);
+
+    const tentativaRenovar = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${refreshToken}`);
+    expect(tentativaRenovar.status).toBe(401);
+  });
+
+  it('sair-todos: 204 e nenhuma sessao do usuario renova mais', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'sair-todos@exemplo.com' });
+    const sessao1 = await logar(email, senha);
+    const sessao2 = await logar(email, senha);
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/sair-todos')
+      .set('Authorization', `Bearer ${sessao1.accessToken}`)
+      .set('Cookie', `refreshToken=${sessao1.refreshToken}`);
+    expect(resposta.status).toBe(204);
+
+    const renovarSessao1 = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${sessao1.refreshToken}`);
+    const renovarSessao2 = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${sessao2.refreshToken}`);
+
+    expect(renovarSessao1.status).toBe(401);
+    expect(renovarSessao2.status).toBe(401);
+  });
+});
