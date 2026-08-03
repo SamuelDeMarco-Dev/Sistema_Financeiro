@@ -602,3 +602,93 @@ describe('PATCH /api/v1/autenticacao/alterar-senha', () => {
     expect(resposta.status).toBe(401);
   });
 });
+
+describe('GET /api/v1/autenticacao/sessoes e DELETE /sessoes/:id', () => {
+  beforeEach(async () => {
+    await limparBanco();
+  });
+
+  afterAll(async () => {
+    await limparBanco();
+    await prisma.$disconnect();
+  });
+
+  it('lista so sessoes ativas, com a atual marcada', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'sessoes@exemplo.com' });
+    const sessaoAtual = await logar(email, senha);
+    await logar(email, senha);
+
+    const resposta = await request(app)
+      .get('/api/v1/autenticacao/sessoes')
+      .set('Authorization', `Bearer ${sessaoAtual.accessToken}`)
+      .set('Cookie', `refreshToken=${sessaoAtual.refreshToken}`);
+
+    expect(resposta.status).toBe(200);
+    const corpo = resposta.body as { data: { sessoes: { id: string; atual: boolean }[] } };
+    expect(corpo.data.sessoes).toHaveLength(2);
+    expect(corpo.data.sessoes.filter((s) => s.atual)).toHaveLength(1);
+  });
+
+  it('nao lista sessoes revogadas', async () => {
+    const { email, senha } = await criarUsuarioVerificado({
+      email: 'sessoes-revogadas@exemplo.com',
+    });
+    const sessaoAtual = await logar(email, senha);
+    await request(app)
+      .post('/api/v1/autenticacao/sair-todos')
+      .set('Authorization', `Bearer ${sessaoAtual.accessToken}`);
+    const novaSessao = await logar(email, senha);
+
+    const resposta = await request(app)
+      .get('/api/v1/autenticacao/sessoes')
+      .set('Authorization', `Bearer ${novaSessao.accessToken}`)
+      .set('Cookie', `refreshToken=${novaSessao.refreshToken}`);
+
+    const corpo = resposta.body as { data: { sessoes: unknown[] } };
+    expect(corpo.data.sessoes).toHaveLength(1);
+  });
+
+  it('revoga uma sessao especifica do proprio usuario (204)', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'revogar-uma@exemplo.com' });
+    const sessaoAtual = await logar(email, senha);
+    const outraSessao = await logar(email, senha);
+
+    const listagem = await request(app)
+      .get('/api/v1/autenticacao/sessoes')
+      .set('Authorization', `Bearer ${sessaoAtual.accessToken}`)
+      .set('Cookie', `refreshToken=${sessaoAtual.refreshToken}`);
+    const corpo = listagem.body as { data: { sessoes: { id: string; atual: boolean }[] } };
+    const idOutraSessao = corpo.data.sessoes.find((s) => !s.atual)?.id;
+
+    const resposta = await request(app)
+      .delete(`/api/v1/autenticacao/sessoes/${idOutraSessao}`)
+      .set('Authorization', `Bearer ${sessaoAtual.accessToken}`);
+    expect(resposta.status).toBe(204);
+
+    const renovarOutra = await request(app)
+      .post('/api/v1/autenticacao/renovar')
+      .set('Cookie', `refreshToken=${outraSessao.refreshToken}`);
+    expect(renovarOutra.status).toBe(401);
+  });
+
+  it('responde 404 (nao 403) ao tentar revogar sessao de outro usuario', async () => {
+    const usuario1 = await criarUsuarioVerificado({ email: 'usuario1@exemplo.com' });
+    const usuario2 = await criarUsuarioVerificado({ email: 'usuario2@exemplo.com' });
+    const sessao1 = await logar(usuario1.email, usuario1.senha);
+    const sessao2 = await logar(usuario2.email, usuario2.senha);
+
+    const listagemUsuario2 = await request(app)
+      .get('/api/v1/autenticacao/sessoes')
+      .set('Authorization', `Bearer ${sessao2.accessToken}`)
+      .set('Cookie', `refreshToken=${sessao2.refreshToken}`);
+    const corpo = listagemUsuario2.body as { data: { sessoes: { id: string }[] } };
+    const idSessaoUsuario2 = corpo.data.sessoes[0]?.id;
+
+    const resposta = await request(app)
+      .delete(`/api/v1/autenticacao/sessoes/${idSessaoUsuario2}`)
+      .set('Authorization', `Bearer ${sessao1.accessToken}`);
+
+    expect(resposta.status).toBe(404);
+    expect(resposta.body).toMatchObject({ codigo: 'NAO_ENCONTRADO' });
+  });
+});

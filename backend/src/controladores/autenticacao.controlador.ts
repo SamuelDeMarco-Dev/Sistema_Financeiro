@@ -11,6 +11,7 @@ import type {
   EsqueciSenhaDTO,
   ReenviarVerificacaoDTO,
   RedefinirSenhaDTO,
+  RevogarSessaoParams,
   VerificarEmailDTO,
 } from '@/validadores/autenticacao.validador';
 import type { Request, Response } from 'express';
@@ -146,5 +147,19 @@ export class AutenticacaoControlador {
     );
 
     res.status(200).json(respostaSucesso({}, 'Senha alterada com sucesso.'));
+  });
+
+  sessoes = asyncHandler(async (req: Request, res: Response) => {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    const sessoes = await this.servico.listarSessoes(req.usuario.id, cookies[NOME_COOKIE_REFRESH]);
+
+    res.status(200).json(respostaSucesso({ sessoes }, 'Sessões ativas listadas.'));
+  });
+
+  revogarSessao = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as RevogarSessaoParams;
+    await this.servico.revogarSessao(req.usuario.id, id);
+
+    res.status(204).send();
   });
 }

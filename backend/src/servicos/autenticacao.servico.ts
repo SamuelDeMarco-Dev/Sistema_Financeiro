@@ -13,6 +13,7 @@ import {
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
   NaoAutenticadoErro,
+  NaoEncontradoErro,
   ValidacaoErro,
 } from '@/erros';
 import { TokenRenovacaoRepositorio } from '@/repositorios/token-renovacao.repositorio';
@@ -22,6 +23,7 @@ import { modeloRecuperacaoSenha } from '@/utilitarios/email/modelos/recuperacao-
 import { modeloVerificacaoEmail } from '@/utilitarios/email/modelos/verificacao-email';
 import { assinarAccessToken, duracaoEmSegundos } from '@/utilitarios/jwt';
 import { registrador } from '@/utilitarios/registrador';
+import { rotularDispositivo } from '@/utilitarios/rotulo-dispositivo';
 import { comparar, gerarHash } from '@/utilitarios/senha';
 import { gerarTokenOpaco, hashToken } from '@/utilitarios/token';
 import type {
@@ -61,6 +63,15 @@ export interface ResultadoRenovacao {
   expiraEmSegundos: number;
   refreshTokenBruto: string;
   refreshTokenExpiraEm: Date;
+}
+
+export interface SessaoResumo {
+  id: string;
+  dispositivo: string;
+  ip: string | null;
+  criadoEm: Date;
+  expiraEm: Date;
+  atual: boolean;
 }
 
 export class AutenticacaoServico {
@@ -357,5 +368,36 @@ export class AutenticacaoServico {
       await this.repositorio.atualizarSenha(usuarioId, senhaHash, tx);
       await this.tokenRepositorio.revogarTodosDoUsuarioExceto(usuarioId, tokenHashAtual, tx);
     });
+  }
+
+  /** RF-06 (issue #16): so sessoes ainda validas — nem revogadas, nem
+   * expiradas. Marca `atual` comparando o hash do proprio cookie da
+   * requisicao, nao um id armazenado em lugar nenhum. */
+  async listarSessoes(
+    usuarioId: string,
+    tokenAtualBruto: string | undefined,
+  ): Promise<SessaoResumo[]> {
+    const tokens = await this.tokenRepositorio.listarAtivasDoUsuario(usuarioId);
+    const hashAtual = tokenAtualBruto ? hashToken(tokenAtualBruto) : undefined;
+
+    return tokens.map((token) => ({
+      id: token.id,
+      dispositivo: rotularDispositivo(token.userAgent),
+      ip: token.ip,
+      criadoEm: token.criadoEm,
+      expiraEm: token.expiraEm,
+      atual: hashAtual !== undefined && token.tokenHash === hashAtual,
+    }));
+  }
+
+  /** RN-51: sessao de outro usuario responde 404, nunca 403 — nao revela
+   * que o id existe. */
+  async revogarSessao(usuarioId: string, sessaoId: string): Promise<void> {
+    const token = await this.tokenRepositorio.buscarPorId(sessaoId);
+    if (token?.usuarioId !== usuarioId) {
+      throw new NaoEncontradoErro('Sessão não encontrada.');
+    }
+
+    await this.tokenRepositorio.revogar(token.id, null);
   }
 }

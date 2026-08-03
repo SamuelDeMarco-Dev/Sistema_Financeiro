@@ -25,6 +25,19 @@ export class TokenRenovacaoRepositorio {
     return prisma.tokenRenovacao.findFirst({ where: { tokenHash }, include: { usuario: true } });
   }
 
+  async buscarPorId(id: string): Promise<TokenRenovacao | null> {
+    return prisma.tokenRenovacao.findUnique({ where: { id } });
+  }
+
+  /** issue #16: sessoes que o usuario ainda pode ver/revogar — nem
+   * revogadas, nem expiradas. Mais recente primeiro. */
+  async listarAtivasDoUsuario(usuarioId: string): Promise<TokenRenovacao[]> {
+    return prisma.tokenRenovacao.findMany({
+      where: { usuarioId, revogadoEm: null, expiraEm: { gt: new Date() } },
+      orderBy: { criadoEm: 'desc' },
+    });
+  }
+
   /** RN-53 (rotacao): marca o token como revogado e aponta para quem o
    * substituiu — a trilha permite reconstruir a familia inteira. */
   async revogar(

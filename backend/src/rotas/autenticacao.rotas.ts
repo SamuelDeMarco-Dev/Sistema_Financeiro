@@ -18,6 +18,7 @@ import {
   esqueciSenhaSchema,
   reenviarVerificacaoSchema,
   redefinirSenhaSchema,
+  revogarSessaoSchema,
   verificarEmailSchema,
   type EntrarDTO,
   type ReenviarVerificacaoDTO,
@@ -81,4 +82,11 @@ autenticacaoRotas.patch(
   autenticar,
   validar(alterarSenhaSchema),
   controlador.alterarSenha,
+);
+autenticacaoRotas.get('/autenticacao/sessoes', autenticar, controlador.sessoes);
+autenticacaoRotas.delete(
+  '/autenticacao/sessoes/:id',
+  autenticar,
+  validar(revogarSessaoSchema),
+  controlador.revogarSessao,
 );

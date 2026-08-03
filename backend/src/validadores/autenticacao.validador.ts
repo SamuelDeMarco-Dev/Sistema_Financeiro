@@ -86,3 +86,9 @@ export const alterarSenhaSchema = z.object({
 });
 
 export type AlterarSenhaDTO = z.infer<typeof alterarSenhaSchema>['body'];
+
+export const revogarSessaoSchema = z.object({
+  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+});
+
+export type RevogarSessaoParams = z.infer<typeof revogarSessaoSchema>['params'];

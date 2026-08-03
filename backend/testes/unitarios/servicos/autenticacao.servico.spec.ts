@@ -6,6 +6,7 @@ import {
   EmailJaCadastradoErro,
   EmailNaoVerificadoErro,
   NaoAutenticadoErro,
+  NaoEncontradoErro,
   ValidacaoErro,
 } from '@/erros';
 import {
@@ -20,6 +21,7 @@ import {
 import { AutenticacaoServico } from '@/servicos/autenticacao.servico';
 import { enviarEmail } from '@/utilitarios/email/enviador';
 import { comparar } from '@/utilitarios/senha';
+import { hashToken } from '@/utilitarios/token';
 import type { Perfil } from '@prisma/client';
 
 vi.mock('@/utilitarios/email/enviador');
@@ -576,6 +578,74 @@ describe('AutenticacaoServico — verificacao, recuperacao e alteracao de senha'
         ValidacaoErro,
       );
       expect(repositorio.atualizarSenha).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('AutenticacaoServico.listarSessoes / revogarSessao', () => {
+  let servico: AutenticacaoServico;
+  let repositorio: MockProxy<UsuarioRepositorio>;
+  let tokenRepositorio: MockProxy<TokenRenovacaoRepositorio>;
+
+  beforeEach(() => {
+    repositorio = mock();
+    tokenRepositorio = mock();
+    servico = new AutenticacaoServico(repositorio, tokenRepositorio);
+  });
+
+  describe('listarSessoes', () => {
+    it('mapeia os tokens para o formato de sessao e marca a atual pelo hash do cookie', async () => {
+      const tokenAtual = fabricarTokenRenovacao({
+        id: 'token-1',
+        tokenHash: hashToken('token-bruto-atual'),
+      });
+      const outroToken = fabricarTokenRenovacao({ id: 'token-2', tokenHash: 'hash-outro' });
+      tokenRepositorio.listarAtivasDoUsuario.mockResolvedValue([tokenAtual, outroToken]);
+
+      const sessoes = await servico.listarSessoes('usuario-1', 'token-bruto-atual');
+
+      expect(sessoes).toHaveLength(2);
+      expect(sessoes.find((s) => s.id === 'token-1')?.atual).toBe(true);
+      expect(sessoes.find((s) => s.id === 'token-2')?.atual).toBe(false);
+    });
+
+    it('nenhuma sessao vem marcada como atual quando nao ha cookie', async () => {
+      tokenRepositorio.listarAtivasDoUsuario.mockResolvedValue([fabricarTokenRenovacao()]);
+
+      const sessoes = await servico.listarSessoes('usuario-1', undefined);
+
+      expect(sessoes.every((s) => !s.atual)).toBe(true);
+    });
+  });
+
+  describe('revogarSessao', () => {
+    it('revoga a sessao quando pertence ao proprio usuario', async () => {
+      tokenRepositorio.buscarPorId.mockResolvedValue(
+        fabricarTokenRenovacao({ id: 'token-1', usuarioId: 'usuario-1' }),
+      );
+
+      await servico.revogarSessao('usuario-1', 'token-1');
+
+      expect(tokenRepositorio.revogar).toHaveBeenCalledWith('token-1', null);
+    });
+
+    it('lanca NaoEncontradoErro (nao Proibido) quando a sessao e de outro usuario', async () => {
+      tokenRepositorio.buscarPorId.mockResolvedValue(
+        fabricarTokenRenovacao({ id: 'token-1', usuarioId: 'outro-usuario' }),
+      );
+
+      await expect(servico.revogarSessao('usuario-1', 'token-1')).rejects.toThrow(
+        NaoEncontradoErro,
+      );
+      expect(tokenRepositorio.revogar).not.toHaveBeenCalled();
+    });
+
+    it('lanca NaoEncontradoErro quando a sessao nao existe', async () => {
+      tokenRepositorio.buscarPorId.mockResolvedValue(null);
+
+      await expect(servico.revogarSessao('usuario-1', 'id-inexistente')).rejects.toThrow(
+        NaoEncontradoErro,
+      );
     });
   });
 });
