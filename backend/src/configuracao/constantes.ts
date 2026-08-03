@@ -19,3 +19,13 @@ export const HORAS_EXPIRACAO_TOKEN_RECUPERACAO = 1;
 /** Rate limit de POST /autenticacao/reenviar-verificacao, por IP+e-mail. */
 export const LIMITE_REENVIO_VERIFICACAO = 3;
 export const MINUTOS_JANELA_REENVIO_VERIFICACAO = 60;
+
+/** RF-11: upload de avatar (issue #17). */
+export const TAMANHO_THUMBNAIL_AVATAR_PX = 128;
+export const TIPOS_MIME_AVATAR_PERMITIDOS: ReadonlySet<string> = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+export const LIMITE_UPLOADS_AVATAR_POR_HORA = 50;
+export const MINUTOS_JANELA_UPLOAD_AVATAR = 60;

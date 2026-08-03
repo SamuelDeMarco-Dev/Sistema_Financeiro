@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { LimiteExcedidoErro } from '@/erros';
 import type { Request, RequestHandler } from 'express';
 
@@ -19,7 +19,12 @@ export function limitador({ janelaMinutos, maximo, chaveExtra }: OpcoesLimitador
     max: maximo,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: Request) => (chaveExtra ? `${req.ip}:${chaveExtra(req)}` : (req.ip ?? '')),
+    // ipKeyGenerator normaliza IPv6 (ex.: agrupa por /64) — usar req.ip cru
+    // quebra a validacao interna da lib e arrisca deixar IPv6 escapar do limite.
+    keyGenerator: (req: Request) => {
+      const chaveIp = ipKeyGenerator(req.ip ?? '');
+      return chaveExtra ? `${chaveIp}:${chaveExtra(req)}` : chaveIp;
+    },
     handler: (_req, res, next) => {
       // Limite superior da janela: express-rate-limit v8 nao expoe o
       // tempo exato restante em `req` sem uma augmentacao propria de tipo.

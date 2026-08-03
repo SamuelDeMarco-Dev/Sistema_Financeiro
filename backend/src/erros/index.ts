@@ -74,6 +74,19 @@ export class ContaBloqueadaErro extends ErroAplicacao {
   }
 }
 
+/** 413 — upload acima do limite (issue #17: avatar; issue de anexos usa
+ * a mesma classe). */
+export class ArquivoMuitoGrandeErro extends ErroAplicacao {
+  readonly statusHttp = 413;
+  readonly codigo: CodigoErro = 'ARQUIVO_MUITO_GRANDE';
+}
+
+/** 415 — MIME real (magic number) fora da lista aceita. */
+export class TipoArquivoInvalidoErro extends ErroAplicacao {
+  readonly statusHttp = 415;
+  readonly codigo: CodigoErro = 'TIPO_ARQUIVO_INVALIDO';
+}
+
 /** 422 — requisicao bem formada, regra de dominio violada. */
 export class RegraNegocioErro extends ErroAplicacao {
   readonly statusHttp = 422;

@@ -116,4 +116,10 @@ export class UsuarioRepositorio {
   ): Promise<void> {
     await (tx ?? prisma).usuario.update({ where: { id }, data: { senhaHash } });
   }
+
+  /** RF-10: `nome` vive em Usuario, nao em Perfil — PATCH /perfil escreve
+   * nas duas tabelas quando o cliente manda nome junto com preferencias. */
+  async atualizarNome(id: string, nome: string, tx?: Prisma.TransactionClient): Promise<Usuario> {
+    return (tx ?? prisma).usuario.update({ where: { id }, data: { nome } });
+  }
 }
