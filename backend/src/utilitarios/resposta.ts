@@ -12,6 +12,7 @@ export interface RespostaErro {
   message: string;
   codigo: CodigoErro;
   errors?: DetalheErro[];
+  meta?: Record<string, unknown>;
 }
 
 export function respostaSucesso<T>(dados: T, mensagem: string, meta?: object): RespostaSucesso<T> {
@@ -24,8 +25,13 @@ export function respostaErro(
   mensagem: string,
   detalhes: DetalheErro[] | undefined,
   codigo: CodigoErro,
+  meta?: Record<string, unknown>,
 ): RespostaErro {
-  return detalhes
-    ? { success: false, message: mensagem, codigo, errors: detalhes }
-    : { success: false, message: mensagem, codigo };
+  return {
+    success: false,
+    message: mensagem,
+    codigo,
+    ...(detalhes ? { errors: detalhes } : {}),
+    ...(meta ? { meta } : {}),
+  };
 }

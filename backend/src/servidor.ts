@@ -2,6 +2,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import { ambiente } from '@/configuracao/ambiente';
 import { opcoesCors } from '@/configuracao/cors';
 import { correlacao } from '@/middlewares/correlacao.middleware';
 import { naoEncontrado } from '@/middlewares/nao-encontrado.middleware';
@@ -26,6 +27,10 @@ export function criarServidor(): Express {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(registradorRequisicoes); // log estruturado da requisicao
+
+  // Avatares (issue #17). Fora de /api/v1 de proposito: e um arquivo
+  // estatico, nao um recurso da API.
+  app.use('/uploads', express.static(ambiente.DIRETORIO_UPLOADS));
 
   app.use('/api/v1', rotas);
   app.use(naoEncontrado);

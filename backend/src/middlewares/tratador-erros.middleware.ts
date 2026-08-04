@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { ErroAplicacao } from '@/erros';
 import type { CodigoErro } from '@/erros';
@@ -46,7 +47,24 @@ export function tratadorErros(
 
   if (erro instanceof ErroAplicacao) {
     registrador.warn({ requestId: req.requestId, codigo: erro.codigo }, erro.message);
-    res.status(erro.statusHttp).json(respostaErro(erro.message, erro.detalhes, erro.codigo));
+    res
+      .status(erro.statusHttp)
+      .json(respostaErro(erro.message, erro.detalhes, erro.codigo, erro.meta));
+    return;
+  }
+
+  // Multer valida o tamanho antes do handler rodar — nao passa por
+  // ErroAplicacao porque nunca chega ao servico.
+  if (erro instanceof MulterError) {
+    if (erro.code === 'LIMIT_FILE_SIZE') {
+      res
+        .status(413)
+        .json(
+          respostaErro('Arquivo acima do limite permitido.', undefined, 'ARQUIVO_MUITO_GRANDE'),
+        );
+      return;
+    }
+    res.status(400).json(respostaErro('Falha no envio do arquivo.', undefined, 'VALIDACAO'));
     return;
   }
 

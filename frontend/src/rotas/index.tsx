@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
-import { Esqueleto } from '@/componentes/feedback';
+import { EsqueletoPagina } from '@/componentes/feedback';
 import { LayoutAutenticado } from '@/layouts/LayoutAutenticado';
 import { LayoutPublico } from '@/layouts/LayoutPublico';
 import { RotaProtegida } from './RotaProtegida';
+import { RotaPublica } from './RotaPublica';
 import type { ReactElement, ReactNode } from 'react';
 
 // React.lazy: cada pagina vira um chunk separado, carregado sob demanda na
@@ -11,19 +12,27 @@ import type { ReactElement, ReactNode } from 'react';
 const Inicio = lazy(() =>
   import('@/paginas/Inicio').then((modulo) => ({ default: modulo.Inicio })),
 );
+const Entrar = lazy(() =>
+  import('@/paginas/Entrar').then((modulo) => ({ default: modulo.Entrar })),
+);
+const Cadastro = lazy(() =>
+  import('@/paginas/Cadastro').then((modulo) => ({ default: modulo.Cadastro })),
+);
+const VerificarEmail = lazy(() =>
+  import('@/paginas/VerificarEmail').then((modulo) => ({ default: modulo.VerificarEmail })),
+);
+const EsqueciSenha = lazy(() =>
+  import('@/paginas/EsqueciSenha').then((modulo) => ({ default: modulo.EsqueciSenha })),
+);
+const RedefinirSenha = lazy(() =>
+  import('@/paginas/RedefinirSenha').then((modulo) => ({ default: modulo.RedefinirSenha })),
+);
+const Configuracoes = lazy(() =>
+  import('@/paginas/Configuracoes').then((modulo) => ({ default: modulo.Configuracoes })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
-
-function EsqueletoPagina(): ReactElement {
-  return (
-    <div className="flex min-h-screen flex-col gap-4 bg-fundo p-8">
-      <Esqueleto className="h-8 w-48" />
-      <Esqueleto className="h-4 w-full max-w-md" />
-      <Esqueleto className="h-40 w-full" />
-    </div>
-  );
-}
 
 function ComSuspense({ children }: { children: ReactNode }): ReactElement {
   return <Suspense fallback={<EsqueletoPagina />}>{children}</Suspense>;
@@ -41,6 +50,57 @@ export const rotas = createBrowserRouter([
           </ComSuspense>
         ),
       },
+      {
+        // Acessivel independente de sessao: o link do e-mail pode ser aberto
+        // deslogado (caso comum) ou logado, e verificar precisa funcionar
+        // nos dois casos — por isso fora de RotaPublica.
+        path: 'verificar-email',
+        element: (
+          <ComSuspense>
+            <VerificarEmail />
+          </ComSuspense>
+        ),
+      },
+      {
+        // Mesmo raciocinio de /verificar-email: o link de redefinicao de
+        // senha precisa funcionar mesmo com uma sessao antiga ainda ativa
+        // no navegador (RF-07).
+        path: 'redefinir-senha',
+        element: (
+          <ComSuspense>
+            <RedefinirSenha />
+          </ComSuspense>
+        ),
+      },
+      {
+        element: <RotaPublica />,
+        children: [
+          {
+            path: 'entrar',
+            element: (
+              <ComSuspense>
+                <Entrar />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'cadastrar',
+            element: (
+              <ComSuspense>
+                <Cadastro />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'esqueci-senha',
+            element: (
+              <ComSuspense>
+                <EsqueciSenha />
+              </ComSuspense>
+            ),
+          },
+        ],
+      },
     ],
   },
   {
@@ -48,9 +108,18 @@ export const rotas = createBrowserRouter([
     children: [
       {
         element: <LayoutAutenticado />,
-        // Paginas autenticadas (Dashboard, Movimentacoes, ...) entram aqui
-        // conforme cada funcionalidade chega, uma issue por vez.
-        children: [],
+        // Demais paginas autenticadas (Dashboard, Movimentacoes, ...) entram
+        // aqui conforme cada funcionalidade chega, uma issue por vez.
+        children: [
+          {
+            path: 'configuracoes',
+            element: (
+              <ComSuspense>
+                <Configuracoes />
+              </ComSuspense>
+            ),
+          },
+        ],
       },
     ],
   },

@@ -38,6 +38,55 @@ export class ConflitoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'CONFLITO';
 }
 
+/** 409 — e-mail ja pertence a outro cadastro. */
+export class EmailJaCadastradoErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'EMAIL_JA_CADASTRADO';
+}
+
+/** 401 — e-mail inexistente ou senha errada. Mesma mensagem para os dois
+ * casos (RN): nao da para um atacante distinguir se o e-mail existe. */
+export class CredenciaisInvalidasErro extends ErroAplicacao {
+  readonly statusHttp = 401;
+  readonly codigo: CodigoErro = 'CREDENCIAIS_INVALIDAS';
+}
+
+/** 403 — RF-02: acesso bloqueado ate a confirmacao do e-mail. */
+export class EmailNaoVerificadoErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'EMAIL_NAO_VERIFICADO';
+}
+
+/** 401 — access token expirado: distinto de NAO_AUTENTICADO porque o
+ * cliente deve reagir diferente (tentar renovar, nao encerrar a sessao). */
+export class TokenExpiradoErro extends ErroAplicacao {
+  readonly statusHttp = 401;
+  readonly codigo: CodigoErro = 'TOKEN_EXPIRADO';
+}
+
+/** 403 — RN-54: bloqueio temporario por excesso de tentativas de login. */
+export class ContaBloqueadaErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'CONTA_BLOQUEADA';
+
+  constructor(mensagem: string, desbloqueiaEm: Date) {
+    super(mensagem, undefined, { desbloqueiaEm: desbloqueiaEm.toISOString() });
+  }
+}
+
+/** 413 — upload acima do limite (issue #17: avatar; issue de anexos usa
+ * a mesma classe). */
+export class ArquivoMuitoGrandeErro extends ErroAplicacao {
+  readonly statusHttp = 413;
+  readonly codigo: CodigoErro = 'ARQUIVO_MUITO_GRANDE';
+}
+
+/** 415 — MIME real (magic number) fora da lista aceita. */
+export class TipoArquivoInvalidoErro extends ErroAplicacao {
+  readonly statusHttp = 415;
+  readonly codigo: CodigoErro = 'TIPO_ARQUIVO_INVALIDO';
+}
+
 /** 422 — requisicao bem formada, regra de dominio violada. */
 export class RegraNegocioErro extends ErroAplicacao {
   readonly statusHttp = 422;
