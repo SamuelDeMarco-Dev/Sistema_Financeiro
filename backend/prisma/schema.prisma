@@ -17,6 +17,25 @@ enum TemaPreferido {
   SISTEMA
 }
 
+// ═══════════════════════════════════════════════════════════
+//  CONTAS, CATEGORIAS E ETIQUETAS
+// ═══════════════════════════════════════════════════════════
+
+enum TipoConta {
+  CARTEIRA
+  CONTA_CORRENTE
+  POUPANCA
+  INVESTIMENTO
+  DINHEIRO
+  OUTRO
+}
+
+enum TipoCategoria {
+  RECEITA
+  DESPESA
+  AMBOS
+}
+
 model Usuario {
   id        String @id @default(cuid())
   nome      String @db.VarChar(120)
@@ -41,6 +60,9 @@ model Usuario {
 
   perfil          Perfil?
   tokensRenovacao TokenRenovacao[]
+  contas          Conta[]
+  categorias      Categoria[]
+  etiquetas       Etiqueta[]
 
   @@index([excluidoEm])
   @@map("usuarios")
@@ -89,4 +111,86 @@ model TokenRenovacao {
   @@index([usuarioId, revogadoEm])
   @@index([expiraEm])
   @@map("tokens_renovacao")
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTAS, CATEGORIAS E ETIQUETAS
+// ═══════════════════════════════════════════════════════════
+
+model Conta {
+  id String @id @default(cuid())
+
+  /// Escopo XOR: usuarioId OU contaCompartilhadaId. contaCompartilhadaId
+  /// ainda nao tem FK ativa — a coluna nasce aqui, a relacao chega em M6.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome         String    @db.VarChar(120)
+  tipo         TipoConta
+  instituicao  String?   @db.VarChar(120)
+  saldoInicial Decimal   @default(0) @map("saldo_inicial") @db.Decimal(14, 2)
+  moeda        String    @default("BRL") @db.Char(3)
+  cor          String    @default("#2563EB") @db.VarChar(9)
+  icone        String    @default("wallet") @db.VarChar(40)
+
+  incluirNoSaldoTotal Boolean @default(true) @map("incluir_no_saldo_total")
+  ordem               Int     @default(0)
+
+  arquivadaEm  DateTime? @map("arquivada_em") @db.Timestamptz(3)
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, excluidoEm, arquivadaEm])
+  @@index([contaCompartilhadaId, excluidoEm])
+  @@map("contas")
+}
+
+model Categoria {
+  id String @id @default(cuid())
+
+  /// Escopo: usuarioId, contaCompartilhadaId, ou ambos nulos quando ehPadraoSistema.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+  categoriaPaiId       String? @map("categoria_pai_id")
+
+  nome            String        @db.VarChar(80)
+  tipo            TipoCategoria @default(DESPESA)
+  cor             String        @default("#64748B") @db.VarChar(9)
+  icone           String        @default("tag") @db.VarChar(40)
+  ehPadraoSistema Boolean       @default(false) @map("eh_padrao_sistema")
+  ordem           Int           @default(0)
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario       Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  categoriaPai  Categoria?  @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
+  subcategorias Categoria[] @relation("Subcategoria")
+
+  @@index([usuarioId, tipo, excluidoEm])
+  @@index([contaCompartilhadaId, tipo, excluidoEm])
+  @@index([categoriaPaiId])
+  @@map("categorias")
+}
+
+model Etiqueta {
+  id                   String  @id @default(cuid())
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome String @db.VarChar(40)
+  cor  String @default("#64748B") @db.VarChar(9)
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([contaCompartilhadaId])
+  @@map("etiquetas")
 }
