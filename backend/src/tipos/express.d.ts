@@ -8,6 +8,7 @@ declare namespace Express {
     usuario: {
       id: string;
       email: string;
+      nome: string;
     };
   }
 }

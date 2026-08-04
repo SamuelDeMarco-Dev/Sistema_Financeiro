@@ -38,6 +38,13 @@ export class ConflitoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'CONFLITO';
 }
 
+/** 409 — RF-17: exclusao bloqueada porque o recurso tem vinculos (ex.:
+ * conta com movimentacoes) — a mensagem deve sugerir a alternativa. */
+export class RecursoEmUsoErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'RECURSO_EM_USO';
+}
+
 /** 409 — e-mail ja pertence a outro cadastro. */
 export class EmailJaCadastradoErro extends ErroAplicacao {
   readonly statusHttp = 409;
