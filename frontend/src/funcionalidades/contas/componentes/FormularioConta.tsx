@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { CampoMoeda } from '@/componentes/formulario/CampoMoeda';
 import { SeletorCor } from '@/componentes/formulario/SeletorCor';
 import { Botao } from '@/componentes/ui/Botao';
 import { CaixaMarcacao } from '@/componentes/ui/CaixaMarcacao';
@@ -54,6 +55,7 @@ export function FormularioConta({ aberto, aoFechar, conta }: FormularioContaProp
   // (react-hooks/incompatible-library) — useWatch e a alternativa oficial.
   const corSelecionada = useWatch({ control, name: 'cor' });
   const iconeSelecionado = useWatch({ control, name: 'icone' });
+  const saldoInicialSelecionado = useWatch({ control, name: 'saldoInicial' });
 
   const criar = useCriarConta();
   const atualizar = useAtualizarConta();
@@ -119,12 +121,14 @@ export function FormularioConta({ aberto, aoFechar, conta }: FormularioContaProp
             {...register('instituicao')}
           />
 
-          <Campo
+          <CampoMoeda
             rotulo="Saldo inicial"
-            inputMode="decimal"
-            placeholder="0,00"
+            valor={saldoInicialSelecionado}
+            aoAlterar={(valor) => {
+              setValue('saldoInicial', valor, { shouldValidate: true });
+            }}
             erro={errors.saldoInicial?.message}
-            {...register('saldoInicial')}
+            permiteNegativo
           />
 
           <SeletorCor
