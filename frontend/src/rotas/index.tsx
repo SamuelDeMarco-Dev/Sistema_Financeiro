@@ -33,6 +33,9 @@ const Configuracoes = lazy(() =>
 const Contas = lazy(() =>
   import('@/paginas/Contas').then((modulo) => ({ default: modulo.Contas })),
 );
+const Categorias = lazy(() =>
+  import('@/paginas/Categorias').then((modulo) => ({ default: modulo.Categorias })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -127,6 +130,14 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Contas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'categorias',
+            element: (
+              <ComSuspense>
+                <Categorias />
               </ComSuspense>
             ),
           },

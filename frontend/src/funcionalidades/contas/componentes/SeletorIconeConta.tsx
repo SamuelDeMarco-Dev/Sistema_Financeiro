@@ -1,4 +1,4 @@
-import { ICONES_CONTA } from '@/constantes/icones-conta';
+import { ICONES } from '@/constantes/icones';
 import { cn } from '@/utilitarios/cn';
 import type { ReactElement } from 'react';
 
@@ -7,12 +7,29 @@ interface SeletorIconeContaProps {
   aoAlterar: (icone: string) => void;
 }
 
+// Subconjunto sugerido para contas — o registro completo (com busca) e da
+// issue #29, usado para categorias, onde a variedade importa mais.
+const ICONES_SUGERIDOS = [
+  'wallet',
+  'landmark',
+  'banknote',
+  'credit-card',
+  'piggy-bank',
+  'trending-up',
+  'coins',
+  'building-2',
+  'smartphone',
+  'briefcase',
+] as const;
+
 export function SeletorIconeConta({ valor, aoAlterar }: SeletorIconeContaProps): ReactElement {
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="text-sm font-medium text-texto">Ícone</legend>
       <div role="radiogroup" aria-label="Ícone" className="flex flex-wrap gap-2">
-        {Object.entries(ICONES_CONTA).map(([nome, Icone]) => {
+        {ICONES_SUGERIDOS.map((nome) => {
+          const Icone = ICONES[nome];
+          if (!Icone) return null;
           const selecionado = nome === valor;
           return (
             <button

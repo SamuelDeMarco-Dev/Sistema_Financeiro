@@ -1,7 +1,7 @@
 import { Archive, ArchiveRestore, GripVertical, Pencil, Trash2 } from 'lucide-react';
 import { createElement } from 'react';
 import { ItemMenuAcoes, MenuAcoes } from '@/componentes/ui/MenuAcoes';
-import { resolverIconeConta } from '@/constantes/icones-conta';
+import { resolverIcone } from '@/constantes/icones';
 import { ROTULO_TIPO_CONTA } from '@/constantes/tipos-conta';
 import { paraCentavos } from '@/utilitarios/dinheiro';
 import { formatarMoeda } from '@/utilitarios/formatadores';
@@ -55,12 +55,12 @@ export function CartaoConta({
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md"
           style={{ backgroundColor: `${conta.cor}1A`, color: conta.cor }}
         >
-          {/* resolverIconeConta escolhe entre icones ja existentes (Record
+          {/* resolverIcone escolhe entre icones ja existentes (Record
               estatico) segundo um dado em runtime (conta.icone) — nao ha
               como hospedar essa escolha fora do componente. createElement
               (em vez de <Icone/>) evita o falso-positivo de
               react-hooks/static-components para esse padrao. */}
-          {createElement(resolverIconeConta(conta.icone), {
+          {createElement(resolverIcone(conta.icone), {
             className: 'h-5 w-5',
             'aria-hidden': true,
           })}
