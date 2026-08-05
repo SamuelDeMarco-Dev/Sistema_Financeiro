@@ -1,17 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as autenticacaoServico from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
+import * as perfilServico from '@/funcionalidades/perfil/servicos/perfil.servico';
+import type { PerfilCompleto } from '@/funcionalidades/perfil/tipos/perfil';
 import { armazenamentoToken } from '@/servicos/armazenamento-token';
-import * as autenticacaoServico from '@/servicos/autenticacao.servico';
 import { notificarSessaoExpirada } from '@/servicos/evento-sessao-expirada';
-import * as perfilServico from '@/servicos/perfil.servico';
 import * as renovarSessaoServico from '@/servicos/renovar-sessao';
-import type { PerfilCompleto } from '@/tipos/perfil';
 import { ProvedorAutenticacao, useSessao } from './ContextoAutenticacao';
 import type { ReactNode } from 'react';
 
 vi.mock('@/servicos/renovar-sessao');
-vi.mock('@/servicos/perfil.servico');
-vi.mock('@/servicos/autenticacao.servico');
+vi.mock('@/funcionalidades/perfil/servicos/perfil.servico');
+vi.mock('@/funcionalidades/autenticacao/servicos/autenticacao.servico');
 
 function Wrapper({ children }: { children: ReactNode }): ReturnType<typeof ProvedorAutenticacao> {
   return <ProvedorAutenticacao>{children}</ProvedorAutenticacao>;

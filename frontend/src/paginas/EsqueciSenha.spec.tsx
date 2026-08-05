@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as autenticacaoServico from '@/servicos/autenticacao.servico';
+import * as autenticacaoServico from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
 import { EsqueciSenha } from './EsqueciSenha';
 import type { ReactElement, ReactNode } from 'react';
 
-vi.mock('@/servicos/autenticacao.servico');
+vi.mock('@/funcionalidades/autenticacao/servicos/autenticacao.servico');
 
 beforeEach(() => {
   vi.clearAllMocks();

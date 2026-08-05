@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AvisoEmailNaoVerificado } from '@/componentes/autenticacao/AvisoEmailNaoVerificado';
-import { FormularioCadastro } from '@/componentes/autenticacao/FormularioCadastro';
+import { AvisoEmailNaoVerificado } from '@/funcionalidades/autenticacao/componentes/AvisoEmailNaoVerificado';
+import { FormularioCadastro } from '@/funcionalidades/autenticacao/componentes/FormularioCadastro';
 import type { ReactElement } from 'react';
 
 export function Cadastro(): ReactElement {

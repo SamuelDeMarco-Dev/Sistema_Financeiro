@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { AbaPerfil } from '@/componentes/configuracoes/AbaPerfil';
-import { AbaPreferencias } from '@/componentes/configuracoes/AbaPreferencias';
-import { AbaSeguranca } from '@/componentes/configuracoes/AbaSeguranca';
 import { Carregando, EstadoErro } from '@/componentes/feedback';
-import { usePerfil } from '@/hooks/usePerfil';
+import { AbaSeguranca } from '@/funcionalidades/autenticacao/componentes/AbaSeguranca';
+import { AbaPerfil } from '@/funcionalidades/perfil/componentes/AbaPerfil';
+import { AbaPreferencias } from '@/funcionalidades/perfil/componentes/AbaPreferencias';
+import { usePerfil } from '@/funcionalidades/perfil/hooks/usePerfil';
 import type { KeyboardEvent, ReactElement } from 'react';
 
 const ABAS = [

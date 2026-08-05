@@ -1,4 +1,4 @@
-import type { PerfilCompleto } from '@/tipos/perfil';
+import type { PerfilCompleto } from '@/funcionalidades/perfil/tipos/perfil';
 import type { Usuario } from '@/tipos/usuario';
 
 /** Reduz a forma rica de GET /perfil (issue #21) para a mesma forma enxuta
