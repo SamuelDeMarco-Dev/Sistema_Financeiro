@@ -19,6 +19,7 @@ import {
   UsuarioRepositorio,
 } from '@/repositorios/usuario.repositorio';
 import { AutenticacaoServico } from '@/servicos/autenticacao.servico';
+import { CategoriaServico } from '@/servicos/categoria.servico';
 import { enviarEmail } from '@/utilitarios/email/enviador';
 import { comparar } from '@/utilitarios/senha';
 import { hashToken } from '@/utilitarios/token';
@@ -104,11 +105,13 @@ describe('AutenticacaoServico.cadastrar', () => {
   let servico: AutenticacaoServico;
   let repositorio: MockProxy<UsuarioRepositorio>;
   let tokenRepositorio: MockProxy<TokenRenovacaoRepositorio>;
+  let categoriaServico: MockProxy<CategoriaServico>;
 
   beforeEach(() => {
     repositorio = mock();
     tokenRepositorio = mock();
-    servico = new AutenticacaoServico(repositorio, tokenRepositorio);
+    categoriaServico = mock();
+    servico = new AutenticacaoServico(repositorio, tokenRepositorio, categoriaServico);
     enviarEmailMockado.mockReset().mockResolvedValue(undefined);
   });
 
@@ -126,8 +129,20 @@ describe('AutenticacaoServico.cadastrar', () => {
     await servico.cadastrar(dadosCadastro);
 
     expect(repositorio.buscarPorEmail).toHaveBeenCalledWith('samuel@exemplo.com');
-    expect(repositorio.criar).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'samuel@exemplo.com' }),
+    // repositorio.criar recebe (dados, tx) — so o primeiro argumento importa aqui.
+    expect(repositorio.criar.mock.calls[0]?.[0]).toMatchObject({ email: 'samuel@exemplo.com' });
+  });
+
+  it('copia as categorias padrao para o usuario recem-criado (RF-19)', async () => {
+    repositorio.buscarPorEmail.mockResolvedValue(null);
+    const criado = fabricarUsuario({ id: 'usuario-novo' });
+    repositorio.criar.mockResolvedValue(criado);
+
+    await servico.cadastrar(dadosCadastro);
+
+    expect(categoriaServico.copiarPadraoParaUsuario).toHaveBeenCalledWith(
+      'usuario-novo',
+      undefined,
     );
   });
 

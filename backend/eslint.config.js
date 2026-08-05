@@ -201,6 +201,15 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
     rules: { 'no-restricted-properties': 'off' },
   },
+  // prisma/seed.ts e um script de CLI, fora do bootstrap do Express: loga
+  // progresso no console (nao ha logger da aplicacao disponivel aqui) e
+  // le NODE_ENV direto de process.env — importar `ambiente` exigiria
+  // variaveis (JWT_SEGREDO, URL_BASE_API, ...) irrelevantes para semear
+  // categorias.
+  {
+    files: ['prisma/**/*.ts'],
+    rules: { 'no-console': 'off', 'no-restricted-properties': 'off' },
+  },
   // Testes: console e liberado (falhas de teste imprimem contexto);
   // objetos mockados (`res.status = vi.fn()`) disparam falso-positivo em
   // unbound-method, que assume extracao de metodo de instancia real;
