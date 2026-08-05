@@ -86,11 +86,18 @@ describe('banco: Conta, Categoria, Etiqueta', () => {
   });
 
   it('categoria padrao do sistema nao tem usuario_id nem conta_compartilhada_id', async () => {
+    // Nome distinto das 18 categorias reais do seed (issue #25) — evita
+    // colidir com o indice/checagem de duplicidade e, mais importante,
+    // nao pode sobreviver ao teste: limparBanco() preserva de proposito
+    // as linhas ehPadraoSistema=true (sao fixture compartilhada), entao
+    // esta linha de teste precisa se autolimpar.
     const categoria = await prisma.categoria.create({
-      data: { nome: 'Salário', tipo: 'RECEITA', ehPadraoSistema: true },
+      data: { nome: 'Categoria Padrao De Teste', tipo: 'RECEITA', ehPadraoSistema: true },
     });
 
     expect(categoria.usuarioId).toBeNull();
+
+    await prisma.categoria.delete({ where: { id: categoria.id } });
   });
 
   it('rejeita categoria com usuario_id e eh_padrao_sistema ao mesmo tempo', async () => {
