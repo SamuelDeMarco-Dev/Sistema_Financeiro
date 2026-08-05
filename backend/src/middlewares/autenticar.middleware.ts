@@ -38,6 +38,6 @@ export const autenticar = asyncHandler(async (req, _res, next) => {
     throw new NaoAutenticadoErro('Token invalido.');
   }
 
-  req.usuario = { id: usuario.id, email: usuario.email };
+  req.usuario = { id: usuario.id, email: usuario.email, nome: usuario.nome };
   next();
 });

@@ -4,10 +4,10 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { Botao } from '@/componentes/ui/Botao';
 import { Campo } from '@/componentes/ui/Campo';
-import { useEsqueciSenha } from '@/hooks/useEsqueciSenha';
+import { useEsqueciSenha } from '@/funcionalidades/autenticacao/hooks/useEsqueciSenha';
+import { esqueciSenhaSchema } from '@/funcionalidades/autenticacao/schemas/autenticacao.schema';
+import type { EsqueciSenhaFormulario } from '@/funcionalidades/autenticacao/schemas/autenticacao.schema';
 import { traduzirErroApi } from '@/utilitarios/traduzir-erro-api';
-import { esqueciSenhaSchema } from '@/validadores/autenticacao.validador';
-import type { EsqueciSenhaFormulario } from '@/validadores/autenticacao.validador';
 import type { ReactElement } from 'react';
 
 export function EsqueciSenha(): ReactElement {

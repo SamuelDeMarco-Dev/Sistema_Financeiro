@@ -18,6 +18,7 @@ import {
 } from '@/erros';
 import { TokenRenovacaoRepositorio } from '@/repositorios/token-renovacao.repositorio';
 import { UsuarioRepositorio } from '@/repositorios/usuario.repositorio';
+import { CategoriaServico } from '@/servicos/categoria.servico';
 import { enviarEmail } from '@/utilitarios/email/enviador';
 import { modeloRecuperacaoSenha } from '@/utilitarios/email/modelos/recuperacao-senha';
 import { modeloVerificacaoEmail } from '@/utilitarios/email/modelos/verificacao-email';
@@ -78,6 +79,7 @@ export class AutenticacaoServico {
   constructor(
     private readonly repositorio = new UsuarioRepositorio(),
     private readonly tokenRepositorio = new TokenRenovacaoRepositorio(),
+    private readonly categoriaServico = new CategoriaServico(),
   ) {}
 
   async cadastrar(dados: CadastrarDTO): Promise<Usuario> {
@@ -95,12 +97,15 @@ export class AutenticacaoServico {
       Date.now() + HORAS_EXPIRACAO_TOKEN_VERIFICACAO * UMA_HORA_MS,
     );
 
-    const usuario = await this.repositorio.criar({
-      nome: dados.nome,
-      email,
-      senhaHash,
-      tokenVerificacao,
-      tokenVerificacaoExpiraEm,
+    // RF-19: usuario e as 18 categorias padrao nascem juntos, na mesma
+    // transacao — nunca um usuario sem categorias nem uma copia orfa.
+    const usuario = await executarTransacao(async (tx) => {
+      const criado = await this.repositorio.criar(
+        { nome: dados.nome, email, senhaHash, tokenVerificacao, tokenVerificacaoExpiraEm },
+        tx,
+      );
+      await this.categoriaServico.copiarPadraoParaUsuario(criado.id, tx);
+      return criado;
     });
 
     // Nao bloqueia a resposta do cadastro (issue #11): enviarEmail() ja

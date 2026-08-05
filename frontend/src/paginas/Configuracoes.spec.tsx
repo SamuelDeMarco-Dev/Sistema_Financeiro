@@ -3,14 +3,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as ContextoAutenticacao from '@/contextos/ContextoAutenticacao';
 import { ProvedorTema } from '@/contextos/ContextoTema';
-import * as autenticacaoServico from '@/servicos/autenticacao.servico';
-import * as perfilServico from '@/servicos/perfil.servico';
-import type { PerfilCompleto } from '@/tipos/perfil';
+import * as autenticacaoServico from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
+import * as perfilServico from '@/funcionalidades/perfil/servicos/perfil.servico';
+import type { PerfilCompleto } from '@/funcionalidades/perfil/tipos/perfil';
 import { Configuracoes } from './Configuracoes';
 import type { ReactElement, ReactNode } from 'react';
 
-vi.mock('@/servicos/perfil.servico');
-vi.mock('@/servicos/autenticacao.servico');
+vi.mock('@/funcionalidades/perfil/servicos/perfil.servico');
+vi.mock('@/funcionalidades/autenticacao/servicos/autenticacao.servico');
 vi.mock('@/contextos/ContextoAutenticacao', async (importarOriginal) => {
   const real = await importarOriginal<typeof import('@/contextos/ContextoAutenticacao')>();
   return { ...real, useSessao: vi.fn() };

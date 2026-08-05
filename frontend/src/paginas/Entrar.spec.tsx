@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import * as ContextoAutenticacao from '@/contextos/ContextoAutenticacao';
-import type { CredenciaisLogin } from '@/servicos/autenticacao.servico';
+import type { CredenciaisLogin } from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
 import { Entrar } from './Entrar';
 import type { ReactElement, ReactNode } from 'react';
 

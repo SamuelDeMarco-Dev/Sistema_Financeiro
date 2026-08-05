@@ -6,8 +6,8 @@ import { z } from 'zod';
 import { Carregando } from '@/componentes/feedback';
 import { Botao } from '@/componentes/ui/Botao';
 import { Campo } from '@/componentes/ui/Campo';
-import { useReenviarVerificacao } from '@/hooks/useReenviarVerificacao';
-import { useVerificarEmail } from '@/hooks/useVerificarEmail';
+import { useReenviarVerificacao } from '@/funcionalidades/autenticacao/hooks/useReenviarVerificacao';
+import { useVerificarEmail } from '@/funcionalidades/autenticacao/hooks/useVerificarEmail';
 import type { ReactElement } from 'react';
 
 const reenvioSchema = z.object({

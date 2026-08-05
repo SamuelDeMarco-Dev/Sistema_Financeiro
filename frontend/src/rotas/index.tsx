@@ -30,6 +30,12 @@ const RedefinirSenha = lazy(() =>
 const Configuracoes = lazy(() =>
   import('@/paginas/Configuracoes').then((modulo) => ({ default: modulo.Configuracoes })),
 );
+const Contas = lazy(() =>
+  import('@/paginas/Contas').then((modulo) => ({ default: modulo.Contas })),
+);
+const Categorias = lazy(() =>
+  import('@/paginas/Categorias').then((modulo) => ({ default: modulo.Categorias })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -116,6 +122,22 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Configuracoes />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'contas',
+            element: (
+              <ComSuspense>
+                <Contas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'categorias',
+            element: (
+              <ComSuspense>
+                <Categorias />
               </ComSuspense>
             ),
           },

@@ -101,6 +101,10 @@ describe('autenticar', () => {
     const erro = await executarAutenticar(req);
 
     expect(erro).toBeUndefined();
-    expect(req.usuario).toEqual({ id: 'usuario-1', email: 'samuel@exemplo.com' });
+    expect(req.usuario).toEqual({
+      id: 'usuario-1',
+      email: 'samuel@exemplo.com',
+      nome: 'Samuel De Marco',
+    });
   });
 });

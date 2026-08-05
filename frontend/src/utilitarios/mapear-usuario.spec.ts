@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PerfilCompleto } from '@/tipos/perfil';
+import type { PerfilCompleto } from '@/funcionalidades/perfil/tipos/perfil';
 import { mapearPerfilParaUsuario } from './mapear-usuario';
 
 function fabricarPerfil(sobrescritas: Partial<PerfilCompleto> = {}): PerfilCompleto {

@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import * as autenticacaoServico from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
+import type { CredenciaisLogin } from '@/funcionalidades/autenticacao/servicos/autenticacao.servico';
+import { consultarPerfil } from '@/funcionalidades/perfil/servicos/perfil.servico';
 import { api } from '@/servicos/api';
 import { armazenamentoToken } from '@/servicos/armazenamento-token';
-import * as autenticacaoServico from '@/servicos/autenticacao.servico';
-import type { CredenciaisLogin } from '@/servicos/autenticacao.servico';
 import { inscreverSessaoExpirada } from '@/servicos/evento-sessao-expirada';
-import { consultarPerfil } from '@/servicos/perfil.servico';
 import { renovarSessao } from '@/servicos/renovar-sessao';
 import type { PerfilResumo, Usuario } from '@/tipos/usuario';
 import { mapearPerfilParaUsuario } from '@/utilitarios/mapear-usuario';

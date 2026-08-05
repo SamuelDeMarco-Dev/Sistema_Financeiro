@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AvisoEmailNaoVerificado } from '@/componentes/autenticacao/AvisoEmailNaoVerificado';
-import { FormularioLogin } from '@/componentes/autenticacao/FormularioLogin';
+import { AvisoEmailNaoVerificado } from '@/funcionalidades/autenticacao/componentes/AvisoEmailNaoVerificado';
+import { FormularioLogin } from '@/funcionalidades/autenticacao/componentes/FormularioLogin';
 import type { ReactElement } from 'react';
 import type { Location } from 'react-router-dom';
 

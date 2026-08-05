@@ -8,3 +8,11 @@ import { afterEach } from 'vitest';
 afterEach(() => {
   cleanup();
 });
+
+// jsdom declara estes metodos no seu tipo mas nao os implementa em runtime
+// — o Radix Select (issue #30) os chama ao abrir/fechar e ao rolar itens
+// para dentro da viewport, o que derruba os testes com "is not a function".
+Element.prototype.hasPointerCapture = () => false;
+Element.prototype.setPointerCapture = () => undefined;
+Element.prototype.releasePointerCapture = () => undefined;
+Element.prototype.scrollIntoView = () => undefined;

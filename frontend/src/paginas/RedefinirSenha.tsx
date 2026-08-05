@@ -2,13 +2,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { IndicadorForcaSenha } from '@/componentes/autenticacao/IndicadorForcaSenha';
 import { notificar } from '@/componentes/feedback';
 import { Botao } from '@/componentes/ui/Botao';
 import { CampoSenha } from '@/componentes/ui/CampoSenha';
-import { useRedefinirSenha } from '@/hooks/useRedefinirSenha';
-import { redefinirSenhaSchema } from '@/validadores/autenticacao.validador';
-import type { RedefinirSenhaFormulario } from '@/validadores/autenticacao.validador';
+import { IndicadorForcaSenha } from '@/funcionalidades/autenticacao/componentes/IndicadorForcaSenha';
+import { useRedefinirSenha } from '@/funcionalidades/autenticacao/hooks/useRedefinirSenha';
+import { redefinirSenhaSchema } from '@/funcionalidades/autenticacao/schemas/autenticacao.schema';
+import type { RedefinirSenhaFormulario } from '@/funcionalidades/autenticacao/schemas/autenticacao.schema';
 import type { ReactElement } from 'react';
 
 function LinkInvalido(): ReactElement {
