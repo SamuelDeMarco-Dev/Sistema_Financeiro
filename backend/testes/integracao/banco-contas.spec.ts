@@ -33,6 +33,21 @@ describe('banco: Conta, Categoria, Etiqueta', () => {
     expect(coluna?.numeric_scale).toBe(2);
   });
 
+  // A tabela de teste tem poucas linhas — o planner do Postgres prefere
+  // Seq Scan nesse volume mesmo com o indice disponivel (e a escolha
+  // correta ali). Por isso a verificacao aqui e que o indice que sustenta
+  // "EXPLAIN ANALYZE da listagem de contas" (issue #31) existe, nao qual
+  // plano o planner escolhe para poucas linhas.
+  it('existe indice composto (usuario_id, excluido_em, arquivada_em) para a listagem de contas', async () => {
+    const indices = await prisma.$queryRaw<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes WHERE tablename = 'contas'
+    `;
+
+    expect(
+      indices.some((i) => i.indexname === 'contas_usuario_id_excluido_em_arquivada_em_idx'),
+    ).toBe(true);
+  });
+
   it('rejeita duas contas com o mesmo nome (case-insensitive) para o mesmo usuario', async () => {
     const usuario = await criarUsuario('dono-conta@exemplo.com');
     await prisma.conta.create({

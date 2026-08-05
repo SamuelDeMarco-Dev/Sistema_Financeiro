@@ -120,6 +120,56 @@ describe('/api/v1/categorias', () => {
     expect(resposta.status).toBe(422);
   });
 
+  it('filtra a arvore por tipo', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+
+    const resposta = await request(app)
+      .get('/api/v1/categorias?tipo=RECEITA')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const corpo = resposta.body as { data: { categorias: { tipo: string }[] } };
+    expect(corpo.data.categorias.every((c) => c.tipo === 'RECEITA')).toBe(true);
+    expect(corpo.data.categorias.length).toBeGreaterThan(0);
+  });
+
+  it('busca uma categoria por id', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+    const listagem = await request(app)
+      .get('/api/v1/categorias')
+      .set('Authorization', `Bearer ${accessToken}`);
+    const corpo = listagem.body as { data: { categorias: { id: string; nome: string }[] } };
+    const pets = corpo.data.categorias.find((c) => c.nome === 'Pets');
+
+    const resposta = await request(app)
+      .get(`/api/v1/categorias/${pets?.id}`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(resposta.status).toBe(200);
+    expect((resposta.body as { data: { categoria: { nome: string } } }).data.categoria.nome).toBe(
+      'Pets',
+    );
+  });
+
+  it('atualiza o nome e a cor de uma categoria', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+    const listagem = await request(app)
+      .get('/api/v1/categorias')
+      .set('Authorization', `Bearer ${accessToken}`);
+    const corpo = listagem.body as { data: { categorias: { id: string; nome: string }[] } };
+    const pets = corpo.data.categorias.find((c) => c.nome === 'Pets');
+
+    const resposta = await request(app)
+      .patch(`/api/v1/categorias/${pets?.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Animais', cor: '#000000' });
+
+    expect(resposta.status).toBe(200);
+    const atualizada = (resposta.body as { data: { categoria: { nome: string; cor: string } } })
+      .data.categoria;
+    expect(atualizada.nome).toBe('Animais');
+    expect(atualizada.cor).toBe('#000000');
+  });
+
   it('impede excluir categoria com subcategorias', async () => {
     const { accessToken } = await criarUsuarioAutenticado();
     const listagem = await request(app)
@@ -161,6 +211,39 @@ describe('/api/v1/categorias', () => {
 
     const resposta = await request(app)
       .get(`/api/v1/categorias/${idCategoria}`)
+      .set('Authorization', `Bearer ${outro.accessToken}`);
+
+    expect(resposta.status).toBe(404);
+  });
+
+  it('responde 404 ao atualizar categoria de outro usuario', async () => {
+    const dono = await criarUsuarioAutenticado();
+    const outro = await criarUsuarioAutenticado();
+    const listagem = await request(app)
+      .get('/api/v1/categorias')
+      .set('Authorization', `Bearer ${dono.accessToken}`);
+    const corpo = listagem.body as { data: { categorias: { id: string }[] } };
+    const idCategoria = corpo.data.categorias[0]?.id;
+
+    const resposta = await request(app)
+      .patch(`/api/v1/categorias/${idCategoria}`)
+      .set('Authorization', `Bearer ${outro.accessToken}`)
+      .send({ nome: 'Roubada' });
+
+    expect(resposta.status).toBe(404);
+  });
+
+  it('responde 404 ao excluir categoria de outro usuario', async () => {
+    const dono = await criarUsuarioAutenticado();
+    const outro = await criarUsuarioAutenticado();
+    const listagem = await request(app)
+      .get('/api/v1/categorias')
+      .set('Authorization', `Bearer ${dono.accessToken}`);
+    const corpo = listagem.body as { data: { categorias: { id: string }[] } };
+    const idCategoria = corpo.data.categorias[0]?.id;
+
+    const resposta = await request(app)
+      .delete(`/api/v1/categorias/${idCategoria}`)
       .set('Authorization', `Bearer ${outro.accessToken}`);
 
     expect(resposta.status).toBe(404);

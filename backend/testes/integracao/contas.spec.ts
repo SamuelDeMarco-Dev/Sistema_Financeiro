@@ -3,25 +3,16 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@/banco/cliente';
 import { criarServidor } from '@/servidor';
 import { limparBanco } from '../configuracao/banco-teste';
+import { fabricarUsuario } from '../fabricas';
 
 const app = criarServidor();
 
-const SENHA_VALIDA = 'SenhaForte@2026';
-let contadorEmail = 0;
-
+// Usuario fabricado direto no banco (issue #31) — evita o segundo bcrypt
+// (login) e a viagem HTTP extra do fluxo real de cadastro+entrar, que a
+// suite de M1 ja cobre; aqui so precisamos de um usuario autenticado.
 async function criarUsuarioAutenticado(): Promise<{ usuarioId: string; accessToken: string }> {
-  contadorEmail += 1;
-  const email = `contas-${contadorEmail}@exemplo.com`;
-
-  await request(app)
-    .post('/api/v1/autenticacao/cadastrar')
-    .send({ nome: 'Samuel De Marco', email, senha: SENHA_VALIDA, confirmacaoSenha: SENHA_VALIDA });
-  await prisma.usuario.update({ where: { email }, data: { emailVerificadoEm: new Date() } });
-  const login = await request(app)
-    .post('/api/v1/autenticacao/entrar')
-    .send({ email, senha: SENHA_VALIDA });
-  const corpo = login.body as { data: { accessToken: string; usuario: { id: string } } };
-  return { usuarioId: corpo.data.usuario.id, accessToken: corpo.data.accessToken };
+  const { usuario, accessToken } = await fabricarUsuario();
+  return { usuarioId: usuario.id, accessToken };
 }
 
 describe('/api/v1/contas', () => {
@@ -110,6 +101,72 @@ describe('/api/v1/contas', () => {
       .set('Authorization', `Bearer ${outro.accessToken}`);
 
     expect(resposta.status).toBe(404);
+  });
+
+  it('omite contas arquivadas por padrao e as inclui com incluirArquivadas=true', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+    const criada = await request(app)
+      .post('/api/v1/contas')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Arquivada', tipo: 'CARTEIRA' });
+    const idConta = (criada.body as { data: { conta: { id: string } } }).data.conta.id;
+    await request(app)
+      .patch(`/api/v1/contas/${idConta}/arquivar`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const semArquivadas = await request(app)
+      .get('/api/v1/contas')
+      .set('Authorization', `Bearer ${accessToken}`);
+    const comArquivadas = await request(app)
+      .get('/api/v1/contas?incluirArquivadas=true')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect((semArquivadas.body as { data: { contas: unknown[] } }).data.contas).toHaveLength(0);
+    expect((comArquivadas.body as { data: { contas: unknown[] } }).data.contas).toHaveLength(1);
+  });
+
+  it('filtra a listagem por tipo', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+    await request(app)
+      .post('/api/v1/contas')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Carteira', tipo: 'CARTEIRA' });
+    await request(app)
+      .post('/api/v1/contas')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Banco Principal', tipo: 'CONTA_CORRENTE' });
+
+    const resposta = await request(app)
+      .get('/api/v1/contas?tipo=CARTEIRA')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const contas = (resposta.body as { data: { contas: { nome: string }[] } }).data.contas;
+    expect(contas).toHaveLength(1);
+    expect(contas[0]?.nome).toBe('Carteira');
+  });
+
+  it('atualiza nome, instituicao e cor de uma conta', async () => {
+    const { accessToken } = await criarUsuarioAutenticado();
+    const criada = await request(app)
+      .post('/api/v1/contas')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Banco Antigo', tipo: 'CONTA_CORRENTE' });
+    const idConta = (criada.body as { data: { conta: { id: string } } }).data.conta.id;
+
+    const resposta = await request(app)
+      .patch(`/api/v1/contas/${idConta}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ nome: 'Banco Novo', instituicao: 'Nubank', cor: '#000000' });
+
+    expect(resposta.status).toBe(200);
+    const atualizada = (
+      resposta.body as {
+        data: { conta: { nome: string; instituicao: string; cor: string } };
+      }
+    ).data.conta;
+    expect(atualizada.nome).toBe('Banco Novo');
+    expect(atualizada.instituicao).toBe('Nubank');
+    expect(atualizada.cor).toBe('#000000');
   });
 
   it('arquiva e desarquiva uma conta', async () => {
@@ -228,5 +285,56 @@ describe('/api/v1/contas', () => {
   it('todas as rotas exigem autenticacao', async () => {
     const resposta = await request(app).get('/api/v1/contas');
     expect(resposta.status).toBe(401);
+  });
+
+  describe('autorizacao negativa: conta de outro usuario responde 404 em cada rota mutavel', () => {
+    it.each([
+      ['PATCH', (id: string) => `/api/v1/contas/${id}`, { nome: 'Roubada' }],
+      ['PATCH', (id: string) => `/api/v1/contas/${id}/arquivar`, undefined],
+      ['PATCH', (id: string) => `/api/v1/contas/${id}/desarquivar`, undefined],
+      ['DELETE', (id: string) => `/api/v1/contas/${id}`, undefined],
+    ] as const)('%s %s', async (metodo, caminho, corpo) => {
+      const dono = await criarUsuarioAutenticado();
+      const outro = await criarUsuarioAutenticado();
+      const criada = await request(app)
+        .post('/api/v1/contas')
+        .set('Authorization', `Bearer ${dono.accessToken}`)
+        .send({ nome: 'Conta do Dono', tipo: 'CARTEIRA' });
+      const idConta = (criada.body as { data: { conta: { id: string } } }).data.conta.id;
+
+      const requisicao = request(app)
+        [metodo.toLowerCase() as 'patch' | 'delete'](caminho(idConta))
+        .set('Authorization', `Bearer ${outro.accessToken}`);
+      const resposta = corpo ? await requisicao.send(corpo) : await requisicao;
+
+      expect(resposta.status).toBe(404);
+    });
+
+    it('reordenar com uma conta de outro usuario responde 404 e nao reordena nada', async () => {
+      const dono = await criarUsuarioAutenticado();
+      const outro = await criarUsuarioAutenticado();
+      const minhaConta = await request(app)
+        .post('/api/v1/contas')
+        .set('Authorization', `Bearer ${dono.accessToken}`)
+        .send({ nome: 'Minha Conta', tipo: 'CARTEIRA' });
+      const contaAlheia = await request(app)
+        .post('/api/v1/contas')
+        .set('Authorization', `Bearer ${outro.accessToken}`)
+        .send({ nome: 'Conta Alheia', tipo: 'CARTEIRA' });
+      const idMinha = (minhaConta.body as { data: { conta: { id: string } } }).data.conta.id;
+      const idAlheia = (contaAlheia.body as { data: { conta: { id: string } } }).data.conta.id;
+
+      const resposta = await request(app)
+        .patch('/api/v1/contas/reordenar')
+        .set('Authorization', `Bearer ${dono.accessToken}`)
+        .send({
+          ordens: [
+            { id: idMinha, ordem: 0 },
+            { id: idAlheia, ordem: 1 },
+          ],
+        });
+
+      expect(resposta.status).toBe(404);
+    });
   });
 });

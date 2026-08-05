@@ -3,24 +3,16 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@/banco/cliente';
 import { criarServidor } from '@/servidor';
 import { limparBanco } from '../configuracao/banco-teste';
+import { fabricarUsuario } from '../fabricas';
 
 const app = criarServidor();
-const SENHA_VALIDA = 'SenhaForte@2026';
-let contadorEmail = 0;
 
+// Etiquetas nao dependem de nenhum efeito colateral do cadastro (a copia
+// de categorias padrao, por exemplo) — fabricar o usuario direto no
+// banco e mais rapido que o fluxo HTTP completo (issue #31).
 async function criarUsuarioAutenticado(): Promise<{ usuarioId: string; accessToken: string }> {
-  contadorEmail += 1;
-  const email = `etiquetas-${contadorEmail}@exemplo.com`;
-
-  await request(app)
-    .post('/api/v1/autenticacao/cadastrar')
-    .send({ nome: 'Samuel De Marco', email, senha: SENHA_VALIDA, confirmacaoSenha: SENHA_VALIDA });
-  await prisma.usuario.update({ where: { email }, data: { emailVerificadoEm: new Date() } });
-  const login = await request(app)
-    .post('/api/v1/autenticacao/entrar')
-    .send({ email, senha: SENHA_VALIDA });
-  const corpo = login.body as { data: { accessToken: string; usuario: { id: string } } };
-  return { usuarioId: corpo.data.usuario.id, accessToken: corpo.data.accessToken };
+  const { usuario, accessToken } = await fabricarUsuario();
+  return { usuarioId: usuario.id, accessToken };
 }
 
 describe('/api/v1/etiquetas', () => {
@@ -114,6 +106,22 @@ describe('/api/v1/etiquetas', () => {
       .patch(`/api/v1/etiquetas/${idEtiqueta}`)
       .set('Authorization', `Bearer ${outro.accessToken}`)
       .send({ nome: 'roubada' });
+
+    expect(resposta.status).toBe(404);
+  });
+
+  it('responde 404 (nao 403) ao excluir etiqueta de outro usuario', async () => {
+    const dono = await criarUsuarioAutenticado();
+    const outro = await criarUsuarioAutenticado();
+    const criada = await request(app)
+      .post('/api/v1/etiquetas')
+      .set('Authorization', `Bearer ${dono.accessToken}`)
+      .send({ nome: 'privada' });
+    const idEtiqueta = (criada.body as { data: { etiqueta: { id: string } } }).data.etiqueta.id;
+
+    const resposta = await request(app)
+      .delete(`/api/v1/etiquetas/${idEtiqueta}`)
+      .set('Authorization', `Bearer ${outro.accessToken}`);
 
     expect(resposta.status).toBe(404);
   });
