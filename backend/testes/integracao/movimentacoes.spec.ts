@@ -181,6 +181,19 @@ describe('/api/v1/movimentacoes', () => {
     expect(resposta.status).toBe(404);
   });
 
+  it('categoria de outro usuario responde 404', async () => {
+    const { accessToken, conta } = await prepararUsuarioComConta();
+    const outroUsuario = await fabricarUsuario();
+    const categoriaDeOutro = await fabricarCategoria(outroUsuario.usuario.id);
+
+    const resposta = await request(app)
+      .post('/api/v1/movimentacoes')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(corpoValido({ contaId: conta.id, categoriaId: categoriaDeOutro.id }));
+
+    expect(resposta.status).toBe(404);
+  });
+
   it('conta arquivada responde 422 CONTA_ARQUIVADA', async () => {
     const { accessToken, conta, categoria } = await prepararUsuarioComConta();
     await request(app)
@@ -231,7 +244,7 @@ describe('/api/v1/movimentacoes', () => {
     expect(resposta.status).toBe(400);
   });
 
-  it.each(['0.00', '-10.00'])('valor "%s" responde 400', async (valor) => {
+  it.each(['0.00', '-10.00', '10.123'])('valor "%s" responde 400', async (valor) => {
     const { accessToken, conta, categoria } = await prepararUsuarioComConta();
 
     const resposta = await request(app)
@@ -240,6 +253,21 @@ describe('/api/v1/movimentacoes', () => {
       .send(corpoValido({ contaId: conta.id, categoriaId: categoria.id, valor }));
 
     expect(resposta.status).toBe(400);
+  });
+
+  // 05-DEVELOPMENT.md §12.5 "Valores": os extremos aceitos pela regex de
+  // RN-08 — nao so os rejeitados acima.
+  it.each(['0.01', '999999999999.99'])('valor "%s" (extremo valido) e aceito', async (valor) => {
+    const { accessToken, conta, categoria } = await prepararUsuarioComConta();
+
+    const resposta = await request(app)
+      .post('/api/v1/movimentacoes')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(corpoValido({ contaId: conta.id, categoriaId: categoria.id, valor }));
+
+    expect(resposta.status).toBe(201);
+    const { movimentacao } = (resposta.body as RespostaMovimentacao).data;
+    expect(movimentacao.valor).toBe(valor);
   });
 
   it('data de competencia 11 anos no futuro responde 400 (RN-13)', async () => {

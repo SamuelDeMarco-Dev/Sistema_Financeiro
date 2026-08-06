@@ -401,4 +401,92 @@ describe('Recorrencias materializadas (issue #38)', () => {
     expect(naoEfetivada1.status).toBe(404);
     expect(naoEfetivada2.status).toBe(404);
   });
+
+  it('DELETE de uma ocorrencia com escopoExclusao=ESTA_E_FUTURAS preserva as anteriores e as ja efetivadas', async () => {
+    const { accessToken, conta, categoria } = await prepararUsuarioComConta();
+    const resposta = await criarRecorrencia(accessToken, {
+      tipo: 'DESPESA',
+      descricao: 'Assinatura',
+      valor: '40.00',
+      dataCompetencia: '2026-01-05',
+      contaId: conta.id,
+      categoriaId: categoria.id,
+      recorrencia: { frequencia: 'MENSAL', intervalo: 1, totalOcorrencias: 4 },
+    });
+    const modeloId = exigir(resposta.meta?.recorrencia?.modeloId, 'modeloId ausente na resposta');
+    const ocorrencias = (
+      (
+        await request(app)
+          .get(`/api/v1/movimentacoes/${modeloId}/ocorrencias`)
+          .set('Authorization', `Bearer ${accessToken}`)
+      ).body as RespostaOcorrencias
+    ).data.ocorrencias;
+    const [id0, id1, id2, id3] = ocorrencias.map((o) => o.id);
+
+    // id1 ja efetivada (paga) antes da exclusao — nao deve ser removida
+    // mesmo estando "no futuro" a partir de id2, porque so ocorrencias
+    // nao efetivadas sao afetadas por ESTA_E_FUTURAS (RN-20).
+    await request(app)
+      .patch(`/api/v1/movimentacoes/${exigir(id1, 'ocorrencia 1 ausente')}/pagar`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ dataEfetivacao: '2026-02-05' });
+
+    const exclusao = await request(app)
+      .delete(`/api/v1/movimentacoes/${exigir(id2, 'ocorrencia 2 ausente')}`)
+      .query({ escopoExclusao: 'ESTA_E_FUTURAS' })
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(exclusao.status).toBe(204);
+
+    const status = await Promise.all(
+      [id0, id1, id2, id3].map(
+        async (id) =>
+          (
+            await request(app)
+              .get(`/api/v1/movimentacoes/${exigir(id, 'ocorrencia ausente')}`)
+              .set('Authorization', `Bearer ${accessToken}`)
+          ).status,
+      ),
+    );
+    expect(status).toEqual([200, 200, 404, 404]);
+  });
+
+  it('DELETE de uma ocorrencia com escopoExclusao=TODAS remove tambem as anteriores nao efetivadas', async () => {
+    const { accessToken, conta, categoria } = await prepararUsuarioComConta();
+    const resposta = await criarRecorrencia(accessToken, {
+      tipo: 'DESPESA',
+      descricao: 'Assinatura',
+      valor: '40.00',
+      dataCompetencia: '2026-01-05',
+      contaId: conta.id,
+      categoriaId: categoria.id,
+      recorrencia: { frequencia: 'MENSAL', intervalo: 1, totalOcorrencias: 3 },
+    });
+    const modeloId = exigir(resposta.meta?.recorrencia?.modeloId, 'modeloId ausente na resposta');
+    const ocorrencias = (
+      (
+        await request(app)
+          .get(`/api/v1/movimentacoes/${modeloId}/ocorrencias`)
+          .set('Authorization', `Bearer ${accessToken}`)
+      ).body as RespostaOcorrencias
+    ).data.ocorrencias;
+    const [id0, id1, id2] = ocorrencias.map((o) => o.id);
+
+    const exclusao = await request(app)
+      .delete(`/api/v1/movimentacoes/${exigir(id1, 'ocorrencia 1 ausente')}`)
+      .query({ escopoExclusao: 'TODAS' })
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(exclusao.status).toBe(204);
+
+    const status = await Promise.all(
+      [id0, id1, id2].map(
+        async (id) =>
+          (
+            await request(app)
+              .get(`/api/v1/movimentacoes/${exigir(id, 'ocorrencia ausente')}`)
+              .set('Authorization', `Bearer ${accessToken}`)
+          ).status,
+      ),
+    );
+    expect(status).toEqual([404, 404, 404]);
+  });
 });

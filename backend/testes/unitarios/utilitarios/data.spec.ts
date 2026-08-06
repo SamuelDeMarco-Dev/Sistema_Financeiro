@@ -107,6 +107,22 @@ describe('utilitarios/data', () => {
       expect(resultado.toISOString().slice(0, 10)).toBe('2024-02-29');
     });
 
+    it('MENSAL a partir de 31/03 cai em 30/04 (mes de 30 dias, sem passar para maio)', () => {
+      const ancora = new Date('2026-03-31T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'MENSAL', 1);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-04-30');
+    });
+
+    it('MENSAL a partir de 31/03, indice 2, volta a preservar o dia 31 em maio', () => {
+      const ancora = new Date('2026-03-31T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'MENSAL', 2);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-05-31');
+    });
+
     it('ANUAL a partir de 29/02 (bissexto) cai em 28/02 no ano seguinte (nao bissexto)', () => {
       const ancora = new Date('2024-02-29T00:00:00.000Z');
 
