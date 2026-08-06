@@ -36,6 +36,41 @@ enum TipoCategoria {
   AMBOS
 }
 
+// ═══════════════════════════════════════════════════════════
+//  MOVIMENTACOES
+// ═══════════════════════════════════════════════════════════
+
+enum TipoMovimentacao {
+  RECEITA
+  DESPESA
+  TRANSFERENCIA
+}
+
+/// Para receitas, PAGA significa "recebida" (RF-29).
+enum SituacaoMovimentacao {
+  PENDENTE
+  PAGA
+  PAGA_PARCIALMENTE
+  ATRASADA
+  CANCELADA
+}
+
+enum SentidoTransferencia {
+  SAIDA
+  ENTRADA
+}
+
+enum FrequenciaRecorrencia {
+  DIARIA
+  SEMANAL
+  QUINZENAL
+  MENSAL
+  BIMESTRAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
 model Usuario {
   id        String @id @default(cuid())
   nome      String @db.VarChar(120)
@@ -58,11 +93,14 @@ model Usuario {
   excluidoEm    DateTime? @map("excluido_em") @db.Timestamptz(3)
   anonimizadoEm DateTime? @map("anonimizado_em") @db.Timestamptz(3)
 
-  perfil          Perfil?
-  tokensRenovacao TokenRenovacao[]
-  contas          Conta[]
-  categorias      Categoria[]
-  etiquetas       Etiqueta[]
+  perfil            Perfil?
+  tokensRenovacao   TokenRenovacao[]
+  contas            Conta[]
+  categorias        Categoria[]
+  etiquetas         Etiqueta[]
+  movimentacoes     Movimentacao[]
+  comprasParceladas CompraParcelada[]
+  anexos            Anexo[]
 
   @@index([excluidoEm])
   @@map("usuarios")
@@ -141,7 +179,8 @@ model Conta {
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
 
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario       Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  movimentacoes Movimentacao[]
 
   @@index([usuarioId, excluidoEm, arquivadaEm])
   @@index([contaCompartilhadaId, excluidoEm])
@@ -167,9 +206,10 @@ model Categoria {
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
 
-  usuario       Usuario?    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  categoriaPai  Categoria?  @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
-  subcategorias Categoria[] @relation("Subcategoria")
+  usuario       Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  categoriaPai  Categoria?     @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
+  subcategorias Categoria[]    @relation("Subcategoria")
+  movimentacoes Movimentacao[]
 
   @@index([usuarioId, tipo, excluidoEm])
   @@index([contaCompartilhadaId, tipo, excluidoEm])
@@ -188,9 +228,144 @@ model Etiqueta {
   criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario       Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  movimentacoes MovimentacaoEtiqueta[]
 
   @@index([usuarioId])
   @@index([contaCompartilhadaId])
   @@map("etiquetas")
+}
+
+model MovimentacaoEtiqueta {
+  movimentacaoId String   @map("movimentacao_id")
+  etiquetaId     String   @map("etiqueta_id")
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+  etiqueta     Etiqueta     @relation(fields: [etiquetaId], references: [id], onDelete: Cascade)
+
+  @@id([movimentacaoId, etiquetaId])
+  @@index([etiquetaId])
+  @@map("movimentacoes_etiquetas")
+}
+
+model CompraParcelada {
+  id        String  @id @default(cuid())
+  usuarioId String  @map("usuario_id")
+  /// Coluna nasce aqui (RN-21/RN-22); FK e relacao com Cartao chegam em M8.
+  cartaoId  String? @map("cartao_id")
+
+  descricao     String   @db.VarChar(200)
+  valorTotal    Decimal  @map("valor_total") @db.Decimal(14, 2)
+  totalParcelas Int      @map("total_parcelas")
+  dataCompra    DateTime @map("data_compra") @db.Date
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario  Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  parcelas Movimentacao[] @relation("ParcelasDaCompra")
+
+  @@index([usuarioId, excluidoEm])
+  @@index([cartaoId])
+  @@map("compras_parceladas")
+}
+
+model Movimentacao {
+  id String @id @default(cuid())
+
+  /// Autor do lancamento. Sempre preenchido, inclusive em grupo (RF-59, M6).
+  usuarioId String @map("usuario_id")
+
+  /// Escopo XOR: contaId (pessoal) OU contaCompartilhadaId (grupo, M6).
+  /// contaCompartilhadaId ainda nao tem FK ativa — ver chk_mov_escopo (#33).
+  contaId              String? @map("conta_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  categoriaId String? @map("categoria_id")
+
+  tipo       TipoMovimentacao
+  descricao  String           @db.VarChar(200)
+  observacao String?          @db.VarChar(1000)
+
+  /// Sempre positivo. O sinal vem de `tipo` (RN-08).
+  valor     Decimal              @db.Decimal(14, 2)
+  valorPago Decimal              @default(0) @map("valor_pago") @db.Decimal(14, 2)
+  situacao  SituacaoMovimentacao @default(PENDENTE)
+
+  /// Data de referencia contabil — base dos relatorios (RN-12).
+  dataCompetencia DateTime  @map("data_competencia") @db.Date
+  dataVencimento  DateTime? @map("data_vencimento") @db.Date
+  /// Data em que o dinheiro efetivamente entrou/saiu — base do saldo (RN-12).
+  dataEfetivacao  DateTime? @map("data_efetivacao") @db.Date
+
+  // ---- Transferencia (RN-23 a RN-27) ----
+  transferenciaId String?               @map("transferencia_id")
+  sentido         SentidoTransferencia?
+
+  // ---- Recorrencia (RN-17 a RN-20) ----
+  ehModeloRecorrencia  Boolean                @default(false) @map("eh_modelo_recorrencia")
+  recorrenciaId        String?                @map("recorrencia_id")
+  frequencia           FrequenciaRecorrencia?
+  intervaloRecorrencia Int?                   @map("intervalo_recorrencia")
+  recorrenciaFimEm     DateTime?              @map("recorrencia_fim_em") @db.Date
+  recorrenciaTotal     Int?                   @map("recorrencia_total")
+
+  // ---- Parcelamento (RN-21, RN-22) ----
+  compraParceladaId String? @map("compra_parcelada_id")
+  numeroParcela     Int?    @map("numero_parcela")
+  totalParcelas     Int?    @map("total_parcelas")
+
+  /// Colunas nascem aqui; FK/relacao com Cartao e Fatura chegam em M8.
+  cartaoId String? @map("cartao_id")
+  faturaId String? @map("fatura_id")
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  conta           Conta?           @relation(fields: [contaId], references: [id], onDelete: Restrict)
+  categoria       Categoria?       @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  compraParcelada CompraParcelada? @relation("ParcelasDaCompra", fields: [compraParceladaId], references: [id], onDelete: Cascade)
+
+  modeloRecorrencia Movimentacao?  @relation("OcorrenciasRecorrencia", fields: [recorrenciaId], references: [id], onDelete: Cascade)
+  ocorrencias       Movimentacao[] @relation("OcorrenciasRecorrencia")
+
+  anexos    Anexo[]
+  etiquetas MovimentacaoEtiqueta[]
+
+  @@index([contaId, situacao, dataEfetivacao])
+  @@index([usuarioId, dataCompetencia, tipo])
+  @@index([contaCompartilhadaId, dataCompetencia])
+  @@index([categoriaId, dataCompetencia])
+  @@index([situacao, dataVencimento])
+  @@index([transferenciaId])
+  @@index([recorrenciaId])
+  @@index([compraParceladaId])
+  @@index([faturaId])
+  @@index([excluidoEm])
+  @@map("movimentacoes")
+}
+
+model Anexo {
+  id             String @id @default(cuid())
+  movimentacaoId String @map("movimentacao_id")
+  usuarioId      String @map("usuario_id")
+
+  nomeOriginal   String @map("nome_original") @db.VarChar(255)
+  nomeArmazenado String @map("nome_armazenado") @db.VarChar(255)
+  caminho        String @db.VarChar(500)
+  tipoMime       String @map("tipo_mime") @db.VarChar(100)
+  tamanhoBytes   Int    @map("tamanho_bytes")
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([movimentacaoId])
+  @@index([usuarioId])
+  @@map("anexos")
 }

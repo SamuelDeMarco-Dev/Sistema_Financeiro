@@ -8,6 +8,12 @@ import { seedCategoriasPadrao } from '../../prisma/seed-categorias';
  * compartilhado (ver `garantirCategoriasPadrao`). */
 export async function limparBanco(): Promise<void> {
   await prisma.$transaction([
+    // Movimentacao usa onDelete: Restrict em usuario/conta/categoria — os
+    // vinculos e a propria movimentacao precisam sair antes desses pais.
+    prisma.movimentacaoEtiqueta.deleteMany(),
+    prisma.anexo.deleteMany(),
+    prisma.movimentacao.deleteMany(),
+    prisma.compraParcelada.deleteMany(),
     prisma.tokenRenovacao.deleteMany(),
     prisma.perfil.deleteMany(),
     prisma.etiqueta.deleteMany(),
