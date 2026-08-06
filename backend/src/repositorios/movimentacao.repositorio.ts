@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/banco/cliente';
-import { calcularProximaOcorrencia } from '@/utilitarios/data';
+import { calcularOrdinalOcorrencia, calcularProximaOcorrencia } from '@/utilitarios/data';
 import type { FrequenciaRecorrencia, SituacaoMovimentacao, TipoMovimentacao } from '@prisma/client';
 
 const INCLUDE_COMPLETO = {
@@ -645,5 +645,120 @@ export class MovimentacaoRepositorio {
       select: { id: true },
     });
     return [...categoriaIds, ...subcategorias.map((categoria) => categoria.id)];
+  }
+
+  /** RF-30 (tarefa `marcar-atrasadas`, issue #41): PENDENTE com vencimento
+   * antes de hoje passa a ATRASADA. Nao restringe por `tipo` de proposito —
+   * o mesmo criterio do indice parcial `idx_mov_pendentes_vencimento`, que
+   * cobre RECEITA e DESPESA igualmente. Idempotente: rodar duas vezes so
+   * afeta as que ainda estao PENDENTE na segunda vez (nenhuma, se a
+   * primeira rodou por completo). */
+  async marcarAtrasadas(hoje: Date): Promise<number> {
+    const resultado = await prisma.movimentacao.updateMany({
+      where: {
+        situacao: 'PENDENTE',
+        dataVencimento: { lt: hoje },
+        ehModeloRecorrencia: false,
+        excluidoEm: null,
+      },
+      data: { situacao: 'ATRASADA' },
+    });
+    return resultado.count;
+  }
+
+  /** RN-18 (tarefa `gerar-recorrencias`, issue #41): para cada modelo
+   * ativo, continua a serie a partir da ultima ocorrencia existente
+   * (nunca reconta do zero — por isso nao duplica) at ate `limiteData`,
+   * respeitando `recorrenciaFimEm`/`recorrenciaTotal`. Modelos sem
+   * conta/categoria/vencimento (nunca deveria acontecer em uso normal,
+   * ver `chk_mov_recorrencia`) sao pulados defensivamente. */
+  async gerarOcorrenciasFaltantes(limiteData: Date): Promise<number> {
+    const modelos = await prisma.movimentacao.findMany({
+      where: { ehModeloRecorrencia: true, excluidoEm: null },
+      select: {
+        id: true,
+        usuarioId: true,
+        contaId: true,
+        categoriaId: true,
+        tipo: true,
+        descricao: true,
+        observacao: true,
+        valor: true,
+        dataCompetencia: true,
+        dataVencimento: true,
+        frequencia: true,
+        intervaloRecorrencia: true,
+        recorrenciaFimEm: true,
+        recorrenciaTotal: true,
+      },
+    });
+
+    let totalGerado = 0;
+    for (const modelo of modelos) {
+      if (!modelo.frequencia || !modelo.contaId || !modelo.categoriaId || !modelo.dataVencimento) {
+        continue;
+      }
+      const intervalo = modelo.intervaloRecorrencia ?? 1;
+
+      const [totalExistente, ultimaOcorrencia] = await Promise.all([
+        prisma.movimentacao.count({ where: { recorrenciaId: modelo.id, excluidoEm: null } }),
+        prisma.movimentacao.findFirst({
+          where: { recorrenciaId: modelo.id, excluidoEm: null },
+          orderBy: { dataCompetencia: 'desc' },
+          select: { dataCompetencia: true },
+        }),
+      ]);
+      if (!ultimaOcorrencia) continue;
+      if (modelo.recorrenciaTotal !== null && totalExistente >= modelo.recorrenciaTotal) continue;
+
+      const deltaVencimentoMs = modelo.dataVencimento.getTime() - modelo.dataCompetencia.getTime();
+      let existentes = totalExistente;
+      let ordinal = calcularOrdinalOcorrencia(
+        modelo.dataCompetencia,
+        ultimaOcorrencia.dataCompetencia,
+        modelo.frequencia,
+        intervalo,
+      );
+      let proximaData = calcularProximaOcorrencia(
+        modelo.dataCompetencia,
+        modelo.frequencia,
+        intervalo * ordinal,
+      );
+
+      while (
+        proximaData <= limiteData &&
+        (modelo.recorrenciaFimEm === null || proximaData <= modelo.recorrenciaFimEm) &&
+        (modelo.recorrenciaTotal === null || existentes < modelo.recorrenciaTotal)
+      ) {
+        await prisma.movimentacao.create({
+          data: {
+            usuarioId: modelo.usuarioId,
+            contaId: modelo.contaId,
+            categoriaId: modelo.categoriaId,
+            tipo: modelo.tipo,
+            descricao: modelo.descricao,
+            observacao: modelo.observacao,
+            valor: modelo.valor,
+            valorPago: new Prisma.Decimal(0),
+            situacao: 'PENDENTE',
+            dataCompetencia: proximaData,
+            dataVencimento: new Date(proximaData.getTime() + deltaVencimentoMs),
+            dataEfetivacao: null,
+            recorrenciaId: modelo.id,
+          },
+        });
+
+        totalGerado += 1;
+        existentes += 1;
+        ordinal += 1;
+        proximaData = calcularProximaOcorrencia(
+          modelo.dataCompetencia,
+          modelo.frequencia,
+          intervalo * ordinal,
+        );
+      }
+    }
+
+    return totalGerado;
   }
 }

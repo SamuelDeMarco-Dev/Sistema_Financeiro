@@ -46,6 +46,10 @@ const esquemaAmbiente = z.object({
 
   NIVEL_LOG: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   HABILITAR_TAREFAS_AGENDADAS: textoBooleano('true'),
+  // Definida pelo PM2 em modo cluster (0, 1, 2...); ausente (dev, testes,
+  // um unico processo) equivale a '0' — a instancia unica sempre roda as
+  // tarefas agendadas.
+  NODE_APP_INSTANCE: z.string().default('0'),
 });
 
 const resultado = esquemaAmbiente.safeParse(process.env);

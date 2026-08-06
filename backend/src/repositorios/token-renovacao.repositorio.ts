@@ -76,4 +76,15 @@ export class TokenRenovacaoRepositorio {
       data: { revogadoEm: new Date() },
     });
   }
+
+  /** Tarefa `limpar-tokens` (issue #41): remove definitivamente tokens
+   * expirados — revogados ou nao, uma vez expirado nao ha mais uso
+   * legitimo para a linha (nem auditoria de reuso, que compara
+   * `tokenHash` de tokens ainda dentro da validade). */
+  async removerExpirados(agora: Date): Promise<number> {
+    const resultado = await prisma.tokenRenovacao.deleteMany({
+      where: { expiraEm: { lt: agora } },
+    });
+    return resultado.count;
+  }
 }

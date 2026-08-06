@@ -61,6 +61,14 @@ export function hojeNoTimezone(timezone: string): Date {
   return new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
 }
 
+/** "Hoje" para tarefas em lote que rodam uma vez para todos os usuarios
+ * (issue #41) — sem timezone de perfil, porque nao ha um usuario
+ * especifico. So a data (meia-noite UTC), sem componente de hora. */
+export function hojeUtc(): Date {
+  const agora = new Date();
+  return new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
+}
+
 const FREQUENCIAS_EM_DIAS: Partial<Record<FrequenciaRecorrencia, number>> = {
   DIARIA: 1,
   SEMANAL: 7,
