@@ -56,11 +56,16 @@ export class CategoriaRepositorio {
     await prisma.categoria.update({ where: { id }, data: { excluidoEm: new Date() } });
   }
 
-  /** M2: `Movimentacao` ainda nao existe (chega em M3, issue #32) — nenhuma
-   * categoria pode ter lancamentos ainda, entao a contagem e sempre zero. */
-  // eslint-disable-next-line @typescript-eslint/require-await -- assinatura assincrona preparada para a consulta real em M3.
-  async contarMovimentacoes(_id: string): Promise<number> {
-    return 0;
+  async contarMovimentacoes(id: string): Promise<number> {
+    return prisma.movimentacao.count({ where: { categoriaId: id, excluidoEm: null } });
+  }
+
+  /** RN-11: a categoria de uma movimentacao pode ser do proprio usuario ou
+   * uma categoria padrao do sistema (usuarioId null, eh_padrao_sistema). */
+  async buscarPorIdOuPadrao(id: string, usuarioId: string): Promise<Categoria | null> {
+    return prisma.categoria.findFirst({
+      where: { id, excluidoEm: null, OR: [{ usuarioId }, { ehPadraoSistema: true }] },
+    });
   }
 
   /** RF-19: copia as categorias padrao do sistema (raiz + subcategorias)

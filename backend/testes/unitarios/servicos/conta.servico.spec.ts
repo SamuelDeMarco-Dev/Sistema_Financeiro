@@ -48,16 +48,16 @@ describe('ContaServico', () => {
   beforeEach(() => {
     repositorio = mock();
     servico = new ContaServico(repositorio);
-    repositorio.calcularSaldoAtual.mockImplementation((c) => c.saldoInicial);
-    repositorio.calcularSaldoPrevisto.mockImplementation((c) => c.saldoInicial);
-    repositorio.calcularSaldoConsolidado.mockReturnValue(new Prisma.Decimal('0'));
+    repositorio.calcularSaldoAtual.mockImplementation((c) => Promise.resolve(c.saldoInicial));
+    repositorio.calcularSaldoPrevisto.mockImplementation((c) => Promise.resolve(c.saldoInicial));
+    repositorio.calcularSaldoConsolidado.mockResolvedValue(new Prisma.Decimal('0'));
     repositorio.contarMovimentacoes.mockResolvedValue(0);
   });
 
   describe('listar', () => {
     it('mapeia contas com saldo, escopo e totalizadores', async () => {
       repositorio.listarPorUsuario.mockResolvedValue([fabricarConta()]);
-      repositorio.calcularSaldoConsolidado.mockReturnValue(new Prisma.Decimal('1000.00'));
+      repositorio.calcularSaldoConsolidado.mockResolvedValue(new Prisma.Decimal('1000.00'));
 
       const resultado = await servico.listar(USUARIO, FILTROS_PADRAO);
 

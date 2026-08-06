@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { doTimezoneDoPerfil, paraTimezoneDoPerfil } from '@/utilitarios/data';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  deDataIso,
+  dentroDoLimiteDeCompetencia,
+  doTimezoneDoPerfil,
+  ehDataIsoValida,
+  paraDataIso,
+  paraTimezoneDoPerfil,
+} from '@/utilitarios/data';
 
 describe('utilitarios/data', () => {
   describe('paraTimezoneDoPerfil', () => {
@@ -41,6 +48,79 @@ describe('utilitarios/data', () => {
       const deVolta = doTimezoneDoPerfil(local, timezone);
 
       expect(deVolta.getTime()).toBe(instanteOriginal.getTime());
+    });
+  });
+
+  describe('ehDataIsoValida', () => {
+    it('aceita uma data valida', () => {
+      expect(ehDataIsoValida('2026-08-05')).toBe(true);
+    });
+
+    it('rejeita formato fora do padrao AAAA-MM-DD', () => {
+      expect(ehDataIsoValida('05/08/2026')).toBe(false);
+    });
+
+    it('rejeita dia inexistente (30 de fevereiro)', () => {
+      expect(ehDataIsoValida('2026-02-30')).toBe(false);
+    });
+
+    it('aceita 29 de fevereiro em ano bissexto', () => {
+      expect(ehDataIsoValida('2024-02-29')).toBe(true);
+    });
+  });
+
+  describe('dentroDoLimiteDeCompetencia (RN-13)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-05T12:00:00.000Z'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('aceita hoje', () => {
+      expect(dentroDoLimiteDeCompetencia('2026-08-05')).toBe(true);
+    });
+
+    it('aceita exatamente 10 anos no futuro', () => {
+      expect(dentroDoLimiteDeCompetencia('2036-08-05')).toBe(true);
+    });
+
+    it('rejeita 10 anos e 1 dia no futuro', () => {
+      expect(dentroDoLimiteDeCompetencia('2036-08-06')).toBe(false);
+    });
+
+    it('aceita exatamente 20 anos no passado', () => {
+      expect(dentroDoLimiteDeCompetencia('2006-08-05')).toBe(true);
+    });
+
+    it('rejeita 20 anos e 1 dia no passado', () => {
+      expect(dentroDoLimiteDeCompetencia('2006-08-04')).toBe(false);
+    });
+
+    it('rejeita data em formato invalido', () => {
+      expect(dentroDoLimiteDeCompetencia('05-08-2026')).toBe(false);
+    });
+  });
+
+  describe('deDataIso / paraDataIso', () => {
+    it('deDataIso produz meia-noite UTC', () => {
+      const data = deDataIso('2026-08-05');
+
+      expect(data.getUTCFullYear()).toBe(2026);
+      expect(data.getUTCMonth()).toBe(7);
+      expect(data.getUTCDate()).toBe(5);
+      expect(data.getUTCHours()).toBe(0);
+    });
+
+    it('paraDataIso e o inverso de deDataIso', () => {
+      expect(paraDataIso(deDataIso('2026-08-05'))).toBe('2026-08-05');
+    });
+
+    it('paraDataIso usa getters UTC, nao locais', () => {
+      const data = new Date(Date.UTC(2026, 0, 1));
+
+      expect(paraDataIso(data)).toBe('2026-01-01');
     });
   });
 });

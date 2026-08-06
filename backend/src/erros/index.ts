@@ -100,6 +100,20 @@ export class RegraNegocioErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'REGRA_NEGOCIO';
 }
 
+/** 422 — RN-10: categoria de RECEITA/DESPESA usada no tipo errado de
+ * movimentacao (categorias AMBOS nunca disparam este erro). */
+export class CategoriaIncompativelErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'CATEGORIA_INCOMPATIVEL';
+}
+
+/** 422 — conta existe e pertence ao usuario, mas esta arquivada: nao pode
+ * receber novos lancamentos ate ser desarquivada. */
+export class ContaArquivadaErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'CONTA_ARQUIVADA';
+}
+
 /** 429 — rate limit. */
 export class LimiteExcedidoErro extends ErroAplicacao {
   readonly statusHttp = 429;

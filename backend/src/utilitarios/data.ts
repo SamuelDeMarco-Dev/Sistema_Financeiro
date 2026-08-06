@@ -50,3 +50,52 @@ export function doTimezoneDoPerfil(dataLocal: Date, timezone: string): Date {
   const desvioMs = comoVistoNoFuso.getTime() - dataLocal.getTime();
   return new Date(dataLocal.getTime() - desvioMs);
 }
+
+const PADRAO_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Valida o formato AAAA-MM-DD e que a data existe de fato no calendario
+ * (rejeita "2026-02-30"). Usado pelos schemas de `@db.Date` — nunca se
+ * confia so no regex. */
+export function ehDataIsoValida(valor: string): boolean {
+  if (!PADRAO_DATA_ISO.test(valor)) return false;
+  const [ano = 0, mes = 0, dia = 0] = valor.split('-').map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  return (
+    data.getUTCFullYear() === ano && data.getUTCMonth() === mes - 1 && data.getUTCDate() === dia
+  );
+}
+
+/** Converte AAAA-MM-DD num `Date` de meia-noite UTC — a forma que os
+ * campos `@db.Date` do Prisma esperam ao escrever (chamar so depois de
+ * `ehDataIsoValida` confirmar o formato). */
+export function deDataIso(dataIso: string): Date {
+  const [ano = 0, mes = 0, dia = 0] = dataIso.split('-').map(Number);
+  return new Date(Date.UTC(ano, mes - 1, dia));
+}
+
+/** Formata um `@db.Date` do Prisma (sempre meia-noite UTC) como
+ * AAAA-MM-DD — usa getters *UTC* de proposito, nunca locais, para o
+ * resultado nao depender do timezone do processo Node. */
+export function paraDataIso(data: Date): string {
+  const ano = String(data.getUTCFullYear()).padStart(4, '0');
+  const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+  const dia = String(data.getUTCDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+/** RN-13: dataCompetencia entre hoje-20anos e hoje+10anos. Os limites sao
+ * calculados a cada chamada (nunca no carregamento do modulo) para que o
+ * teste de fronteira nao dependa de quando o processo comecou a rodar. */
+export function dentroDoLimiteDeCompetencia(dataIso: string): boolean {
+  if (!ehDataIsoValida(dataIso)) return false;
+  const hoje = new Date();
+  const limiteMinimo = new Date(
+    Date.UTC(hoje.getUTCFullYear() - 20, hoje.getUTCMonth(), hoje.getUTCDate()),
+  );
+  const limiteMaximo = new Date(
+    Date.UTC(hoje.getUTCFullYear() + 10, hoje.getUTCMonth(), hoje.getUTCDate()),
+  );
+  const [ano = 0, mes = 0, dia = 0] = dataIso.split('-').map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  return data >= limiteMinimo && data <= limiteMaximo;
+}
