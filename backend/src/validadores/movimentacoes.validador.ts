@@ -233,3 +233,20 @@ export const listarMovimentacoesSchema = z.object({
 });
 
 export type ListarMovimentacoesQuery = z.infer<typeof listarMovimentacoesSchema>['query'];
+
+// ═══════════════════════════════════════════════════════════
+//  PAGAMENTO E ESTORNO (issue #37)
+// ═══════════════════════════════════════════════════════════
+
+// contaId: so relevante para despesa de cartao (M8) — aceito e ignorado por
+// ora, mesmo padrao de cartaoIdSchema acima.
+export const pagarMovimentacaoSchema = z.object({
+  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  body: z.object({
+    dataEfetivacao: dataIsoSchema.optional(),
+    valorPago: valorPositivoSchema.optional(),
+    contaId: z.unknown().optional(),
+  }),
+});
+
+export type PagarMovimentacaoDTO = z.infer<typeof pagarMovimentacaoSchema>['body'];

@@ -8,6 +8,7 @@ import {
   duplicarMovimentacaoSchema,
   idParamMovimentacaoSchema,
   listarMovimentacoesSchema,
+  pagarMovimentacaoSchema,
 } from '@/validadores/movimentacoes.validador';
 
 export const movimentacoesRotas = Router();
@@ -36,4 +37,14 @@ movimentacoesRotas.post(
   '/movimentacoes/:id/duplicar',
   validar(duplicarMovimentacaoSchema),
   controlador.duplicar,
+);
+movimentacoesRotas.patch(
+  '/movimentacoes/:id/pagar',
+  validar(pagarMovimentacaoSchema),
+  controlador.pagar,
+);
+movimentacoesRotas.patch(
+  '/movimentacoes/:id/estornar',
+  validar(idParamMovimentacaoSchema),
+  controlador.estornar,
 );

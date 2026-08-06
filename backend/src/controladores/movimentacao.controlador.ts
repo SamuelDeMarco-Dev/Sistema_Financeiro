@@ -7,6 +7,7 @@ import type {
   DuplicarMovimentacaoDTO,
   IdParamMovimentacao,
   ListarMovimentacoesQuery,
+  PagarMovimentacaoDTO,
 } from '@/validadores/movimentacoes.validador';
 import type { Request, Response } from 'express';
 
@@ -71,5 +72,23 @@ export class MovimentacaoControlador {
       .status(201)
       .location(`/api/v1/movimentacoes/${movimentacao.id}`)
       .json(respostaSucesso({ movimentacao }, 'Movimentação duplicada com sucesso.'));
+  });
+
+  pagar = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as IdParamMovimentacao;
+    const movimentacao = await this.servico.pagar(
+      id,
+      req.usuario.id,
+      req.body as PagarMovimentacaoDTO,
+    );
+
+    res.status(200).json(respostaSucesso({ movimentacao }, 'Movimentação paga com sucesso.'));
+  });
+
+  estornar = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as IdParamMovimentacao;
+    const movimentacao = await this.servico.estornar(id, req.usuario.id);
+
+    res.status(200).json(respostaSucesso({ movimentacao }, 'Pagamento estornado com sucesso.'));
   });
 }

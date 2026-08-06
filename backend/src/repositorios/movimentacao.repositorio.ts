@@ -42,6 +42,12 @@ export interface DadosAtualizarMovimentacao {
   etiquetaIds?: string[];
 }
 
+export interface DadosAtualizarPagamento {
+  situacao: SituacaoMovimentacao;
+  valorPago: Prisma.Decimal;
+  dataEfetivacao: Date | null;
+}
+
 export interface FiltrosListarMovimentacoes {
   dataInicio?: Date | undefined;
   dataFim?: Date | undefined;
@@ -139,6 +145,24 @@ export class MovimentacaoRepositorio {
 
   async excluirLogicamente(id: string): Promise<void> {
     await prisma.movimentacao.update({ where: { id }, data: { excluidoEm: new Date() } });
+  }
+
+  /** Usado tanto por `pagar` (situacao PAGA/PAGA_PARCIALMENTE) quanto por
+   * `estornar` (situacao PENDENTE, valorPago zerado, dataEfetivacao nula) —
+   * as duas sao a mesma escrita de 3 campos, so o destino muda. */
+  async atualizarPagamento(
+    id: string,
+    dados: DadosAtualizarPagamento,
+  ): Promise<MovimentacaoCompleta> {
+    return prisma.movimentacao.update({
+      where: { id },
+      data: {
+        situacao: dados.situacao,
+        valorPago: dados.valorPago,
+        dataEfetivacao: dados.dataEfetivacao,
+      },
+      include: INCLUDE_COMPLETO,
+    });
   }
 
   /** RF-34: filtro base sempre presente (excluidoEm/ehModeloRecorrencia) —

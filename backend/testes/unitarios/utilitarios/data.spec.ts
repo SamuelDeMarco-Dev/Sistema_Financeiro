@@ -4,6 +4,7 @@ import {
   dentroDoLimiteDeCompetencia,
   doTimezoneDoPerfil,
   ehDataIsoValida,
+  hojeNoTimezone,
   paraDataIso,
   paraTimezoneDoPerfil,
 } from '@/utilitarios/data';
@@ -48,6 +49,34 @@ describe('utilitarios/data', () => {
       const deVolta = doTimezoneDoPerfil(local, timezone);
 
       expect(deVolta.getTime()).toBe(instanteOriginal.getTime());
+    });
+  });
+
+  describe('hojeNoTimezone', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('usa o dia local do timezone, nao o dia UTC, quando ja e amanha em UTC', () => {
+      // 22:00 em Sao Paulo (UTC-3) de 04/08 e 01:00 UTC de 05/08.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-05T01:00:00.000Z'));
+
+      const resultado = hojeNoTimezone('America/Sao_Paulo');
+
+      expect(resultado.getUTCFullYear()).toBe(2026);
+      expect(resultado.getUTCMonth()).toBe(7); // agosto (0-indexado)
+      expect(resultado.getUTCDate()).toBe(4);
+      expect(resultado.getUTCHours()).toBe(0);
+    });
+
+    it('para UTC, o dia local coincide com o dia do instante', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-05T23:00:00.000Z'));
+
+      const resultado = hojeNoTimezone('UTC');
+
+      expect(resultado.getUTCDate()).toBe(5);
     });
   });
 

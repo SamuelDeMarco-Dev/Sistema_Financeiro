@@ -51,6 +51,14 @@ export function doTimezoneDoPerfil(dataLocal: Date, timezone: string): Date {
   return new Date(dataLocal.getTime() - desvioMs);
 }
 
+/** RF-13: "hoje" para um `@db.Date` (dataEfetivacao padrao ao pagar, issue
+ * #37) depende do timezone do perfil, nao do timezone do processo Node —
+ * so a data (meia-noite UTC), sem componente de hora. */
+export function hojeNoTimezone(timezone: string): Date {
+  const agora = paraTimezoneDoPerfil(new Date(), timezone);
+  return new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
+}
+
 const PADRAO_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Valida o formato AAAA-MM-DD e que a data existe de fato no calendario

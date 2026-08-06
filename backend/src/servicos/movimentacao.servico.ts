@@ -16,8 +16,9 @@ import type {
   MovimentacaoCompleta,
   PaginacaoMovimentacoes,
 } from '@/repositorios/movimentacao.repositorio';
+import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
-import { deDataIso } from '@/utilitarios/data';
+import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
 import { registrador } from '@/utilitarios/registrador';
@@ -26,6 +27,7 @@ import type {
   CriarMovimentacaoDTO,
   DuplicarMovimentacaoDTO,
   ListarMovimentacoesQuery,
+  PagarMovimentacaoDTO,
 } from '@/validadores/movimentacoes.validador';
 import type { Categoria, Conta } from '@prisma/client';
 
@@ -35,6 +37,7 @@ export class MovimentacaoServico {
     private readonly contaRepositorio = new ContaRepositorio(),
     private readonly categoriaRepositorio = new CategoriaRepositorio(),
     private readonly etiquetaRepositorio = new EtiquetaRepositorio(),
+    private readonly perfilRepositorio = new PerfilRepositorio(),
   ) {}
 
   async listar(
@@ -332,6 +335,89 @@ export class MovimentacaoServico {
     });
 
     return mapearMovimentacao(nova);
+  }
+
+  /** RF-29/RF-30: `valorPago` do corpo e um INCREMENTO sobre o ja pago, nao
+   * um valor absoluto — pagar 30 de 100 e depois 70 adicionais completa o
+   * pagamento (RN-03). Padrao (omitido) e o restante, o que sempre
+   * completa para PAGA. */
+  async pagar(
+    id: string,
+    usuarioId: string,
+    dados: PagarMovimentacaoDTO,
+  ): Promise<MovimentacaoDTO> {
+    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    this.garantirNaoTransferencia(atual, 'pagas');
+
+    if (atual.situacao === 'PAGA' || atual.situacao === 'CANCELADA') {
+      throw new RegraNegocioErro('Esta movimentação não pode ser paga.', [
+        {
+          campo: 'situacao',
+          mensagem: `Situação atual: ${atual.situacao}.`,
+        },
+      ]);
+    }
+
+    const incremento =
+      dados.valorPago !== undefined
+        ? new Prisma.Decimal(dados.valorPago)
+        : atual.valor.minus(atual.valorPago);
+    const novoValorPago = atual.valorPago.plus(incremento);
+
+    if (novoValorPago.greaterThan(atual.valor)) {
+      throw new RegraNegocioErro('O valor pago não pode exceder o valor total.', [
+        {
+          campo: 'valorPago',
+          mensagem: `O valor restante é ${atual.valor.minus(atual.valorPago).toFixed(2)}.`,
+        },
+      ]);
+    }
+
+    const dataEfetivacao = dados.dataEfetivacao
+      ? deDataIso(dados.dataEfetivacao)
+      : await this.hojeDoUsuario(usuarioId);
+
+    const movimentacao = await this.repositorio.atualizarPagamento(id, {
+      situacao: novoValorPago.equals(atual.valor) ? 'PAGA' : 'PAGA_PARCIALMENTE',
+      valorPago: novoValorPago,
+      dataEfetivacao,
+    });
+
+    return mapearMovimentacao(movimentacao);
+  }
+
+  /** RF-31: so reverte o que foi de fato pago — PENDENTE/ATRASADA/CANCELADA
+   * nao tem pagamento para estornar. */
+  async estornar(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
+    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    this.garantirNaoTransferencia(atual, 'estornadas');
+
+    if (atual.situacao !== 'PAGA' && atual.situacao !== 'PAGA_PARCIALMENTE') {
+      throw new RegraNegocioErro('Esta movimentação não está paga — não há o que estornar.', [
+        { campo: 'situacao', mensagem: `Situação atual: ${atual.situacao}.` },
+      ]);
+    }
+
+    const movimentacao = await this.repositorio.atualizarPagamento(id, {
+      situacao: 'PENDENTE',
+      valorPago: new Prisma.Decimal(0),
+      dataEfetivacao: null,
+    });
+
+    return mapearMovimentacao(movimentacao);
+  }
+
+  private garantirNaoTransferencia(movimentacao: MovimentacaoCompleta, acao: string): void {
+    if (movimentacao.tipo === 'TRANSFERENCIA') {
+      throw new RegraNegocioErro(`Transferências não podem ser ${acao} por aqui.`, [
+        { campo: 'id', mensagem: 'Gerencie o pagamento da transferência em /transferencias.' },
+      ]);
+    }
+  }
+
+  private async hojeDoUsuario(usuarioId: string): Promise<Date> {
+    const perfil = await this.perfilRepositorio.buscarPorUsuarioId(usuarioId);
+    return hojeNoTimezone(perfil?.timezone ?? 'America/Sao_Paulo');
   }
 
   /** RN-14: PAGA sempre efetiva o valor total (ignora valorPago enviado —
