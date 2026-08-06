@@ -10,11 +10,18 @@ import { CategoriaRepositorio } from '@/repositorios/categoria.repositorio';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { EtiquetaRepositorio } from '@/repositorios/etiqueta.repositorio';
 import { MovimentacaoRepositorio } from '@/repositorios/movimentacao.repositorio';
+import type {
+  FiltrosListarMovimentacoes,
+  PaginacaoMovimentacoes,
+} from '@/repositorios/movimentacao.repositorio';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
 import { deDataIso } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
-import type { CriarMovimentacaoDTO } from '@/validadores/movimentacoes.validador';
+import type {
+  CriarMovimentacaoDTO,
+  ListarMovimentacoesQuery,
+} from '@/validadores/movimentacoes.validador';
 import type { Categoria, Conta } from '@prisma/client';
 
 export class MovimentacaoServico {
@@ -24,6 +31,78 @@ export class MovimentacaoServico {
     private readonly categoriaRepositorio = new CategoriaRepositorio(),
     private readonly etiquetaRepositorio = new EtiquetaRepositorio(),
   ) {}
+
+  async listar(
+    usuarioId: string,
+    query: ListarMovimentacoesQuery,
+  ): Promise<{
+    itens: MovimentacaoDTO[];
+    paginacao: {
+      pagina: number;
+      limite: number;
+      total: number;
+      totalPaginas: number;
+      temProxima: boolean;
+      temAnterior: boolean;
+    };
+    totalizadores: {
+      receitas: string;
+      despesas: string;
+      resultado: string;
+      receitasPendentes: string;
+      despesasPendentes: string;
+    };
+  }> {
+    const filtros: FiltrosListarMovimentacoes = {
+      dataInicio: query.dataInicio ? deDataIso(query.dataInicio) : undefined,
+      dataFim: query.dataFim ? deDataIso(query.dataFim) : undefined,
+      campoData: query.campoData,
+      tipo: query.tipo,
+      situacao: query.situacao,
+      contaId: query.contaId,
+      categoriaId: query.categoriaId,
+      etiquetaId: query.etiquetaId,
+      cartaoId: query.cartaoId,
+      valorMinimo: query.valorMinimo ? new Prisma.Decimal(query.valorMinimo) : undefined,
+      valorMaximo: query.valorMaximo ? new Prisma.Decimal(query.valorMaximo) : undefined,
+      busca: query.busca,
+      apenasRecorrentes: query.apenasRecorrentes,
+      apenasParceladas: query.apenasParceladas,
+    };
+    const paginacao: PaginacaoMovimentacoes = {
+      pagina: query.pagina,
+      limite: query.limite,
+      ordenarPor: query.ordenarPor,
+      ordem: query.ordem,
+    };
+
+    const where = await this.repositorio.montarWhere(usuarioId, filtros);
+    const { itens, total, totalizadores } = await this.repositorio.listarComTotalizadores(
+      where,
+      paginacao,
+    );
+
+    const totalPaginas = Math.max(1, Math.ceil(total / paginacao.limite));
+
+    return {
+      itens: itens.map(mapearMovimentacao),
+      paginacao: {
+        pagina: paginacao.pagina,
+        limite: paginacao.limite,
+        total,
+        totalPaginas,
+        temProxima: paginacao.pagina < totalPaginas,
+        temAnterior: paginacao.pagina > 1,
+      },
+      totalizadores: {
+        receitas: totalizadores.receitas.toFixed(2),
+        despesas: totalizadores.despesas.toFixed(2),
+        resultado: totalizadores.resultado.toFixed(2),
+        receitasPendentes: totalizadores.receitasPendentes.toFixed(2),
+        despesasPendentes: totalizadores.despesasPendentes.toFixed(2),
+      },
+    };
+  }
 
   async criar(usuarioId: string, dados: CriarMovimentacaoDTO): Promise<MovimentacaoDTO> {
     const conta = await this.buscarContaOuFalhar(dados.contaId, usuarioId);

@@ -113,3 +113,82 @@ export const idParamMovimentacaoSchema = z.object({
 });
 
 export type IdParamMovimentacao = z.infer<typeof idParamMovimentacaoSchema>['params'];
+
+// ═══════════════════════════════════════════════════════════
+//  LISTAGEM (issue #35)
+// ═══════════════════════════════════════════════════════════
+
+const TIPOS_MOVIMENTACAO_TODOS = ['RECEITA', 'DESPESA', 'TRANSFERENCIA'] as const;
+const CAMPOS_DATA = ['COMPETENCIA', 'VENCIMENTO', 'EFETIVACAO'] as const;
+const CAMPOS_ORDENACAO_MOVIMENTACAO = [
+  'dataCompetencia',
+  'dataVencimento',
+  'valor',
+  'descricao',
+  'criadoEm',
+] as const;
+
+function paraArray<T extends string>(valor: T | T[] | undefined): T[] | undefined {
+  if (valor === undefined) return undefined;
+  return Array.isArray(valor) ? valor : [valor];
+}
+
+const booleanoQuerySchema = z
+  .enum(['true', 'false'])
+  .optional()
+  .transform((valor) => (valor === undefined ? undefined : valor === 'true'));
+
+export const listarMovimentacoesSchema = z.object({
+  query: z.object({
+    dataInicio: dataIsoSchema.optional(),
+    dataFim: dataIsoSchema.optional(),
+    campoData: z.enum(CAMPOS_DATA).optional().default('COMPETENCIA'),
+    tipo: z
+      .union([z.enum(TIPOS_MOVIMENTACAO_TODOS), z.array(z.enum(TIPOS_MOVIMENTACAO_TODOS))])
+      .optional()
+      .transform(paraArray),
+    situacao: z
+      .union([z.enum(SITUACOES), z.array(z.enum(SITUACOES))])
+      .optional()
+      .transform(paraArray),
+    contaId: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform(paraArray),
+    categoriaId: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform(paraArray),
+    etiquetaId: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform(paraArray),
+    cartaoId: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform(paraArray),
+    contaCompartilhadaId: contaCompartilhadaIdSchema,
+    valorMinimo: valorDecimalSchema.optional(),
+    valorMaximo: valorDecimalSchema.optional(),
+    busca: z.string().trim().min(2, 'A busca deve ter no minimo 2 caracteres.').optional(),
+    apenasRecorrentes: booleanoQuerySchema,
+    apenasParceladas: booleanoQuerySchema,
+    pagina: z.coerce
+      .number()
+      .int('Pagina invalida.')
+      .min(1, 'Pagina invalida.')
+      .optional()
+      .default(1),
+    limite: z.coerce
+      .number()
+      .int('Limite invalido.')
+      .min(1, 'Limite invalido.')
+      .max(100, 'O limite maximo e 100.')
+      .optional()
+      .default(20),
+    ordenarPor: z.enum(CAMPOS_ORDENACAO_MOVIMENTACAO).optional().default('dataCompetencia'),
+    ordem: z.enum(['asc', 'desc']).optional().default('desc'),
+  }),
+});
+
+export type ListarMovimentacoesQuery = z.infer<typeof listarMovimentacoesSchema>['query'];
