@@ -1,6 +1,9 @@
-import type { MovimentacaoCompleta } from '@/repositorios/movimentacao.repositorio';
+import type {
+  ContraparteTransferencia,
+  MovimentacaoCompleta,
+} from '@/repositorios/movimentacao.repositorio';
 import { calcularOrdinalOcorrencia, paraDataIso } from './data';
-import type { FrequenciaRecorrencia, Prisma } from '@prisma/client';
+import type { FrequenciaRecorrencia, Prisma, SentidoTransferencia } from '@prisma/client';
 
 export interface MovimentacaoDTO {
   id: string;
@@ -26,7 +29,11 @@ export interface MovimentacaoDTO {
   fatura: null;
   etiquetas: { id: string; nome: string; cor: string }[];
   autor: { id: string; nome: string; fotoUrl: string | null };
-  transferencia: null;
+  transferencia: {
+    transferenciaId: string;
+    sentido: SentidoTransferencia;
+    contraparte: ContraparteTransferencia;
+  } | null;
   recorrencia: {
     modeloId: string;
     frequencia: FrequenciaRecorrencia;
@@ -42,9 +49,26 @@ export interface MovimentacaoDTO {
 
 /** 04-API.md §12.1/§12.2: `transferencia`, `recorrencia` e `parcelamento`
  * sao sempre chaves presentes (null quando nao se aplicam) — o cliente
- * nao precisa checar existencia da propriedade. A issue #39 ainda preenche
- * transferencia de verdade. */
-export function mapearMovimentacao(movimentacao: MovimentacaoCompleta): MovimentacaoDTO {
+ * nao precisa checar existencia da propriedade. `contraparte` vem de fora
+ * (MovimentacaoRepositorio.buscarContrapartes) porque a outra perna da
+ * transferencia nao e uma relacao do Prisma — so uma correlacao por
+ * `transferenciaId` — e buscar isso por item aqui dentro geraria N+1. */
+export function mapearMovimentacao(
+  movimentacao: MovimentacaoCompleta,
+  contraparte?: ContraparteTransferencia,
+): MovimentacaoDTO {
+  const transferencia =
+    movimentacao.tipo === 'TRANSFERENCIA' &&
+    movimentacao.transferenciaId !== null &&
+    movimentacao.sentido !== null &&
+    contraparte
+      ? {
+          transferenciaId: movimentacao.transferenciaId,
+          sentido: movimentacao.sentido,
+          contraparte,
+        }
+      : null;
+
   const modelo = movimentacao.modeloRecorrencia;
   const recorrencia =
     modelo !== null && modelo.frequencia !== null
@@ -84,7 +108,7 @@ export function mapearMovimentacao(movimentacao: MovimentacaoCompleta): Moviment
       nome: movimentacao.usuario.nome,
       fotoUrl: movimentacao.usuario.perfil?.fotoUrl ?? null,
     },
-    transferencia: null,
+    transferencia,
     recorrencia,
     parcelamento: null,
     quantidadeAnexos: movimentacao._count.anexos,

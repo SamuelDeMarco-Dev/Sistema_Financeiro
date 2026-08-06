@@ -114,6 +114,13 @@ export class ContaArquivadaErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'CONTA_ARQUIVADA';
 }
 
+/** 422 — RN-24: conta de origem e destino de uma transferencia devem ser
+ * diferentes. */
+export class ContasIguaisErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'CONTAS_IGUAIS';
+}
+
 /** 429 — rate limit. */
 export class LimiteExcedidoErro extends ErroAplicacao {
   readonly statusHttp = 429;

@@ -17,6 +17,7 @@ import type {
   PaginacaoMovimentacoes,
 } from '@/repositorios/movimentacao.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
+import { TransferenciaServico } from '@/servicos/transferencia.servico';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
 import { deDataIso, hojeNoTimezone, paraDataIso } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
@@ -62,6 +63,7 @@ export class MovimentacaoServico {
     private readonly categoriaRepositorio = new CategoriaRepositorio(),
     private readonly etiquetaRepositorio = new EtiquetaRepositorio(),
     private readonly perfilRepositorio = new PerfilRepositorio(),
+    private readonly transferenciaServico = new TransferenciaServico(),
   ) {}
 
   async listar(
@@ -116,8 +118,13 @@ export class MovimentacaoServico {
 
     const totalPaginas = Math.max(1, Math.ceil(total / paginacao.limite));
 
+    const transferenciaIds = itens
+      .map((item) => item.transferenciaId)
+      .filter((id): id is string => id !== null);
+    const contrapartePorId = await this.repositorio.buscarContrapartes(transferenciaIds);
+
     return {
-      itens: itens.map(mapearMovimentacao),
+      itens: itens.map((item) => mapearMovimentacao(item, contrapartePorId.get(item.id))),
       paginacao: {
         pagina: paginacao.pagina,
         limite: paginacao.limite,
@@ -237,7 +244,13 @@ export class MovimentacaoServico {
 
   async buscarPorId(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
     const movimentacao = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
-    return mapearMovimentacao(movimentacao);
+    if (movimentacao.transferenciaId === null) {
+      return mapearMovimentacao(movimentacao);
+    }
+    const contrapartePorId = await this.repositorio.buscarContrapartes([
+      movimentacao.transferenciaId,
+    ]);
+    return mapearMovimentacao(movimentacao, contrapartePorId.get(movimentacao.id));
   }
 
   /** RN-15/RF-25: PATCH altera so os campos enviados. Trocar de conta e
@@ -397,6 +410,17 @@ export class MovimentacaoServico {
    * `escopoExclusao` so e obrigatorio/relevante ao excluir uma ocorrencia. */
   async excluir(id: string, usuarioId: string, escopoExclusao?: EscopoRecorrencia): Promise<void> {
     const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+
+    // RN-39: excluir um lado de transferencia por aqui e so uma
+    // conveniencia — o efeito real e o de DELETE /transferencias/:id
+    // (exclui os dois lados na mesma transacao).
+    if (atual.tipo === 'TRANSFERENCIA') {
+      if (atual.transferenciaId === null) {
+        throw new ErroInterno('Transferência sem transferenciaId.');
+      }
+      await this.transferenciaServico.excluir(atual.transferenciaId, usuarioId);
+      return;
+    }
 
     if (atual.ehModeloRecorrencia) {
       await this.repositorio.excluirRecorrenciaEmCascata(atual.id, null);

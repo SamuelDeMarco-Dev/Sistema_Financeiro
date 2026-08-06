@@ -108,6 +108,11 @@ export interface OcorrenciaRecorrencia {
   divergeDoModelo: boolean;
 }
 
+export interface ContraparteTransferencia {
+  movimentacaoId: string;
+  conta: { id: string; nome: string };
+}
+
 const SITUACOES_EFETIVADAS: SituacaoMovimentacao[] = ['PAGA', 'PAGA_PARCIALMENTE'];
 
 export interface FiltrosListarMovimentacoes {
@@ -402,6 +407,46 @@ export class MovimentacaoRepositorio {
         data: { recorrenciaFimEm: dataCorte, recorrenciaTotal: null },
       }),
     ]);
+  }
+
+  /** RN-23: monta, para cada movimentacao TRANSFERENCIA presente num lote
+   * (listagem ou item unico), o dado da perna oposta — uma unica consulta
+   * agrupada por `transferenciaId`, nunca uma consulta por item (o join
+   * entre as duas pernas nao existe como relacao no schema, so
+   * `transferenciaId` como correlacao). Chave do mapa e o id da PROPRIA
+   * movimentacao (nao o transferenciaId), pronta para lookup em
+   * `mapearMovimentacao`. */
+  async buscarContrapartes(
+    transferenciaIds: string[],
+  ): Promise<Map<string, ContraparteTransferencia>> {
+    const contrapartePorId = new Map<string, ContraparteTransferencia>();
+    if (transferenciaIds.length === 0) return contrapartePorId;
+
+    const pernas = await prisma.movimentacao.findMany({
+      where: { transferenciaId: { in: transferenciaIds }, excluidoEm: null },
+      select: {
+        id: true,
+        transferenciaId: true,
+        conta: { select: { id: true, nome: true } },
+      },
+    });
+
+    const porTransferencia = new Map<string, typeof pernas>();
+    for (const perna of pernas) {
+      if (perna.transferenciaId === null) continue;
+      const grupo = porTransferencia.get(perna.transferenciaId);
+      if (grupo) grupo.push(perna);
+      else porTransferencia.set(perna.transferenciaId, [perna]);
+    }
+
+    for (const grupo of porTransferencia.values()) {
+      const [primeira, segunda] = grupo;
+      if (!primeira || !segunda || !primeira.conta || !segunda.conta) continue;
+      contrapartePorId.set(primeira.id, { movimentacaoId: segunda.id, conta: segunda.conta });
+      contrapartePorId.set(segunda.id, { movimentacaoId: primeira.id, conta: primeira.conta });
+    }
+
+    return contrapartePorId;
   }
 
   /** 04-API.md §12.8: `id` pode ser o modelo ou qualquer ocorrencia dele —
