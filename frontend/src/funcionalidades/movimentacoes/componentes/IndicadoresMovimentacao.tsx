@@ -22,6 +22,12 @@ export function IndicadoresMovimentacao({
   if (movimentacao.transferencia) {
     indicadores.push({ chave: 'transferencia', texto: '⇄ Transferência' });
   }
+  if (movimentacao.quantidadeAnexos > 0) {
+    indicadores.push({
+      chave: 'anexos',
+      texto: `📎 ${movimentacao.quantidadeAnexos} anexo${movimentacao.quantidadeAnexos === 1 ? '' : 's'}`,
+    });
+  }
 
   if (indicadores.length === 0) return null;
 

@@ -81,6 +81,15 @@ export interface ParcelamentoResumo {
   rotulo: string;
 }
 
+export interface AnexoResumo {
+  id: string;
+  nomeOriginal: string;
+  tipoMime: string;
+  tamanhoBytes: number;
+  url: string;
+  criadoEm: string;
+}
+
 export interface Movimentacao {
   id: string;
   tipo: TipoMovimentacao;
@@ -102,6 +111,7 @@ export interface Movimentacao {
   transferencia: TransferenciaResumo | null;
   recorrencia: RecorrenciaResumo | null;
   parcelamento: ParcelamentoResumo | null;
+  anexos: AnexoResumo[];
   quantidadeAnexos: number;
   criadoEm: string;
   atualizadoEm: string;

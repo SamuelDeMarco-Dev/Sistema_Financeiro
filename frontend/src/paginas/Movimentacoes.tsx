@@ -18,6 +18,7 @@ import type {
   Movimentacao,
 } from '@/funcionalidades/movimentacoes/tipos/movimentacao';
 import { usePerfil } from '@/funcionalidades/perfil/hooks/usePerfil';
+import { FormularioTransferencia } from '@/funcionalidades/transferencias/componentes/FormularioTransferencia';
 import type { ReactElement } from 'react';
 
 const LIMITE_PAGINA = 20;
@@ -52,6 +53,7 @@ export function Movimentacoes(): ReactElement {
   const { data, isLoading, isError, refetch } = useMovimentacoes(filtrosApi);
 
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [formularioTransferenciaAberto, setFormularioTransferenciaAberto] = useState(false);
   const [movimentacaoEmEdicao, setMovimentacaoEmEdicao] = useState<Movimentacao | undefined>(
     undefined,
   );
@@ -99,7 +101,17 @@ export function Movimentacoes(): ReactElement {
     <div className="mx-auto flex min-w-0 max-w-[1440px] flex-col gap-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold text-texto">Movimentações</h1>
-        <Botao onClick={abrirCriacao}>Nova movimentação</Botao>
+        <div className="flex gap-2">
+          <Botao
+            variante="secundaria"
+            onClick={() => {
+              setFormularioTransferenciaAberto(true);
+            }}
+          >
+            Nova transferência
+          </Botao>
+          <Botao onClick={abrirCriacao}>Nova movimentação</Botao>
+        </div>
       </header>
 
       <BarraFiltros
@@ -169,6 +181,12 @@ export function Movimentacoes(): ReactElement {
         }}
         movimentacao={movimentacaoEmEdicao}
         escopoEdicao={escopoEdicao}
+      />
+      <FormularioTransferencia
+        aberto={formularioTransferenciaAberto}
+        aoFechar={() => {
+          setFormularioTransferenciaAberto(false);
+        }}
       />
       <DialogoEscopoEdicao
         movimentacao={movimentacaoParaEscolherEscopo}

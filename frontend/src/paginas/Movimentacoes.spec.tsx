@@ -76,6 +76,7 @@ function fabricarMovimentacao(sobrescritas: Partial<Movimentacao> = {}): Movimen
     transferencia: null,
     recorrencia: null,
     parcelamento: null,
+    anexos: [],
     quantidadeAnexos: 0,
     criadoEm: '2026-08-05T10:00:00.000Z',
     atualizadoEm: '2026-08-05T10:00:00.000Z',

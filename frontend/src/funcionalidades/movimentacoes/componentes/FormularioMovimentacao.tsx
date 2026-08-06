@@ -18,6 +18,7 @@ import { usePerfil } from '@/funcionalidades/perfil/hooks/usePerfil';
 import { aplicarErrosDeCampo } from '@/utilitarios/aplicar-erros-campo';
 import { formatarDataBr } from '@/utilitarios/data';
 import { traduzirErroApi } from '@/utilitarios/traduzir-erro-api';
+import { GerenciadorAnexos } from './GerenciadorAnexos';
 import { useAtualizarMovimentacao } from '../hooks/useAtualizarMovimentacao';
 import { useCriarMovimentacao } from '../hooks/useCriarMovimentacao';
 import { movimentacaoSchema, TIPOS_LIMITE_RECORRENCIA } from '../schemas/movimentacao.schema';
@@ -335,6 +336,13 @@ export function FormularioMovimentacao({
             erro={errors.observacao?.message}
             {...register('observacao')}
           />
+
+          {ehEdicao && !movimentacao.transferencia ? (
+            <GerenciadorAnexos
+              movimentacaoId={movimentacao.id}
+              anexosIniciais={movimentacao.anexos}
+            />
+          ) : null}
 
           {!ehEdicao ? (
             <div className="flex flex-col gap-3 rounded-md border border-borda p-4">
