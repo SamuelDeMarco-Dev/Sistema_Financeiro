@@ -4,13 +4,24 @@ import { chavesContas } from '@/funcionalidades/contas/hooks/useContas';
 import type { ErroApi } from '@/servicos/erro-api';
 import { chavesMovimentacoes } from './useMovimentacoes';
 import { excluirMovimentacao } from '../servicos/movimentacao.servico';
+import type { EscopoRecorrencia } from '../tipos/movimentacao';
 import type { UseMutationResult } from '@tanstack/react-query';
 
-export function useExcluirMovimentacao(): UseMutationResult<void, ErroApi, string> {
+export interface ExcluirMovimentacaoVariaveis {
+  id: string;
+  escopoExclusao?: EscopoRecorrencia | undefined;
+}
+
+export function useExcluirMovimentacao(): UseMutationResult<
+  void,
+  ErroApi,
+  ExcluirMovimentacaoVariaveis
+> {
   const clienteConsulta = useQueryClient();
 
   return useMutation({
-    mutationFn: excluirMovimentacao,
+    mutationFn: ({ id, escopoExclusao }: ExcluirMovimentacaoVariaveis) =>
+      excluirMovimentacao(id, escopoExclusao),
     onSuccess: () => {
       void clienteConsulta.invalidateQueries({ queryKey: chavesMovimentacoes.todas });
       void clienteConsulta.invalidateQueries({ queryKey: chavesContas.todas });

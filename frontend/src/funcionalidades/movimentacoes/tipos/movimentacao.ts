@@ -27,6 +27,17 @@ export const ROTULO_SITUACAO_MOVIMENTACAO: Record<SituacaoMovimentacao, string> 
   CANCELADA: 'Cancelada',
 };
 
+// RN-19/RN-20: os tres escopos de edicao/exclusao de uma ocorrencia de
+// recorrencia — o mesmo enum serve os dois casos (04-API.md §12.3/§12.9).
+export const ESCOPOS_RECORRENCIA = ['APENAS_ESTA', 'ESTA_E_FUTURAS', 'TODAS'] as const;
+export type EscopoRecorrencia = (typeof ESCOPOS_RECORRENCIA)[number];
+
+export const ROTULO_ESCOPO_RECORRENCIA: Record<EscopoRecorrencia, string> = {
+  APENAS_ESTA: 'Apenas esta ocorrência',
+  ESTA_E_FUTURAS: 'Esta e as futuras',
+  TODAS: 'Todas as ocorrências',
+};
+
 export interface ContaResumoMovimentacao {
   id: string;
   nome: string;

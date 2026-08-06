@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { CampoData } from '@/componentes/formulario/CampoData';
 import { CampoMoeda } from '@/componentes/formulario/CampoMoeda';
 import { Botao } from '@/componentes/ui/Botao';
+import { CaixaMarcacao } from '@/componentes/ui/CaixaMarcacao';
 import { Campo } from '@/componentes/ui/Campo';
 import { Dialog, DialogConteudo, DialogTitulo } from '@/componentes/ui/Dialog';
 import { Selecao } from '@/componentes/ui/Selecao';
@@ -14,24 +15,39 @@ import { useContas } from '@/funcionalidades/contas/hooks/useContas';
 import { SelecionadorEtiquetas } from '@/funcionalidades/etiquetas/componentes/SelecionadorEtiquetas';
 import { useEtiquetas } from '@/funcionalidades/etiquetas/hooks/useEtiquetas';
 import { usePerfil } from '@/funcionalidades/perfil/hooks/usePerfil';
+import { aplicarErrosDeCampo } from '@/utilitarios/aplicar-erros-campo';
+import { formatarDataBr } from '@/utilitarios/data';
 import { traduzirErroApi } from '@/utilitarios/traduzir-erro-api';
 import { useAtualizarMovimentacao } from '../hooks/useAtualizarMovimentacao';
 import { useCriarMovimentacao } from '../hooks/useCriarMovimentacao';
-import { movimentacaoSchema } from '../schemas/movimentacao.schema';
+import { movimentacaoSchema, TIPOS_LIMITE_RECORRENCIA } from '../schemas/movimentacao.schema';
 import {
   ROTULO_SITUACAO_MOVIMENTACAO,
   SITUACOES_MOVIMENTACAO,
   TIPOS_MOVIMENTACAO_CRIACAO,
 } from '../tipos/movimentacao';
-import type { MovimentacaoFormulario } from '../schemas/movimentacao.schema';
-import type { Movimentacao } from '../tipos/movimentacao';
+import {
+  FREQUENCIAS_RECORRENCIA,
+  proximasDatas,
+  ROTULO_FREQUENCIA,
+} from '../utilitarios/recorrencia';
+import type { MovimentacaoFormulario, TipoLimiteRecorrencia } from '../schemas/movimentacao.schema';
+import type { RecorrenciaPayload } from '../servicos/movimentacao.servico';
+import type { EscopoRecorrencia, Movimentacao } from '../tipos/movimentacao';
 import type { ReactElement } from 'react';
 
 interface FormularioMovimentacaoProps {
   aberto: boolean;
   aoFechar: () => void;
   movimentacao?: Movimentacao | undefined;
+  escopoEdicao?: EscopoRecorrencia | undefined;
 }
+
+const ROTULO_TIPO_LIMITE: Record<TipoLimiteRecorrencia, string> = {
+  SEM_FIM: 'Sem fim',
+  ATE_DATA: 'Até uma data',
+  NUMERO_OCORRENCIAS: 'Número de ocorrências',
+};
 
 function valoresIniciais(movimentacao: Movimentacao | undefined): MovimentacaoFormulario {
   return {
@@ -47,17 +63,25 @@ function valoresIniciais(movimentacao: Movimentacao | undefined): MovimentacaoFo
     contaId: movimentacao?.conta?.id ?? '',
     categoriaId: movimentacao?.categoria?.id ?? '',
     etiquetaIds: movimentacao?.etiquetas.map((etiqueta) => etiqueta.id) ?? [],
+    recorrenciaAtiva: false,
+    frequencia: undefined,
+    intervalo: 1,
+    tipoLimite: 'SEM_FIM',
+    fimEm: null,
+    totalOcorrencias: undefined,
   };
 }
 
-/** RF-23/RF-24: formulário único para receita e despesa — a recorrência
- * (RF-27) chega na issue #43. Radix Dialog só renderiza quando `open`,
- * então cada abertura monta o formulário do zero (mesmo raciocínio de
- * `FormularioConta`). */
+/** RF-23/RF-24/RF-27: formulário único para receita e despesa, com a
+ * seção de recorrência (só na criação — uma ocorrência existente não
+ * "ganha" recorrência depois, RN-17). Radix Dialog só renderiza quando
+ * `open`, então cada abertura monta o formulário do zero (mesmo
+ * raciocínio de `FormularioConta`). */
 export function FormularioMovimentacao({
   aberto,
   aoFechar,
   movimentacao,
+  escopoEdicao,
 }: FormularioMovimentacaoProps): ReactElement {
   const ehEdicao = movimentacao !== undefined;
   const {
@@ -65,6 +89,7 @@ export function FormularioMovimentacao({
     handleSubmit,
     control,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<MovimentacaoFormulario>({
     resolver: zodResolver(movimentacaoSchema),
@@ -81,6 +106,11 @@ export function FormularioMovimentacao({
   const contaSelecionada = useWatch({ control, name: 'contaId' });
   const categoriaSelecionada = useWatch({ control, name: 'categoriaId' });
   const etiquetasSelecionadas = useWatch({ control, name: 'etiquetaIds' });
+  const recorrenciaAtivaSelecionada = useWatch({ control, name: 'recorrenciaAtiva' });
+  const frequenciaSelecionada = useWatch({ control, name: 'frequencia' });
+  const intervaloSelecionado = useWatch({ control, name: 'intervalo' });
+  const tipoLimiteSelecionado = useWatch({ control, name: 'tipoLimite' });
+  const fimEmSelecionado = useWatch({ control, name: 'fimEm' });
 
   const { data: perfil } = usePerfil();
   const { data: dadosContas } = useContas();
@@ -93,8 +123,30 @@ export function FormularioMovimentacao({
   const erro = criar.error ?? atualizar.error;
   const enviandoRef = useRef(false);
 
+  useEffect(() => {
+    if (erro) aplicarErrosDeCampo(erro, setError);
+  }, [erro, setError]);
+
   const efetivada = situacaoSelecionada === 'PAGA' || situacaoSelecionada === 'PAGA_PARCIALMENTE';
   const timezone = perfil?.timezone ?? 'America/Sao_Paulo';
+  const proximasDatasPreview =
+    !ehEdicao && recorrenciaAtivaSelecionada && dataCompetenciaSelecionada && frequenciaSelecionada
+      ? proximasDatas(dataCompetenciaSelecionada, frequenciaSelecionada, intervaloSelecionado, 3)
+      : null;
+
+  function construirRecorrencia(dados: MovimentacaoFormulario): RecorrenciaPayload | undefined {
+    if (!dados.recorrenciaAtiva) return undefined;
+    if (!dados.frequencia) {
+      throw new Error('Frequência ausente: schema deveria ter recusado o envio (superRefine).');
+    }
+    return {
+      frequencia: dados.frequencia,
+      intervalo: dados.intervalo,
+      fimEm: dados.tipoLimite === 'ATE_DATA' ? (dados.fimEm ?? undefined) : undefined,
+      totalOcorrencias:
+        dados.tipoLimite === 'NUMERO_OCORRENCIAS' ? dados.totalOcorrencias : undefined,
+    };
+  }
 
   function aoSubmeter(dados: MovimentacaoFormulario): void {
     if (enviandoRef.current) return;
@@ -116,7 +168,7 @@ export function FormularioMovimentacao({
 
     if (ehEdicao) {
       atualizar.mutate(
-        { id: movimentacao.id, dados: { ...payloadComum, tipo: dados.tipo } },
+        { id: movimentacao.id, dados: { ...payloadComum, tipo: dados.tipo, escopoEdicao } },
         { onSuccess: aoFechar, onSettled: aoTerminar },
       );
       return;
@@ -130,6 +182,7 @@ export function FormularioMovimentacao({
         situacao: dados.situacao,
         dataEfetivacao: dados.dataEfetivacao ?? undefined,
         valorPago: dados.valorPago,
+        recorrencia: construirRecorrencia(dados),
       },
       { onSuccess: aoFechar, onSettled: aoTerminar },
     );
@@ -282,6 +335,99 @@ export function FormularioMovimentacao({
             erro={errors.observacao?.message}
             {...register('observacao')}
           />
+
+          {!ehEdicao ? (
+            <div className="flex flex-col gap-3 rounded-md border border-borda p-4">
+              <CaixaMarcacao
+                rotulo="Repetir esta movimentação"
+                checked={recorrenciaAtivaSelecionada}
+                onChange={(evento) => {
+                  setValue('recorrenciaAtiva', evento.target.checked, { shouldValidate: true });
+                }}
+              />
+
+              {recorrenciaAtivaSelecionada ? (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Selecao
+                      rotulo="Frequência"
+                      erro={errors.frequencia?.message}
+                      {...register('frequencia')}
+                    >
+                      <option value="">Selecione...</option>
+                      {FREQUENCIAS_RECORRENCIA.map((frequencia) => (
+                        <option key={frequencia} value={frequencia}>
+                          {ROTULO_FREQUENCIA[frequencia]}
+                        </option>
+                      ))}
+                    </Selecao>
+                    <Campo
+                      rotulo="Repetir a cada (1–12)"
+                      type="number"
+                      min={1}
+                      max={12}
+                      erro={errors.intervalo?.message}
+                      {...register('intervalo')}
+                    />
+                  </div>
+
+                  <div
+                    role="radiogroup"
+                    aria-label="Até quando repetir"
+                    className="flex flex-col gap-2"
+                  >
+                    {TIPOS_LIMITE_RECORRENCIA.map((tipoLimiteOpcao) => (
+                      <label
+                        key={tipoLimiteOpcao}
+                        className="flex items-center gap-2 text-sm text-texto"
+                      >
+                        <input
+                          type="radio"
+                          name="tipo-limite-recorrencia"
+                          checked={tipoLimiteSelecionado === tipoLimiteOpcao}
+                          onChange={() => {
+                            setValue('tipoLimite', tipoLimiteOpcao, { shouldValidate: true });
+                          }}
+                          className="h-4 w-4 border-borda text-primaria focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                        />
+                        {ROTULO_TIPO_LIMITE[tipoLimiteOpcao]}
+                      </label>
+                    ))}
+                  </div>
+
+                  {tipoLimiteSelecionado === 'ATE_DATA' ? (
+                    <CampoData
+                      rotulo="Repetir até"
+                      valor={fimEmSelecionado}
+                      aoAlterar={(dataIso) => {
+                        setValue('fimEm', dataIso, { shouldValidate: true });
+                      }}
+                      timezone={timezone}
+                      erro={errors.fimEm?.message}
+                    />
+                  ) : null}
+
+                  {tipoLimiteSelecionado === 'NUMERO_OCORRENCIAS' ? (
+                    <Campo
+                      rotulo="Número de ocorrências (2–360)"
+                      type="number"
+                      min={2}
+                      max={360}
+                      erro={errors.totalOcorrencias?.message}
+                      {...register('totalOcorrencias')}
+                    />
+                  ) : null}
+
+                  {proximasDatasPreview ? (
+                    <div className="text-sm text-textoSuave">
+                      <p className="font-medium text-texto">Próximas datas</p>
+                      <p>{proximasDatasPreview.map(formatarDataBr).join(' · ')}</p>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
 
           <Botao type="submit" carregando={enviando}>
             {ehEdicao ? 'Salvar alterações' : 'Criar movimentação'}

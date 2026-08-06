@@ -1,11 +1,13 @@
 import { api } from '@/servicos/api';
 import type {
+  EscopoRecorrencia,
   Movimentacao,
   PaginacaoMovimentacoes,
   SituacaoMovimentacao,
   TipoMovimentacao,
   TotalizadoresMovimentacoes,
 } from '../tipos/movimentacao';
+import type { FrequenciaRecorrencia } from '../utilitarios/recorrencia';
 
 export interface FiltrosListarMovimentacoes {
   dataInicio?: string;
@@ -34,6 +36,13 @@ interface EnvelopeListarMovimentacoes {
   meta: { paginacao: PaginacaoMovimentacoes; totalizadores: TotalizadoresMovimentacoes };
 }
 
+export interface RecorrenciaPayload {
+  frequencia: FrequenciaRecorrencia;
+  intervalo: number;
+  fimEm?: string | undefined;
+  totalOcorrencias?: number | undefined;
+}
+
 export interface CriarMovimentacaoPayload {
   tipo: 'RECEITA' | 'DESPESA';
   descricao: string;
@@ -47,11 +56,15 @@ export interface CriarMovimentacaoPayload {
   contaId: string;
   categoriaId: string;
   etiquetaIds?: string[] | undefined;
+  recorrencia?: RecorrenciaPayload | undefined;
 }
 
 export type AtualizarMovimentacaoPayload = Partial<
-  Omit<CriarMovimentacaoPayload, 'contaId' | 'tipo'>
-> & { tipo?: 'RECEITA' | 'DESPESA' | undefined };
+  Omit<CriarMovimentacaoPayload, 'contaId' | 'tipo' | 'recorrencia'>
+> & {
+  tipo?: 'RECEITA' | 'DESPESA' | undefined;
+  escopoEdicao?: EscopoRecorrencia | undefined;
+};
 
 export interface PagarMovimentacaoPayload {
   dataEfetivacao?: string | undefined;
@@ -95,8 +108,13 @@ export async function atualizarMovimentacao(
   return resposta.data.data.movimentacao;
 }
 
-export async function excluirMovimentacao(id: string): Promise<void> {
-  await api.delete(`/movimentacoes/${id}`);
+export async function excluirMovimentacao(
+  id: string,
+  escopoExclusao?: EscopoRecorrencia,
+): Promise<void> {
+  await api.delete(`/movimentacoes/${id}`, {
+    ...(escopoExclusao && { params: { escopoExclusao } }),
+  });
 }
 
 export async function duplicarMovimentacao(id: string): Promise<Movimentacao> {

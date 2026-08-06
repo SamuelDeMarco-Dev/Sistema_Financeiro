@@ -4,6 +4,7 @@ import { Botao } from '@/componentes/ui/Botao';
 import { BarraFiltros } from '@/funcionalidades/movimentacoes/componentes/BarraFiltros';
 import { CartaoTotalizadores } from '@/funcionalidades/movimentacoes/componentes/CartaoTotalizadores';
 import { ChipsFiltros } from '@/funcionalidades/movimentacoes/componentes/ChipsFiltros';
+import { DialogoEscopoEdicao } from '@/funcionalidades/movimentacoes/componentes/DialogoEscopoEdicao';
 import { DialogoExcluirMovimentacao } from '@/funcionalidades/movimentacoes/componentes/DialogoExcluirMovimentacao';
 import { FormularioMovimentacao } from '@/funcionalidades/movimentacoes/componentes/FormularioMovimentacao';
 import { ListaCartoesMovimentacoes } from '@/funcionalidades/movimentacoes/componentes/ListaCartoesMovimentacoes';
@@ -12,7 +13,10 @@ import { TabelaMovimentacoes } from '@/funcionalidades/movimentacoes/componentes
 import { useFiltrosUrl } from '@/funcionalidades/movimentacoes/hooks/useFiltrosUrl';
 import { useMovimentacoes } from '@/funcionalidades/movimentacoes/hooks/useMovimentacoes';
 import type { FiltrosListarMovimentacoes } from '@/funcionalidades/movimentacoes/servicos/movimentacao.servico';
-import type { Movimentacao } from '@/funcionalidades/movimentacoes/tipos/movimentacao';
+import type {
+  EscopoRecorrencia,
+  Movimentacao,
+} from '@/funcionalidades/movimentacoes/tipos/movimentacao';
 import { usePerfil } from '@/funcionalidades/perfil/hooks/usePerfil';
 import type { ReactElement } from 'react';
 
@@ -51,15 +55,31 @@ export function Movimentacoes(): ReactElement {
   const [movimentacaoEmEdicao, setMovimentacaoEmEdicao] = useState<Movimentacao | undefined>(
     undefined,
   );
+  const [escopoEdicao, setEscopoEdicao] = useState<EscopoRecorrencia | undefined>(undefined);
+  const [movimentacaoParaEscolherEscopo, setMovimentacaoParaEscolherEscopo] =
+    useState<Movimentacao | null>(null);
   const [movimentacaoParaExcluir, setMovimentacaoParaExcluir] = useState<Movimentacao | null>(null);
 
   function abrirCriacao(): void {
     setMovimentacaoEmEdicao(undefined);
+    setEscopoEdicao(undefined);
     setFormularioAberto(true);
   }
 
   function abrirEdicao(movimentacao: Movimentacao): void {
+    if (movimentacao.recorrencia !== null) {
+      setMovimentacaoParaEscolherEscopo(movimentacao);
+      return;
+    }
     setMovimentacaoEmEdicao(movimentacao);
+    setEscopoEdicao(undefined);
+    setFormularioAberto(true);
+  }
+
+  function confirmarEscopoEdicao(escopo: EscopoRecorrencia): void {
+    setMovimentacaoEmEdicao(movimentacaoParaEscolherEscopo ?? undefined);
+    setEscopoEdicao(escopo);
+    setMovimentacaoParaEscolherEscopo(null);
     setFormularioAberto(true);
   }
 
@@ -148,6 +168,14 @@ export function Movimentacoes(): ReactElement {
           setFormularioAberto(false);
         }}
         movimentacao={movimentacaoEmEdicao}
+        escopoEdicao={escopoEdicao}
+      />
+      <DialogoEscopoEdicao
+        movimentacao={movimentacaoParaEscolherEscopo}
+        aoFechar={() => {
+          setMovimentacaoParaEscolherEscopo(null);
+        }}
+        aoConfirmar={confirmarEscopoEdicao}
       />
       <DialogoExcluirMovimentacao
         movimentacao={movimentacaoParaExcluir}

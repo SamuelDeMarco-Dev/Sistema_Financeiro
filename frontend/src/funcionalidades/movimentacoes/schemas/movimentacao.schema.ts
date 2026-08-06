@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { SITUACOES_MOVIMENTACAO, TIPOS_MOVIMENTACAO_CRIACAO } from '../tipos/movimentacao';
+import { FREQUENCIAS_RECORRENCIA } from '../utilitarios/recorrencia';
+
+export const TIPOS_LIMITE_RECORRENCIA = ['SEM_FIM', 'ATE_DATA', 'NUMERO_OCORRENCIAS'] as const;
+export type TipoLimiteRecorrencia = (typeof TIPOS_LIMITE_RECORRENCIA)[number];
 
 // RN-08: estritamente positivo, no maximo 2 casas — mesmo regex do
 // backend (movimentacoes.validador.ts), aceitando virgula (convencao
@@ -38,8 +42,38 @@ export const movimentacaoSchema = z
     contaId: z.string().min(1, 'Informe a conta.'),
     categoriaId: z.string().min(1, 'Informe a categoria.'),
     etiquetaIds: z.array(z.string()),
+    recorrenciaAtiva: z.boolean(),
+    frequencia: z.enum(FREQUENCIAS_RECORRENCIA).optional(),
+    intervalo: z.coerce.number().int().min(1).max(12),
+    tipoLimite: z.enum(TIPOS_LIMITE_RECORRENCIA),
+    fimEm: z.string().nullable(),
+    totalOcorrencias: z.coerce.number().int().min(2).max(360).optional(),
   })
   .superRefine((dados, ctx) => {
+    if (dados.recorrenciaAtiva) {
+      if (!dados.frequencia) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['frequencia'],
+          message: 'Selecione a frequência.',
+        });
+      }
+      if (dados.tipoLimite === 'ATE_DATA' && dados.fimEm === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['fimEm'],
+          message: 'Informe a data final.',
+        });
+      }
+      if (dados.tipoLimite === 'NUMERO_OCORRENCIAS' && dados.totalOcorrencias === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['totalOcorrencias'],
+          message: 'Informe o número de ocorrências.',
+        });
+      }
+    }
+
     if (dados.dataCompetencia === null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

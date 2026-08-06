@@ -18,9 +18,10 @@ const SITUACOES_ESTORNAVEIS = new Set(['PAGA', 'PAGA_PARCIALMENTE']);
  * movimentações. Pagar/estornar disparam direto (sem diálogo — pagar usa
  * os padrões do backend: hoje, valor total) exceto para transferência,
  * que não tem essas ações por aqui (RN-39: gerencie em /transferencias).
- * Editar/duplicar tambem ficam de fora para uma ocorrencia de recorrencia
- * — o dialogo de escopo (APENAS_ESTA/ESTA_E_FUTURAS/TODAS) chega na issue
- * #43, editar por aqui sem ele so devolveria 400 do backend. */
+ * Editar chama `onEditar` tanto para uma movimentação avulsa quanto para
+ * uma ocorrência de recorrência — quem decide se mostra o diálogo de
+ * escopo (RN-19) antes do formulário é a página, que conhece o estado de
+ * ambos os diálogos. */
 export function AcoesMovimentacao({
   movimentacao,
   onEditar,
@@ -31,14 +32,12 @@ export function AcoesMovimentacao({
   const estornar = useEstornarMovimentacao();
 
   const ehTransferencia = movimentacao.tipo === 'TRANSFERENCIA';
-  const ehOcorrenciaRecorrente = movimentacao.recorrencia !== null;
-  const podeEditar = !ehTransferencia && !ehOcorrenciaRecorrente;
   const podePagar = !ehTransferencia && SITUACOES_PAGAVEIS.has(movimentacao.situacao);
   const podeEstornar = !ehTransferencia && SITUACOES_ESTORNAVEIS.has(movimentacao.situacao);
 
   return (
     <MenuAcoes rotuloGatilho={`Ações para ${movimentacao.descricao}`}>
-      {podeEditar ? (
+      {!ehTransferencia ? (
         <ItemMenuAcoes
           onSelect={() => {
             onEditar(movimentacao);
@@ -74,16 +73,14 @@ export function AcoesMovimentacao({
           Estornar
         </ItemMenuAcoes>
       ) : null}
-      {!ehOcorrenciaRecorrente ? (
-        <ItemMenuAcoes
-          perigo
-          onSelect={() => {
-            onExcluir(movimentacao);
-          }}
-        >
-          Excluir
-        </ItemMenuAcoes>
-      ) : null}
+      <ItemMenuAcoes
+        perigo
+        onSelect={() => {
+          onExcluir(movimentacao);
+        }}
+      >
+        Excluir
+      </ItemMenuAcoes>
     </MenuAcoes>
   );
 }
