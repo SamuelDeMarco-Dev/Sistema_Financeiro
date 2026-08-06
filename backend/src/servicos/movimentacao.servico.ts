@@ -17,6 +17,7 @@ import type {
   PaginacaoMovimentacoes,
 } from '@/repositorios/movimentacao.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
+import { AnexoServico } from '@/servicos/anexo.servico';
 import { TransferenciaServico } from '@/servicos/transferencia.servico';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
 import { deDataIso, hojeNoTimezone, paraDataIso } from '@/utilitarios/data';
@@ -64,6 +65,7 @@ export class MovimentacaoServico {
     private readonly etiquetaRepositorio = new EtiquetaRepositorio(),
     private readonly perfilRepositorio = new PerfilRepositorio(),
     private readonly transferenciaServico = new TransferenciaServico(),
+    private readonly anexoServico = new AnexoServico(),
   ) {}
 
   async listar(
@@ -423,7 +425,8 @@ export class MovimentacaoServico {
     }
 
     if (atual.ehModeloRecorrencia) {
-      await this.repositorio.excluirRecorrenciaEmCascata(atual.id, null);
+      const idsExcluidos = await this.repositorio.excluirRecorrenciaEmCascata(atual.id, null);
+      await this.anexoServico.excluirPorMovimentacoes(idsExcluidos);
       return;
     }
 
@@ -435,13 +438,15 @@ export class MovimentacaoServico {
 
     if (atual.recorrenciaId === null || escopoExclusao === 'APENAS_ESTA') {
       await this.repositorio.excluirLogicamente(id);
+      await this.anexoServico.excluirPorMovimentacoes([id]);
       return;
     }
 
-    await this.repositorio.excluirRecorrenciaEmCascata(
+    const idsExcluidos = await this.repositorio.excluirRecorrenciaEmCascata(
       atual.recorrenciaId,
       escopoExclusao === 'ESTA_E_FUTURAS' ? atual.dataCompetencia : null,
     );
+    await this.anexoServico.excluirPorMovimentacoes(idsExcluidos);
   }
 
   /** RF-26: copia todos os campos, exceto anexos e vinculos de recorrencia/

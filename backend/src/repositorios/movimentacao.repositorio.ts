@@ -376,30 +376,47 @@ export class MovimentacaoRepositorio {
    * "o modelo" ou escopo TODAS); informada, so as ocorrencias a partir
    * dela (ESTA_E_FUTURAS) — e o modelo e "encurtado" (`recorrenciaFimEm`)
    * para a tarefa de reabastecimento (issue #41) parar de gerar mais. */
-  async excluirRecorrenciaEmCascata(modeloId: string, dataReferencia: Date | null): Promise<void> {
+  /** Retorna os ids efetivamente excluidos — o chamador usa isso para
+   * limpar os anexos em disco dessas movimentacoes (a exclusao logica nao
+   * dispara o `onDelete: Cascade` do schema, que so vale para DELETE
+   * fisico). */
+  async excluirRecorrenciaEmCascata(
+    modeloId: string,
+    dataReferencia: Date | null,
+  ): Promise<string[]> {
     const agora = new Date();
 
     if (dataReferencia === null) {
-      await prisma.movimentacao.updateMany({
+      const alvos = await prisma.movimentacao.findMany({
         where: {
           OR: [{ id: modeloId }, { recorrenciaId: modeloId }],
           excluidoEm: null,
           situacao: { notIn: SITUACOES_EFETIVADAS },
         },
+        select: { id: true },
+      });
+      const ids = alvos.map((alvo) => alvo.id);
+      await prisma.movimentacao.updateMany({
+        where: { id: { in: ids } },
         data: { excluidoEm: agora },
       });
-      return;
+      return ids;
     }
 
+    const alvos = await prisma.movimentacao.findMany({
+      where: {
+        recorrenciaId: modeloId,
+        dataCompetencia: { gte: dataReferencia },
+        excluidoEm: null,
+        situacao: { notIn: SITUACOES_EFETIVADAS },
+      },
+      select: { id: true },
+    });
+    const ids = alvos.map((alvo) => alvo.id);
     const dataCorte = new Date(dataReferencia.getTime() - 24 * 60 * 60 * 1000);
     await prisma.$transaction([
       prisma.movimentacao.updateMany({
-        where: {
-          recorrenciaId: modeloId,
-          dataCompetencia: { gte: dataReferencia },
-          excluidoEm: null,
-          situacao: { notIn: SITUACOES_EFETIVADAS },
-        },
+        where: { id: { in: ids } },
         data: { excluidoEm: agora },
       }),
       prisma.movimentacao.update({
@@ -407,6 +424,7 @@ export class MovimentacaoRepositorio {
         data: { recorrenciaFimEm: dataCorte, recorrenciaTotal: null },
       }),
     ]);
+    return ids;
   }
 
   /** RN-23: monta, para cada movimentacao TRANSFERENCIA presente num lote

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { anexosRotas } from '@/rotas/anexos.rotas';
 import { autenticacaoRotas } from '@/rotas/autenticacao.rotas';
 import { categoriasRotas } from '@/rotas/categorias.rotas';
 import { contasRotas } from '@/rotas/contas.rotas';
@@ -20,3 +21,4 @@ rotas.use(categoriasRotas);
 rotas.use(etiquetasRotas);
 rotas.use(movimentacoesRotas);
 rotas.use(transferenciasRotas);
+rotas.use(anexosRotas);

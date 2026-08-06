@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { ContaArquivadaErro, ContasIguaisErro, ErroInterno, NaoEncontradoErro } from '@/erros';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { TransferenciaRepositorio } from '@/repositorios/transferencia.repositorio';
+import { AnexoServico } from '@/servicos/anexo.servico';
 import { deDataIso, paraDataIso } from '@/utilitarios/data';
 import type { CriarTransferenciaDTO } from '@/validadores/transferencia.validador';
 import type { Conta, SituacaoMovimentacao } from '@prisma/client';
@@ -20,6 +21,7 @@ export class TransferenciaServico {
   constructor(
     private readonly repositorio = new TransferenciaRepositorio(),
     private readonly contaRepositorio = new ContaRepositorio(),
+    private readonly anexoServico = new AnexoServico(),
   ) {}
 
   /** RN-24/RN-26: contas diferentes, ambas do usuario e nenhuma arquivada,
@@ -66,6 +68,7 @@ export class TransferenciaServico {
     if (pernas.length === 0) {
       throw new NaoEncontradoErro('Transferência não encontrada.');
     }
+    await this.anexoServico.excluirPorMovimentacoes(pernas.map((perna) => perna.id));
     await this.repositorio.excluirPorTransferenciaId(transferenciaId);
   }
 
