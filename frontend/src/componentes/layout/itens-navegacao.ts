@@ -7,6 +7,7 @@ export interface ItemNavegacao {
 }
 
 export const ITENS_NAVEGACAO: ItemNavegacao[] = [
+  { rotulo: 'Movimentações', para: '/movimentacoes' },
   { rotulo: 'Contas', para: '/contas' },
   { rotulo: 'Categorias', para: '/categorias' },
   { rotulo: 'Configurações', para: '/configuracoes' },

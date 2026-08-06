@@ -1,0 +1,89 @@
+import { formatarDataBr } from '@/utilitarios/data';
+import { formatarMoeda } from '@/utilitarios/formatadores';
+import { AcoesMovimentacao } from './AcoesMovimentacao';
+import { IndicadoresMovimentacao } from './IndicadoresMovimentacao';
+import { SeloSituacao } from './SeloSituacao';
+import type { Movimentacao } from '../tipos/movimentacao';
+import type { ReactElement } from 'react';
+
+interface TabelaMovimentacoesProps {
+  movimentacoes: Movimentacao[];
+  onEditar: (movimentacao: Movimentacao) => void;
+  onExcluir: (movimentacao: Movimentacao) => void;
+}
+
+/** Visível a partir de `md` (768px) — abaixo disso, `ListaCartoesMovimentacoes`
+ * assume, sem scroll horizontal (RF-34). */
+export function TabelaMovimentacoes({
+  movimentacoes,
+  onEditar,
+  onExcluir,
+}: TabelaMovimentacoesProps): ReactElement {
+  return (
+    <table className="hidden w-full border-collapse text-sm md:table">
+      <thead>
+        <tr className="border-b border-borda text-left text-xs text-textoSuave">
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Data
+          </th>
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Descrição
+          </th>
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Conta
+          </th>
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Categoria
+          </th>
+          <th scope="col" className="py-2 pr-3 text-right font-medium">
+            Valor
+          </th>
+          <th scope="col" className="py-2 pr-3 font-medium">
+            Situação
+          </th>
+          <th scope="col" className="py-2 pr-3 font-medium">
+            <span className="sr-only">Ações</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {movimentacoes.map((movimentacao) => {
+          const ehReceita = movimentacao.tipo === 'RECEITA';
+          const ehDespesa = movimentacao.tipo === 'DESPESA';
+          const corValor = ehReceita ? 'text-sucesso' : ehDespesa ? 'text-perigo' : 'text-texto';
+          const sinal = ehReceita ? '+ ' : ehDespesa ? '− ' : '';
+
+          return (
+            <tr key={movimentacao.id} className="border-b border-borda">
+              <td className="whitespace-nowrap py-3 pr-3 text-texto">
+                {formatarDataBr(movimentacao.dataCompetencia)}
+              </td>
+              <td className="min-w-0 py-3 pr-3">
+                <p className="truncate font-medium text-texto">{movimentacao.descricao}</p>
+                <IndicadoresMovimentacao movimentacao={movimentacao} />
+              </td>
+              <td className="py-3 pr-3 text-textoSuave">{movimentacao.conta?.nome ?? '—'}</td>
+              <td className="py-3 pr-3 text-textoSuave">{movimentacao.categoria?.nome ?? '—'}</td>
+              <td
+                className={`whitespace-nowrap py-3 pr-3 text-right font-mono tabular-nums ${corValor}`}
+              >
+                {sinal}
+                {formatarMoeda(movimentacao.valor)}
+              </td>
+              <td className="py-3 pr-3">
+                <SeloSituacao situacao={movimentacao.situacao} />
+              </td>
+              <td className="py-3 pr-3 text-right">
+                <AcoesMovimentacao
+                  movimentacao={movimentacao}
+                  onEditar={onEditar}
+                  onExcluir={onExcluir}
+                />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
