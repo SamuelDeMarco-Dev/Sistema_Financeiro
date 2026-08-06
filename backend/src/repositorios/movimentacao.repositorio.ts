@@ -30,6 +30,18 @@ export interface DadosCriarMovimentacao {
   etiquetaIds: string[];
 }
 
+export interface DadosAtualizarMovimentacao {
+  tipo?: TipoMovimentacao;
+  descricao?: string;
+  observacao?: string | null;
+  valor?: Prisma.Decimal;
+  valorPago?: Prisma.Decimal;
+  dataCompetencia?: Date;
+  dataVencimento?: Date;
+  categoriaId?: string;
+  etiquetaIds?: string[];
+}
+
 export interface FiltrosListarMovimentacoes {
   dataInicio?: Date | undefined;
   dataFim?: Date | undefined;
@@ -97,6 +109,36 @@ export class MovimentacaoRepositorio {
       where: { id, usuarioId, excluidoEm: null },
       include: INCLUDE_COMPLETO,
     });
+  }
+
+  /** `etiquetaIds` undefined = nao tocar nos vinculos; array (mesmo vazio)
+   * = substituir a lista inteira. `deleteMany` + `create` na mesma escrita
+   * aninhada roda como uma unica operacao atomica, igual `criar`. */
+  async atualizar(id: string, dados: DadosAtualizarMovimentacao): Promise<MovimentacaoCompleta> {
+    return prisma.movimentacao.update({
+      where: { id },
+      data: {
+        ...(dados.tipo !== undefined && { tipo: dados.tipo }),
+        ...(dados.descricao !== undefined && { descricao: dados.descricao }),
+        ...(dados.observacao !== undefined && { observacao: dados.observacao }),
+        ...(dados.valor !== undefined && { valor: dados.valor }),
+        ...(dados.valorPago !== undefined && { valorPago: dados.valorPago }),
+        ...(dados.dataCompetencia !== undefined && { dataCompetencia: dados.dataCompetencia }),
+        ...(dados.dataVencimento !== undefined && { dataVencimento: dados.dataVencimento }),
+        ...(dados.categoriaId !== undefined && { categoriaId: dados.categoriaId }),
+        ...(dados.etiquetaIds !== undefined && {
+          etiquetas: {
+            deleteMany: {},
+            create: dados.etiquetaIds.map((etiquetaId) => ({ etiquetaId })),
+          },
+        }),
+      },
+      include: INCLUDE_COMPLETO,
+    });
+  }
+
+  async excluirLogicamente(id: string): Promise<void> {
+    await prisma.movimentacao.update({ where: { id }, data: { excluidoEm: new Date() } });
   }
 
   /** RF-34: filtro base sempre presente (excluidoEm/ehModeloRecorrencia) —

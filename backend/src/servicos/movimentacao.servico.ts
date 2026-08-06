@@ -4,6 +4,7 @@ import {
   ContaArquivadaErro,
   ErroInterno,
   NaoEncontradoErro,
+  RegraNegocioErro,
   ValidacaoErro,
 } from '@/erros';
 import { CategoriaRepositorio } from '@/repositorios/categoria.repositorio';
@@ -12,14 +13,18 @@ import { EtiquetaRepositorio } from '@/repositorios/etiqueta.repositorio';
 import { MovimentacaoRepositorio } from '@/repositorios/movimentacao.repositorio';
 import type {
   FiltrosListarMovimentacoes,
+  MovimentacaoCompleta,
   PaginacaoMovimentacoes,
 } from '@/repositorios/movimentacao.repositorio';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
 import { deDataIso } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
+import { registrador } from '@/utilitarios/registrador';
 import type {
+  AtualizarMovimentacaoDTO,
   CriarMovimentacaoDTO,
+  DuplicarMovimentacaoDTO,
   ListarMovimentacoesQuery,
 } from '@/validadores/movimentacoes.validador';
 import type { Categoria, Conta } from '@prisma/client';
@@ -155,11 +160,178 @@ export class MovimentacaoServico {
   }
 
   async buscarPorId(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
-    const movimentacao = await this.repositorio.buscarPorId(id, usuarioId);
-    if (!movimentacao) {
-      throw new NaoEncontradoErro('Movimentação não encontrada.');
-    }
+    const movimentacao = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
     return mapearMovimentacao(movimentacao);
+  }
+
+  /** RN-15/RF-25: PATCH altera so os campos enviados. Trocar de conta e
+   * bloqueado (afetaria o saldo de duas contas — o caminho correto e
+   * excluir e recriar); tipo/categoria sao revalidados juntos quando
+   * qualquer um dos dois muda. */
+  async atualizar(
+    id: string,
+    usuarioId: string,
+    dados: AtualizarMovimentacaoDTO,
+  ): Promise<MovimentacaoDTO> {
+    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+
+    if (
+      dados.contaId !== undefined ||
+      dados.contaCompartilhadaId !== undefined ||
+      dados.cartaoId !== undefined
+    ) {
+      throw new RegraNegocioErro('Não é possível alterar a conta de uma movimentação existente.', [
+        {
+          campo: 'contaId',
+          mensagem:
+            'Para mudar de conta, exclua esta movimentação e crie uma nova na conta desejada.',
+        },
+      ]);
+    }
+
+    if (
+      atual.tipo === 'TRANSFERENCIA' &&
+      (dados.tipo !== undefined || dados.categoriaId !== undefined)
+    ) {
+      throw new RegraNegocioErro('Transferências não têm tipo nem categoria editáveis por aqui.', [
+        { campo: 'categoriaId', mensagem: 'Edite a transferência em /transferencias.' },
+      ]);
+    }
+
+    const tipoFinal = dados.tipo ?? atual.tipo;
+    let categoriaId: string | undefined;
+    if (dados.tipo !== undefined || dados.categoriaId !== undefined) {
+      const categoriaIdFinal = dados.categoriaId ?? atual.categoria?.id;
+      if (categoriaIdFinal === undefined) {
+        throw new ValidacaoErro('Informe a categoria.', [
+          { campo: 'categoriaId', mensagem: 'Categoria obrigatoria.' },
+        ]);
+      }
+      const categoria = await this.buscarCategoriaOuFalhar(categoriaIdFinal, usuarioId);
+      // tipoFinal so pode ser RECEITA/DESPESA aqui — o guard acima ja
+      // rejeitou a unica forma de chegar em TRANSFERENCIA (atual.tipo
+      // ser transferencia com tipo/categoria sendo alterados).
+      if (!validarCompatibilidadeCategoria(categoria, tipoFinal as 'RECEITA' | 'DESPESA')) {
+        throw new CategoriaIncompativelErro(
+          'A categoria selecionada não é compatível com o tipo da movimentação.',
+          [
+            {
+              campo: 'categoriaId',
+              mensagem: `A categoria "${categoria.nome}" aceita apenas movimentações de ${categoria.tipo}.`,
+            },
+          ],
+        );
+      }
+      categoriaId = categoria.id;
+    }
+
+    const etiquetaIds =
+      dados.etiquetaIds !== undefined
+        ? await this.validarEtiquetasOuFalhar(dados.etiquetaIds, usuarioId)
+        : undefined;
+
+    // RN-15: alterar o valor de uma movimentacao ja efetivada exige
+    // recalculo de saldo e log de auditoria. `LogAuditoria` (RF-82) chega
+    // em M11; por ora o registro fica no log estruturado da aplicacao. O
+    // recalculo em si e automatico (calcularSaldoAtual soma valorPago, nunca
+    // uma coluna gravada) — mas so se valorPago continuar coerente com o
+    // novo valor, daí os ajustes abaixo.
+    let valorPagoAjustado: Prisma.Decimal | undefined;
+    if (dados.valor !== undefined) {
+      const valorNovo = new Prisma.Decimal(dados.valor);
+      if (atual.situacao === 'PAGA') {
+        // RN-14: PAGA sempre tem valorPago === valor.
+        valorPagoAjustado = valorNovo;
+      } else if (atual.situacao === 'PAGA_PARCIALMENTE' && valorNovo.lessThan(atual.valorPago)) {
+        throw new RegraNegocioErro('O novo valor não pode ser menor que o valor já pago.', [
+          { campo: 'valor', mensagem: `Já foram pagos ${atual.valorPago.toFixed(2)}.` },
+        ]);
+      }
+
+      const efetivada = atual.situacao === 'PAGA' || atual.situacao === 'PAGA_PARCIALMENTE';
+      if (efetivada && !valorNovo.equals(atual.valor)) {
+        registrador.info(
+          {
+            movimentacaoId: id,
+            usuarioId,
+            valorAntigo: atual.valor.toFixed(2),
+            valorNovo: dados.valor,
+          },
+          'RN-15: valor de movimentação já efetivada foi alterado.',
+        );
+      }
+    }
+
+    const movimentacao = await this.repositorio.atualizar(id, {
+      ...(dados.tipo !== undefined && { tipo: dados.tipo }),
+      ...(dados.descricao !== undefined && { descricao: dados.descricao }),
+      ...(dados.observacao !== undefined && { observacao: dados.observacao }),
+      ...(dados.valor !== undefined && { valor: new Prisma.Decimal(dados.valor) }),
+      ...(valorPagoAjustado !== undefined && { valorPago: valorPagoAjustado }),
+      ...(dados.dataCompetencia !== undefined && {
+        dataCompetencia: deDataIso(dados.dataCompetencia),
+      }),
+      ...(dados.dataVencimento !== undefined && {
+        dataVencimento: deDataIso(dados.dataVencimento),
+      }),
+      ...(categoriaId !== undefined && { categoriaId }),
+      ...(etiquetaIds !== undefined && { etiquetaIds }),
+    });
+
+    return mapearMovimentacao(movimentacao);
+  }
+
+  /** RN-16: exclusao logica — a movimentacao para de contar em saldos,
+   * totalizadores e listagens. #39 estende isto para excluir o par quando
+   * `id` for um dos lados de uma transferencia (RN-39). */
+  async excluir(id: string, usuarioId: string): Promise<void> {
+    await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    await this.repositorio.excluirLogicamente(id);
+  }
+
+  /** RF-26: copia todos os campos, exceto anexos e vinculos de recorrencia/
+   * parcelamento (a copia nasce avulsa, sem virar uma nova parcela nem uma
+   * nova ocorrencia). `situacao`/`dataCompetencia` podem ser sobrescritas —
+   * o caso de uso tipico e duplicar um lancamento pago como um novo
+   * pendente no mes seguinte. */
+  async duplicar(
+    id: string,
+    usuarioId: string,
+    dados: DuplicarMovimentacaoDTO,
+  ): Promise<MovimentacaoDTO> {
+    const original = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    if (original.tipo === 'TRANSFERENCIA') {
+      throw new RegraNegocioErro('Transferências não podem ser duplicadas por aqui.', [
+        { campo: 'id', mensagem: 'Crie uma nova transferência em /transferencias.' },
+      ]);
+    }
+    if (!original.conta || !original.categoria) {
+      throw new ErroInterno('Movimentação original sem conta ou categoria associada.');
+    }
+
+    const situacaoFinal = dados.situacao ?? original.situacao;
+    const efetivada = situacaoFinal === 'PAGA' || situacaoFinal === 'PAGA_PARCIALMENTE';
+    const dataCompetenciaFinal = dados.dataCompetencia
+      ? deDataIso(dados.dataCompetencia)
+      : original.dataCompetencia;
+
+    const nova = await this.repositorio.criar({
+      usuarioId,
+      contaId: original.conta.id,
+      categoriaId: original.categoria.id,
+      tipo: original.tipo,
+      descricao: original.descricao,
+      observacao: original.observacao,
+      valor: original.valor,
+      valorPago: efetivada ? original.valorPago : new Prisma.Decimal(0),
+      situacao: situacaoFinal,
+      dataCompetencia: dataCompetenciaFinal,
+      dataVencimento: original.dataVencimento ?? dataCompetenciaFinal,
+      dataEfetivacao: efetivada ? original.dataEfetivacao : null,
+      etiquetaIds: original.etiquetas.map((vinculo) => vinculo.etiqueta.id),
+    });
+
+    return mapearMovimentacao(nova);
   }
 
   /** RN-14: PAGA sempre efetiva o valor total (ignora valorPago enviado —
@@ -186,6 +358,17 @@ export class MovimentacaoServico {
       return { valorPago: new Prisma.Decimal(dados.valorPago), dataEfetivacao };
     }
     return { valorPago: new Prisma.Decimal(0), dataEfetivacao: null };
+  }
+
+  private async buscarMovimentacaoOuFalhar(
+    id: string,
+    usuarioId: string,
+  ): Promise<MovimentacaoCompleta> {
+    const movimentacao = await this.repositorio.buscarPorId(id, usuarioId);
+    if (!movimentacao) {
+      throw new NaoEncontradoErro('Movimentação não encontrada.');
+    }
+    return movimentacao;
   }
 
   /** RN-51: 404 (nunca 403) para conta de outro usuario — o solicitante

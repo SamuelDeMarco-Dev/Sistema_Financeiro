@@ -3,7 +3,9 @@ import { MovimentacaoControlador } from '@/controladores/movimentacao.controlado
 import { autenticar } from '@/middlewares/autenticar.middleware';
 import { validar } from '@/middlewares/validar.middleware';
 import {
+  atualizarMovimentacaoSchema,
   criarMovimentacaoSchema,
+  duplicarMovimentacaoSchema,
   idParamMovimentacaoSchema,
   listarMovimentacoesSchema,
 } from '@/validadores/movimentacoes.validador';
@@ -20,3 +22,18 @@ movimentacoesRotas.get(
   controlador.buscarPorId,
 );
 movimentacoesRotas.post('/movimentacoes', validar(criarMovimentacaoSchema), controlador.criar);
+movimentacoesRotas.patch(
+  '/movimentacoes/:id',
+  validar(atualizarMovimentacaoSchema),
+  controlador.atualizar,
+);
+movimentacoesRotas.delete(
+  '/movimentacoes/:id',
+  validar(idParamMovimentacaoSchema),
+  controlador.excluir,
+);
+movimentacoesRotas.post(
+  '/movimentacoes/:id/duplicar',
+  validar(duplicarMovimentacaoSchema),
+  controlador.duplicar,
+);

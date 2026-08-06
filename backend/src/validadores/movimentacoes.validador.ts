@@ -115,6 +115,47 @@ export const idParamMovimentacaoSchema = z.object({
 export type IdParamMovimentacao = z.infer<typeof idParamMovimentacaoSchema>['params'];
 
 // ═══════════════════════════════════════════════════════════
+//  EDICAO, EXCLUSAO E DUPLICACAO (issue #36)
+// ═══════════════════════════════════════════════════════════
+
+// contaId/contaCompartilhadaId/cartaoId sao aceitos aqui (nao removidos
+// pelo Zod) so para o servico poder detectar a tentativa e responder
+// 422 REGRA_NEGOCIO — mudar de conta e excluir e recriar (04-API.md §12.3).
+export const atualizarMovimentacaoSchema = z.object({
+  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  body: z.object({
+    tipo: z.enum(TIPOS_MOVIMENTACAO_ACEITOS).optional(),
+    descricao: z
+      .string()
+      .trim()
+      .min(2, 'A descricao deve ter no minimo 2 caracteres.')
+      .max(200)
+      .optional(),
+    observacao: z.string().trim().max(1000).optional(),
+    valor: valorPositivoSchema.optional(),
+    dataCompetencia: dataCompetenciaSchema.optional(),
+    dataVencimento: dataIsoSchema.optional(),
+    categoriaId: z.string().min(1, 'Informe a categoria.').optional(),
+    etiquetaIds: z.array(z.string().min(1)).max(10, 'Maximo de 10 etiquetas.').optional(),
+    contaId: z.unknown().optional(),
+    contaCompartilhadaId: z.unknown().optional(),
+    cartaoId: z.unknown().optional(),
+  }),
+});
+
+export type AtualizarMovimentacaoDTO = z.infer<typeof atualizarMovimentacaoSchema>['body'];
+
+export const duplicarMovimentacaoSchema = z.object({
+  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  body: z.object({
+    dataCompetencia: dataCompetenciaSchema.optional(),
+    situacao: z.enum(SITUACOES).optional(),
+  }),
+});
+
+export type DuplicarMovimentacaoDTO = z.infer<typeof duplicarMovimentacaoSchema>['body'];
+
+// ═══════════════════════════════════════════════════════════
 //  LISTAGEM (issue #35)
 // ═══════════════════════════════════════════════════════════
 
