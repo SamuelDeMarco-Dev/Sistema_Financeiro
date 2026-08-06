@@ -1,6 +1,6 @@
 import type { MovimentacaoCompleta } from '@/repositorios/movimentacao.repositorio';
-import { paraDataIso } from './data';
-import type { Prisma } from '@prisma/client';
+import { calcularOrdinalOcorrencia, paraDataIso } from './data';
+import type { FrequenciaRecorrencia, Prisma } from '@prisma/client';
 
 export interface MovimentacaoDTO {
   id: string;
@@ -27,7 +27,13 @@ export interface MovimentacaoDTO {
   etiquetas: { id: string; nome: string; cor: string }[];
   autor: { id: string; nome: string; fotoUrl: string | null };
   transferencia: null;
-  recorrencia: null;
+  recorrencia: {
+    modeloId: string;
+    frequencia: FrequenciaRecorrencia;
+    intervalo: number;
+    fimEm: string | null;
+    ocorrenciaAtual: number;
+  } | null;
   parcelamento: null;
   quantidadeAnexos: number;
   criadoEm: Date;
@@ -36,10 +42,26 @@ export interface MovimentacaoDTO {
 
 /** 04-API.md §12.1/§12.2: `transferencia`, `recorrencia` e `parcelamento`
  * sao sempre chaves presentes (null quando nao se aplicam) — o cliente
- * nao precisa checar existencia da propriedade. Esta issue (#34) so
- * produz receita/despesa simples; as issues #38/#39 preenchem
- * recorrencia/transferencia de verdade. */
+ * nao precisa checar existencia da propriedade. A issue #39 ainda preenche
+ * transferencia de verdade. */
 export function mapearMovimentacao(movimentacao: MovimentacaoCompleta): MovimentacaoDTO {
+  const modelo = movimentacao.modeloRecorrencia;
+  const recorrencia =
+    modelo !== null && modelo.frequencia !== null
+      ? {
+          modeloId: modelo.id,
+          frequencia: modelo.frequencia,
+          intervalo: modelo.intervaloRecorrencia ?? 1,
+          fimEm: modelo.recorrenciaFimEm ? paraDataIso(modelo.recorrenciaFimEm) : null,
+          ocorrenciaAtual: calcularOrdinalOcorrencia(
+            modelo.dataCompetencia,
+            movimentacao.dataCompetencia,
+            modelo.frequencia,
+            modelo.intervaloRecorrencia ?? 1,
+          ),
+        }
+      : null;
+
   return {
     id: movimentacao.id,
     tipo: movimentacao.tipo,
@@ -63,7 +85,7 @@ export function mapearMovimentacao(movimentacao: MovimentacaoCompleta): Moviment
       fotoUrl: movimentacao.usuario.perfil?.fotoUrl ?? null,
     },
     transferencia: null,
-    recorrencia: null,
+    recorrencia,
     parcelamento: null,
     quantidadeAnexos: movimentacao._count.anexos,
     criadoEm: movimentacao.criadoEm,

@@ -5,6 +5,7 @@ import type {
   AtualizarMovimentacaoDTO,
   CriarMovimentacaoDTO,
   DuplicarMovimentacaoDTO,
+  ExcluirMovimentacaoQuery,
   IdParamMovimentacao,
   ListarMovimentacoesQuery,
   PagarMovimentacaoDTO,
@@ -27,12 +28,18 @@ export class MovimentacaoControlador {
   });
 
   criar = asyncHandler(async (req: Request, res: Response) => {
-    const movimentacao = await this.servico.criar(req.usuario.id, req.body as CriarMovimentacaoDTO);
+    const { movimentacao, recorrencia } = await this.servico.criar(
+      req.usuario.id,
+      req.body as CriarMovimentacaoDTO,
+    );
+    const mensagem = recorrencia
+      ? `Movimentação recorrente criada. ${recorrencia.ocorrenciasGeradas} ocorrências geradas.`
+      : 'Movimentação criada com sucesso.';
 
     res
       .status(201)
       .location(`/api/v1/movimentacoes/${movimentacao.id}`)
-      .json(respostaSucesso({ movimentacao }, 'Movimentação criada com sucesso.'));
+      .json(respostaSucesso({ movimentacao }, mensagem, recorrencia ? { recorrencia } : undefined));
   });
 
   buscarPorId = asyncHandler(async (req: Request, res: Response) => {
@@ -55,7 +62,8 @@ export class MovimentacaoControlador {
 
   excluir = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as IdParamMovimentacao;
-    await this.servico.excluir(id, req.usuario.id);
+    const { escopoExclusao } = req.query as ExcluirMovimentacaoQuery;
+    await this.servico.excluir(id, req.usuario.id, escopoExclusao);
 
     res.status(204).send();
   });
@@ -90,5 +98,12 @@ export class MovimentacaoControlador {
     const movimentacao = await this.servico.estornar(id, req.usuario.id);
 
     res.status(200).json(respostaSucesso({ movimentacao }, 'Pagamento estornado com sucesso.'));
+  });
+
+  ocorrencias = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as IdParamMovimentacao;
+    const resultado = await this.servico.buscarOcorrencias(id, req.usuario.id);
+
+    res.status(200).json(respostaSucesso(resultado, 'Ocorrências listadas.'));
   });
 }

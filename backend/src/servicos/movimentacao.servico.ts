@@ -18,7 +18,7 @@ import type {
 } from '@/repositorios/movimentacao.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
-import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
+import { deDataIso, hojeNoTimezone, paraDataIso } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
 import { registrador } from '@/utilitarios/registrador';
@@ -26,10 +26,34 @@ import type {
   AtualizarMovimentacaoDTO,
   CriarMovimentacaoDTO,
   DuplicarMovimentacaoDTO,
+  EscopoRecorrencia,
   ListarMovimentacoesQuery,
   PagarMovimentacaoDTO,
 } from '@/validadores/movimentacoes.validador';
-import type { Categoria, Conta } from '@prisma/client';
+import type { Categoria, Conta, FrequenciaRecorrencia, SituacaoMovimentacao } from '@prisma/client';
+
+export interface MetaRecorrencia {
+  modeloId: string;
+  ocorrenciasGeradas: number;
+  proximaGeracaoEm: string;
+}
+
+export interface OcorrenciasRecorrenciaDTO {
+  modelo: {
+    id: string;
+    descricao: string;
+    valor: string;
+    frequencia: FrequenciaRecorrencia;
+    intervalo: number;
+  };
+  ocorrencias: {
+    id: string;
+    dataCompetencia: string;
+    valor: string;
+    situacao: SituacaoMovimentacao;
+    divergeDoModelo: boolean;
+  }[];
+}
 
 export class MovimentacaoServico {
   constructor(
@@ -112,7 +136,10 @@ export class MovimentacaoServico {
     };
   }
 
-  async criar(usuarioId: string, dados: CriarMovimentacaoDTO): Promise<MovimentacaoDTO> {
+  async criar(
+    usuarioId: string,
+    dados: CriarMovimentacaoDTO,
+  ): Promise<{ movimentacao: MovimentacaoDTO; recorrencia: MetaRecorrencia | null }> {
     const conta = await this.buscarContaOuFalhar(dados.contaId, usuarioId);
     if (conta.arquivadaEm !== null) {
       throw new ContaArquivadaErro(
@@ -143,6 +170,52 @@ export class MovimentacaoServico {
 
     const { valorPago, dataEfetivacao } = this.resolverPagamento(dados);
 
+    if (dados.recorrencia) {
+      // RF-27/04-API.md §12.2: as duas formas de limitar a recorrencia sao
+      // mutuamente exclusivas — 422 REGRA_NEGOCIO (nao 400: o schema por si
+      // so aceita as duas, a incompatibilidade e uma regra de negocio).
+      if (
+        dados.recorrencia.fimEm !== undefined &&
+        dados.recorrencia.totalOcorrencias !== undefined
+      ) {
+        throw new RegraNegocioErro('Informe fimEm ou totalOcorrencias, nunca os dois.', [
+          {
+            campo: 'recorrencia',
+            mensagem: 'fimEm e totalOcorrencias sao mutuamente exclusivos.',
+          },
+        ]);
+      }
+
+      const resultado = await this.repositorio.criarComRecorrencia({
+        usuarioId,
+        contaId: conta.id,
+        categoriaId: categoria.id,
+        tipo: dados.tipo,
+        descricao: dados.descricao,
+        observacao: dados.observacao ?? null,
+        valor: new Prisma.Decimal(dados.valor),
+        valorPago,
+        situacao: dados.situacao,
+        dataCompetencia: deDataIso(dados.dataCompetencia),
+        dataVencimento: deDataIso(dados.dataVencimento ?? dados.dataCompetencia),
+        dataEfetivacao,
+        etiquetaIds,
+        frequencia: dados.recorrencia.frequencia,
+        intervalo: dados.recorrencia.intervalo,
+        fimEm: dados.recorrencia.fimEm ? deDataIso(dados.recorrencia.fimEm) : null,
+        totalOcorrencias: dados.recorrencia.totalOcorrencias ?? null,
+      });
+
+      return {
+        movimentacao: mapearMovimentacao(resultado.primeiraOcorrencia),
+        recorrencia: {
+          modeloId: resultado.modeloId,
+          ocorrenciasGeradas: resultado.ocorrenciasGeradas,
+          proximaGeracaoEm: paraDataIso(resultado.proximaGeracaoEm),
+        },
+      };
+    }
+
     const movimentacao = await this.repositorio.criar({
       usuarioId,
       contaId: conta.id,
@@ -159,7 +232,7 @@ export class MovimentacaoServico {
       etiquetaIds,
     });
 
-    return mapearMovimentacao(movimentacao);
+    return { movimentacao: mapearMovimentacao(movimentacao), recorrencia: null };
   }
 
   async buscarPorId(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
@@ -177,6 +250,17 @@ export class MovimentacaoServico {
     dados: AtualizarMovimentacaoDTO,
   ): Promise<MovimentacaoDTO> {
     const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+
+    // RN-19: obrigatorio em qualquer movimentacao que pertenca a uma
+    // recorrencia — seja uma ocorrencia (recorrenciaId) ou o proprio
+    // modelo. Em movimentacao avulsa, escopoEdicao e simplesmente ignorado
+    // (04-API.md §12.3).
+    const pertenceARecorrencia = atual.recorrenciaId !== null || atual.ehModeloRecorrencia;
+    if (pertenceARecorrencia && dados.escopoEdicao === undefined) {
+      throw new ValidacaoErro('Informe o escopo da edição para uma movimentação recorrente.', [
+        { campo: 'escopoEdicao', mensagem: 'Use APENAS_ESTA, ESTA_E_FUTURAS ou TODAS.' },
+      ]);
+    }
 
     if (
       dados.contaId !== undefined ||
@@ -281,15 +365,59 @@ export class MovimentacaoServico {
       ...(etiquetaIds !== undefined && { etiquetaIds }),
     });
 
+    // RN-19: ESTA_E_FUTURAS/TODAS propagam para o modelo e para as demais
+    // ocorrencias nao efetivadas. Datas (dataCompetencia/dataVencimento) sao
+    // sempre por-ocorrencia e nunca propagadas, mesmo nesses escopos — so a
+    // ocorrencia atual (ja atualizada acima) reflete uma data enviada.
+    if (pertenceARecorrencia && dados.escopoEdicao !== 'APENAS_ESTA') {
+      const modeloId = atual.ehModeloRecorrencia ? atual.id : atual.recorrenciaId;
+      if (modeloId === null) {
+        throw new ErroInterno('Ocorrência de recorrência sem modeloId.');
+      }
+      await this.repositorio.atualizarEmLote(
+        modeloId,
+        dados.escopoEdicao === 'ESTA_E_FUTURAS' ? atual.dataCompetencia : null,
+        {
+          ...(dados.descricao !== undefined && { descricao: dados.descricao }),
+          ...(dados.observacao !== undefined && { observacao: dados.observacao }),
+          ...(dados.valor !== undefined && { valor: new Prisma.Decimal(dados.valor) }),
+          ...(categoriaId !== undefined && { categoriaId }),
+        },
+      );
+    }
+
     return mapearMovimentacao(movimentacao);
   }
 
-  /** RN-16: exclusao logica — a movimentacao para de contar em saldos,
-   * totalizadores e listagens. #39 estende isto para excluir o par quando
-   * `id` for um dos lados de uma transferencia (RN-39). */
-  async excluir(id: string, usuarioId: string): Promise<void> {
-    await this.buscarMovimentacaoOuFalhar(id, usuarioId);
-    await this.repositorio.excluirLogicamente(id);
+  /** RN-16/RN-20: exclusao logica — a movimentacao para de contar em
+   * saldos, totalizadores e listagens. #39 estende isto para excluir o
+   * par quando `id` for um dos lados de uma transferencia (RN-39).
+   * Excluir pelo id do MODELO sempre significa acabar a serie inteira
+   * (nao ha "so esta ocorrencia" quando o alvo e o proprio modelo) —
+   * `escopoExclusao` so e obrigatorio/relevante ao excluir uma ocorrencia. */
+  async excluir(id: string, usuarioId: string, escopoExclusao?: EscopoRecorrencia): Promise<void> {
+    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+
+    if (atual.ehModeloRecorrencia) {
+      await this.repositorio.excluirRecorrenciaEmCascata(atual.id, null);
+      return;
+    }
+
+    if (atual.recorrenciaId !== null && escopoExclusao === undefined) {
+      throw new ValidacaoErro('Informe o escopo da exclusão para uma ocorrência de recorrência.', [
+        { campo: 'escopoExclusao', mensagem: 'Use APENAS_ESTA, ESTA_E_FUTURAS ou TODAS.' },
+      ]);
+    }
+
+    if (atual.recorrenciaId === null || escopoExclusao === 'APENAS_ESTA') {
+      await this.repositorio.excluirLogicamente(id);
+      return;
+    }
+
+    await this.repositorio.excluirRecorrenciaEmCascata(
+      atual.recorrenciaId,
+      escopoExclusao === 'ESTA_E_FUTURAS' ? atual.dataCompetencia : null,
+    );
   }
 
   /** RF-26: copia todos os campos, exceto anexos e vinculos de recorrencia/
@@ -405,6 +533,31 @@ export class MovimentacaoServico {
     });
 
     return mapearMovimentacao(movimentacao);
+  }
+
+  /** 04-API.md §12.8: `id` pode ser o modelo ou qualquer ocorrencia dele. */
+  async buscarOcorrencias(id: string, usuarioId: string): Promise<OcorrenciasRecorrenciaDTO> {
+    const resultado = await this.repositorio.buscarModeloEOcorrencias(id, usuarioId);
+    if (!resultado) {
+      throw new NaoEncontradoErro('Movimentação recorrente não encontrada.');
+    }
+
+    return {
+      modelo: {
+        id: resultado.modelo.id,
+        descricao: resultado.modelo.descricao,
+        valor: resultado.modelo.valor.toFixed(2),
+        frequencia: resultado.modelo.frequencia,
+        intervalo: resultado.modelo.intervalo,
+      },
+      ocorrencias: resultado.ocorrencias.map((ocorrencia) => ({
+        id: ocorrencia.id,
+        dataCompetencia: paraDataIso(ocorrencia.dataCompetencia),
+        valor: ocorrencia.valor.toFixed(2),
+        situacao: ocorrencia.situacao,
+        divergeDoModelo: ocorrencia.divergeDoModelo,
+      })),
+    };
   }
 
   private garantirNaoTransferencia(movimentacao: MovimentacaoCompleta, acao: string): void {

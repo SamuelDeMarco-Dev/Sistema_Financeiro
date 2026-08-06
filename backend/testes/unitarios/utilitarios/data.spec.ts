@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  calcularOrdinalOcorrencia,
+  calcularProximaOcorrencia,
   deDataIso,
   dentroDoLimiteDeCompetencia,
   doTimezoneDoPerfil,
@@ -77,6 +79,78 @@ describe('utilitarios/data', () => {
       const resultado = hojeNoTimezone('UTC');
 
       expect(resultado.getUTCDate()).toBe(5);
+    });
+  });
+
+  describe('calcularProximaOcorrencia (RN-17/RN-18)', () => {
+    it('MENSAL a partir de 31/01 nao pula meses: cai em fevereiro (28 em ano comum)', () => {
+      const ancora = new Date('2026-01-31T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'MENSAL', 1);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-02-28');
+    });
+
+    it('MENSAL a partir de 31/01, indice 2 (dois meses), preserva o dia 31 em marco', () => {
+      const ancora = new Date('2026-01-31T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'MENSAL', 2);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-03-31');
+    });
+
+    it('MENSAL a partir de 31/01 em ano bissexto cai em 29/02', () => {
+      const ancora = new Date('2024-01-31T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'MENSAL', 1);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2024-02-29');
+    });
+
+    it('ANUAL a partir de 29/02 (bissexto) cai em 28/02 no ano seguinte (nao bissexto)', () => {
+      const ancora = new Date('2024-02-29T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'ANUAL', 1);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2025-02-28');
+    });
+
+    it('DIARIA soma dias corridos multiplicados pelo intervalo', () => {
+      const ancora = new Date('2026-08-05T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'DIARIA', 3);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-08-08');
+    });
+
+    it('SEMANAL soma 7 dias por intervalo', () => {
+      const ancora = new Date('2026-08-05T00:00:00.000Z');
+
+      const resultado = calcularProximaOcorrencia(ancora, 'SEMANAL', 2);
+
+      expect(resultado.toISOString().slice(0, 10)).toBe('2026-08-19');
+    });
+  });
+
+  describe('calcularOrdinalOcorrencia', () => {
+    it('a propria ancora e a ocorrencia numero 1', () => {
+      const ancora = new Date('2026-07-05T00:00:00.000Z');
+
+      expect(calcularOrdinalOcorrencia(ancora, ancora, 'MENSAL', 1)).toBe(1);
+    });
+
+    it('conta meses corridos para frequencia MENSAL', () => {
+      const ancora = new Date('2026-01-05T00:00:00.000Z');
+      const ocorrencia = new Date('2026-07-05T00:00:00.000Z');
+
+      expect(calcularOrdinalOcorrencia(ancora, ocorrencia, 'MENSAL', 1)).toBe(7);
+    });
+
+    it('conta dias corridos para frequencia DIARIA', () => {
+      const ancora = new Date('2026-08-01T00:00:00.000Z');
+      const ocorrencia = new Date('2026-08-04T00:00:00.000Z');
+
+      expect(calcularOrdinalOcorrencia(ancora, ocorrencia, 'DIARIA', 1)).toBe(4);
     });
   });
 

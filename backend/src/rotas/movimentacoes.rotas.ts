@@ -6,6 +6,7 @@ import {
   atualizarMovimentacaoSchema,
   criarMovimentacaoSchema,
   duplicarMovimentacaoSchema,
+  excluirMovimentacaoSchema,
   idParamMovimentacaoSchema,
   listarMovimentacoesSchema,
   pagarMovimentacaoSchema,
@@ -30,8 +31,13 @@ movimentacoesRotas.patch(
 );
 movimentacoesRotas.delete(
   '/movimentacoes/:id',
-  validar(idParamMovimentacaoSchema),
+  validar(excluirMovimentacaoSchema),
   controlador.excluir,
+);
+movimentacoesRotas.get(
+  '/movimentacoes/:id/ocorrencias',
+  validar(idParamMovimentacaoSchema),
+  controlador.ocorrencias,
 );
 movimentacoesRotas.post(
   '/movimentacoes/:id/duplicar',

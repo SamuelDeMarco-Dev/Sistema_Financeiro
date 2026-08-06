@@ -1,3 +1,5 @@
+import type { FrequenciaRecorrencia } from '@prisma/client';
+
 const CAMPOS_DATA_HORA: Intl.DateTimeFormatOptions = {
   year: 'numeric',
   month: '2-digit',
@@ -57,6 +59,76 @@ export function doTimezoneDoPerfil(dataLocal: Date, timezone: string): Date {
 export function hojeNoTimezone(timezone: string): Date {
   const agora = paraTimezoneDoPerfil(new Date(), timezone);
   return new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
+}
+
+const FREQUENCIAS_EM_DIAS: Partial<Record<FrequenciaRecorrencia, number>> = {
+  DIARIA: 1,
+  SEMANAL: 7,
+  QUINZENAL: 15,
+};
+
+const FREQUENCIAS_EM_MESES: Partial<Record<FrequenciaRecorrencia, number>> = {
+  MENSAL: 1,
+  BIMESTRAL: 2,
+  TRIMESTRAL: 3,
+  SEMESTRAL: 6,
+  ANUAL: 12,
+};
+
+/** RN-17/RN-18: avanca `intervalo` periodos de `frequencia` a partir de
+ * `data`. Frequencias mensais e maiores preservam o *dia original* — nao
+ * o dia da ocorrencia anterior — por isso o gerador de ocorrencias sempre
+ * chama esta funcao a partir da data-ancora (multiplicando o intervalo
+ * pelo indice da ocorrencia), nunca encadeando resultado a resultado.
+ * Isso e o que garante 31/01 -> 28 ou 29/02 -> 31/03 em vez de
+ * degradar para 28/03 (mes curto nao "contamina" os seguintes). Quando o
+ * mes de destino e mais curto que o dia original, usa o ultimo dia do
+ * mes de destino. */
+export function calcularProximaOcorrencia(
+  data: Date,
+  frequencia: FrequenciaRecorrencia,
+  intervalo: number,
+): Date {
+  const dias = FREQUENCIAS_EM_DIAS[frequencia];
+  if (dias !== undefined) {
+    return new Date(
+      Date.UTC(data.getUTCFullYear(), data.getUTCMonth(), data.getUTCDate() + dias * intervalo),
+    );
+  }
+
+  const meses = FREQUENCIAS_EM_MESES[frequencia] ?? 1;
+  const mesDestino = data.getUTCMonth() + meses * intervalo;
+  const ultimoDiaDoMesDestino = new Date(
+    Date.UTC(data.getUTCFullYear(), mesDestino + 1, 0),
+  ).getUTCDate();
+  return new Date(
+    Date.UTC(data.getUTCFullYear(), mesDestino, Math.min(data.getUTCDate(), ultimoDiaDoMesDestino)),
+  );
+}
+
+/** Numero de ordem (1-based) de `dataOcorrencia` na serie que comeca em
+ * `dataAncora` — usado so para exibicao (`recorrencia.ocorrenciaAtual`
+ * no DTO). Calculado por aritmetica de calendario, nunca por contagem no
+ * banco, para nao custar uma consulta extra por item numa listagem. */
+export function calcularOrdinalOcorrencia(
+  dataAncora: Date,
+  dataOcorrencia: Date,
+  frequencia: FrequenciaRecorrencia,
+  intervalo: number,
+): number {
+  const dias = FREQUENCIAS_EM_DIAS[frequencia];
+  if (dias !== undefined) {
+    const diffDias = Math.round(
+      (dataOcorrencia.getTime() - dataAncora.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return Math.round(diffDias / (dias * intervalo)) + 1;
+  }
+
+  const meses = FREQUENCIAS_EM_MESES[frequencia] ?? 1;
+  const diffMeses =
+    (dataOcorrencia.getUTCFullYear() - dataAncora.getUTCFullYear()) * 12 +
+    (dataOcorrencia.getUTCMonth() - dataAncora.getUTCMonth());
+  return Math.round(diffMeses / (meses * intervalo)) + 1;
 }
 
 const PADRAO_DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;

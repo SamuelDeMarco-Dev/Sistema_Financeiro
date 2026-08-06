@@ -4,6 +4,18 @@ import { dentroDoLimiteDeCompetencia, ehDataIsoValida } from '@/utilitarios/data
 
 const TIPOS_MOVIMENTACAO_ACEITOS = ['RECEITA', 'DESPESA'] as const;
 const SITUACOES = ['PENDENTE', 'PAGA', 'PAGA_PARCIALMENTE', 'ATRASADA', 'CANCELADA'] as const;
+const FREQUENCIAS_RECORRENCIA = [
+  'DIARIA',
+  'SEMANAL',
+  'QUINZENAL',
+  'MENSAL',
+  'BIMESTRAL',
+  'TRIMESTRAL',
+  'SEMESTRAL',
+  'ANUAL',
+] as const;
+const ESCOPOS_RECORRENCIA = ['APENAS_ESTA', 'ESTA_E_FUTURAS', 'TODAS'] as const;
+export type EscopoRecorrencia = (typeof ESCOPOS_RECORRENCIA)[number];
 
 // RN-08: estritamente positivo, maximo 2 casas — o lookahead negativo
 // rejeita "0", "0.0" e "0.00" sem precisar de Number() sobre o decimal.
@@ -45,6 +57,16 @@ const contaCompartilhadaIdSchema = z
     message: 'Contas de grupo ainda nao sao suportadas nesta versao.',
   });
 
+// RF-27: exclusividade entre fimEm/totalOcorrencias (RN nao numerada
+// explicitamente, mas 04-API.md §12.2) e verificada no servico, nao aqui —
+// o contrato exige 422 REGRA_NEGOCIO, nao 400 VALIDACAO.
+const recorrenciaSchema = z.object({
+  frequencia: z.enum(FREQUENCIAS_RECORRENCIA),
+  intervalo: z.number().int().min(1).max(12).optional().default(1),
+  fimEm: dataIsoSchema.optional(),
+  totalOcorrencias: z.number().int().min(2).max(360).optional(),
+});
+
 export const criarMovimentacaoSchema = z.object({
   body: z
     .object({
@@ -67,6 +89,7 @@ export const criarMovimentacaoSchema = z.object({
       cartaoId: cartaoIdSchema,
       categoriaId: z.string().min(1, 'Informe a categoria.'),
       etiquetaIds: z.array(z.string().min(1)).max(10, 'Maximo de 10 etiquetas.').optional(),
+      recorrencia: recorrenciaSchema.optional(),
     })
     .superRefine((dados, ctx) => {
       const efetivada = dados.situacao === 'PAGA' || dados.situacao === 'PAGA_PARCIALMENTE';
@@ -114,6 +137,17 @@ export const idParamMovimentacaoSchema = z.object({
 
 export type IdParamMovimentacao = z.infer<typeof idParamMovimentacaoSchema>['params'];
 
+// RN-20: obrigatorio quando a movimentacao pertence a uma recorrencia —
+// verificado no servico, igual escopoEdicao.
+export const excluirMovimentacaoSchema = z.object({
+  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  query: z.object({
+    escopoExclusao: z.enum(ESCOPOS_RECORRENCIA).optional(),
+  }),
+});
+
+export type ExcluirMovimentacaoQuery = z.infer<typeof excluirMovimentacaoSchema>['query'];
+
 // ═══════════════════════════════════════════════════════════
 //  EDICAO, EXCLUSAO E DUPLICACAO (issue #36)
 // ═══════════════════════════════════════════════════════════
@@ -140,6 +174,9 @@ export const atualizarMovimentacaoSchema = z.object({
     contaId: z.unknown().optional(),
     contaCompartilhadaId: z.unknown().optional(),
     cartaoId: z.unknown().optional(),
+    // RN-19: obrigatorio quando a movimentacao pertence a uma recorrencia —
+    // verificado no servico (depende do registro em banco), nao aqui.
+    escopoEdicao: z.enum(ESCOPOS_RECORRENCIA).optional(),
   }),
 });
 

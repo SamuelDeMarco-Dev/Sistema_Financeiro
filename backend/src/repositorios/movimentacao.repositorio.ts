@@ -1,12 +1,22 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/banco/cliente';
-import type { SituacaoMovimentacao, TipoMovimentacao } from '@prisma/client';
+import { calcularProximaOcorrencia } from '@/utilitarios/data';
+import type { FrequenciaRecorrencia, SituacaoMovimentacao, TipoMovimentacao } from '@prisma/client';
 
 const INCLUDE_COMPLETO = {
   conta: { select: { id: true, nome: true, cor: true, icone: true } },
   categoria: { select: { id: true, nome: true, cor: true, icone: true, categoriaPaiId: true } },
   etiquetas: { include: { etiqueta: { select: { id: true, nome: true, cor: true } } } },
   usuario: { select: { id: true, nome: true, perfil: { select: { fotoUrl: true } } } },
+  modeloRecorrencia: {
+    select: {
+      id: true,
+      dataCompetencia: true,
+      frequencia: true,
+      intervaloRecorrencia: true,
+      recorrenciaFimEm: true,
+    },
+  },
   _count: { select: { anexos: true } },
 } satisfies Prisma.MovimentacaoInclude;
 
@@ -48,6 +58,58 @@ export interface DadosAtualizarPagamento {
   dataEfetivacao: Date | null;
 }
 
+export interface DadosCriarRecorrencia {
+  usuarioId: string;
+  contaId: string;
+  categoriaId: string;
+  tipo: TipoMovimentacao;
+  descricao: string;
+  observacao: string | null;
+  valor: Prisma.Decimal;
+  valorPago: Prisma.Decimal;
+  situacao: SituacaoMovimentacao;
+  dataCompetencia: Date;
+  dataVencimento: Date;
+  dataEfetivacao: Date | null;
+  etiquetaIds: string[];
+  frequencia: FrequenciaRecorrencia;
+  intervalo: number;
+  fimEm: Date | null;
+  totalOcorrencias: number | null;
+}
+
+export interface ResultadoCriarRecorrencia {
+  primeiraOcorrencia: MovimentacaoCompleta;
+  modeloId: string;
+  ocorrenciasGeradas: number;
+  proximaGeracaoEm: Date;
+}
+
+export interface DadosPropagarEdicao {
+  descricao?: string;
+  observacao?: string | null;
+  valor?: Prisma.Decimal;
+  categoriaId?: string;
+}
+
+export interface ModeloRecorrencia {
+  id: string;
+  descricao: string;
+  valor: Prisma.Decimal;
+  frequencia: FrequenciaRecorrencia;
+  intervalo: number;
+}
+
+export interface OcorrenciaRecorrencia {
+  id: string;
+  dataCompetencia: Date;
+  valor: Prisma.Decimal;
+  situacao: SituacaoMovimentacao;
+  divergeDoModelo: boolean;
+}
+
+const SITUACOES_EFETIVADAS: SituacaoMovimentacao[] = ['PAGA', 'PAGA_PARCIALMENTE'];
+
 export interface FiltrosListarMovimentacoes {
   dataInicio?: Date | undefined;
   dataFim?: Date | undefined;
@@ -81,6 +143,28 @@ export interface TotalizadoresMovimentacoes {
 }
 
 const SITUACOES_PENDENTES: SituacaoMovimentacao[] = ['PENDENTE', 'ATRASADA'];
+
+/** RN-18: gera no maximo 12 datas (a ancora + ate 11 seguintes), sempre a
+ * partir da ancora (nunca encadeando) — ver comentario de
+ * `calcularProximaOcorrencia`. Interrompe antes de 12 se `totalOcorrencias`
+ * ou `fimEm` (o que vier primeiro) ja tiver sido atingido; o reabastecimento
+ * para alem de 12 meses e responsabilidade da tarefa diaria (issue #41). */
+function gerarDatasOcorrencias(
+  ancora: Date,
+  frequencia: FrequenciaRecorrencia,
+  intervalo: number,
+  fimEm: Date | null,
+  totalOcorrencias: number | null,
+): Date[] {
+  const datas: Date[] = [ancora];
+  const limite = Math.min(12, totalOcorrencias ?? 12);
+  for (let indice = 1; indice < limite; indice += 1) {
+    const proxima = calcularProximaOcorrencia(ancora, frequencia, intervalo * indice);
+    if (fimEm !== null && proxima > fimEm) break;
+    datas.push(proxima);
+  }
+  return datas;
+}
 
 export class MovimentacaoRepositorio {
   /** Nested write do Prisma (`etiquetas: { create: [...] }`) roda como uma
@@ -163,6 +247,213 @@ export class MovimentacaoRepositorio {
       },
       include: INCLUDE_COMPLETO,
     });
+  }
+
+  /** RN-17/ADR-006: cria o registro-mae (`ehModeloRecorrencia: true`,
+   * sempre PENDENTE/sem pagamento — ele nunca aparece em listagem nem
+   * afeta saldo) e as ocorrencias concretas vinculadas a ele, tudo em uma
+   * transacao. So a primeira ocorrencia (na data informada) carrega a
+   * `situacao`/`valorPago`/`dataEfetivacao` recebidas; as demais nascem
+   * `PENDENTE` — nao faz sentido uma ocorrencia futura nascer paga. */
+  async criarComRecorrencia(dados: DadosCriarRecorrencia): Promise<ResultadoCriarRecorrencia> {
+    const [primeiraData, ...datasRestantes] = gerarDatasOcorrencias(
+      dados.dataCompetencia,
+      dados.frequencia,
+      dados.intervalo,
+      dados.fimEm,
+      dados.totalOcorrencias,
+    );
+    if (primeiraData === undefined) {
+      // gerarDatasOcorrencias sempre inclui ao menos a ancora — rede de
+      // seguranca contra uma regressao futura, nunca deveria disparar.
+      throw new Error('gerarDatasOcorrencias nao gerou nenhuma data.');
+    }
+    const deltaVencimentoMs = dados.dataVencimento.getTime() - dados.dataCompetencia.getTime();
+
+    const criarOcorrencia = (
+      tx: Prisma.TransactionClient,
+      modeloId: string,
+      dataCompetenciaOcorrencia: Date,
+      ehPrimeira: boolean,
+    ): Promise<MovimentacaoCompleta> =>
+      tx.movimentacao.create({
+        data: {
+          usuarioId: dados.usuarioId,
+          contaId: dados.contaId,
+          categoriaId: dados.categoriaId,
+          tipo: dados.tipo,
+          descricao: dados.descricao,
+          observacao: dados.observacao,
+          valor: dados.valor,
+          valorPago: ehPrimeira ? dados.valorPago : new Prisma.Decimal(0),
+          situacao: ehPrimeira ? dados.situacao : 'PENDENTE',
+          dataCompetencia: dataCompetenciaOcorrencia,
+          dataVencimento: new Date(dataCompetenciaOcorrencia.getTime() + deltaVencimentoMs),
+          dataEfetivacao: ehPrimeira ? dados.dataEfetivacao : null,
+          recorrenciaId: modeloId,
+          ...(dados.etiquetaIds.length > 0
+            ? { etiquetas: { create: dados.etiquetaIds.map((etiquetaId) => ({ etiquetaId })) } }
+            : {}),
+        },
+        include: INCLUDE_COMPLETO,
+      });
+
+    return prisma.$transaction(async (tx) => {
+      const modelo = await tx.movimentacao.create({
+        data: {
+          usuarioId: dados.usuarioId,
+          contaId: dados.contaId,
+          categoriaId: dados.categoriaId,
+          tipo: dados.tipo,
+          descricao: dados.descricao,
+          observacao: dados.observacao,
+          valor: dados.valor,
+          valorPago: new Prisma.Decimal(0),
+          situacao: 'PENDENTE',
+          dataCompetencia: dados.dataCompetencia,
+          dataVencimento: dados.dataVencimento,
+          dataEfetivacao: null,
+          ehModeloRecorrencia: true,
+          frequencia: dados.frequencia,
+          intervaloRecorrencia: dados.intervalo,
+          recorrenciaFimEm: dados.fimEm,
+          recorrenciaTotal: dados.totalOcorrencias,
+        },
+      });
+
+      const primeiraOcorrencia = await criarOcorrencia(tx, modelo.id, primeiraData, true);
+      for (const dataCompetenciaOcorrencia of datasRestantes) {
+        await criarOcorrencia(tx, modelo.id, dataCompetenciaOcorrencia, false);
+      }
+
+      const ultimaData = datasRestantes.at(-1) ?? primeiraData;
+      return {
+        primeiraOcorrencia,
+        modeloId: modelo.id,
+        ocorrenciasGeradas: 1 + datasRestantes.length,
+        proximaGeracaoEm: calcularProximaOcorrencia(ultimaData, dados.frequencia, dados.intervalo),
+      };
+    });
+  }
+
+  /** RN-19: propaga campos "de template" (nunca datas, que sao por
+   * ocorrencia) para o modelo e para as ocorrencias no escopo pedido.
+   * `dataReferencia` nulo = TODAS; informada = ESTA_E_FUTURAS a partir
+   * dela. Ocorrencias ja efetivadas nunca sao tocadas (RN-19). */
+  async atualizarEmLote(
+    modeloId: string,
+    dataReferencia: Date | null,
+    dados: DadosPropagarEdicao,
+  ): Promise<void> {
+    const dadosTemplate: Prisma.MovimentacaoUpdateInput = {
+      ...(dados.descricao !== undefined && { descricao: dados.descricao }),
+      ...(dados.observacao !== undefined && { observacao: dados.observacao }),
+      ...(dados.valor !== undefined && { valor: dados.valor }),
+      ...(dados.categoriaId !== undefined && { categoriaId: dados.categoriaId }),
+    };
+
+    await prisma.$transaction([
+      prisma.movimentacao.update({ where: { id: modeloId }, data: dadosTemplate }),
+      prisma.movimentacao.updateMany({
+        where: {
+          recorrenciaId: modeloId,
+          excluidoEm: null,
+          situacao: { notIn: SITUACOES_EFETIVADAS },
+          ...(dataReferencia !== null && { dataCompetencia: { gte: dataReferencia } }),
+        },
+        data: dadosTemplate,
+      }),
+    ]);
+  }
+
+  /** RN-20: exclusao logica em cascata. `dataReferencia` nulo exclui o
+   * modelo e todas as ocorrencias nao efetivadas (equivalente a excluir
+   * "o modelo" ou escopo TODAS); informada, so as ocorrencias a partir
+   * dela (ESTA_E_FUTURAS) — e o modelo e "encurtado" (`recorrenciaFimEm`)
+   * para a tarefa de reabastecimento (issue #41) parar de gerar mais. */
+  async excluirRecorrenciaEmCascata(modeloId: string, dataReferencia: Date | null): Promise<void> {
+    const agora = new Date();
+
+    if (dataReferencia === null) {
+      await prisma.movimentacao.updateMany({
+        where: {
+          OR: [{ id: modeloId }, { recorrenciaId: modeloId }],
+          excluidoEm: null,
+          situacao: { notIn: SITUACOES_EFETIVADAS },
+        },
+        data: { excluidoEm: agora },
+      });
+      return;
+    }
+
+    const dataCorte = new Date(dataReferencia.getTime() - 24 * 60 * 60 * 1000);
+    await prisma.$transaction([
+      prisma.movimentacao.updateMany({
+        where: {
+          recorrenciaId: modeloId,
+          dataCompetencia: { gte: dataReferencia },
+          excluidoEm: null,
+          situacao: { notIn: SITUACOES_EFETIVADAS },
+        },
+        data: { excluidoEm: agora },
+      }),
+      prisma.movimentacao.update({
+        where: { id: modeloId },
+        data: { recorrenciaFimEm: dataCorte, recorrenciaTotal: null },
+      }),
+    ]);
+  }
+
+  /** 04-API.md §12.8: `id` pode ser o modelo ou qualquer ocorrencia dele —
+   * resolve para o modelo antes de listar. */
+  async buscarModeloEOcorrencias(
+    id: string,
+    usuarioId: string,
+  ): Promise<{ modelo: ModeloRecorrencia; ocorrencias: OcorrenciaRecorrencia[] } | null> {
+    const referencia = await prisma.movimentacao.findFirst({
+      where: { id, usuarioId, excluidoEm: null },
+      select: { id: true, recorrenciaId: true, ehModeloRecorrencia: true },
+    });
+    if (!referencia) return null;
+
+    const modeloId = referencia.ehModeloRecorrencia ? referencia.id : referencia.recorrenciaId;
+    if (modeloId === null) return null;
+
+    const modelo = await prisma.movimentacao.findFirst({
+      where: { id: modeloId, usuarioId, excluidoEm: null, ehModeloRecorrencia: true },
+      select: {
+        id: true,
+        descricao: true,
+        valor: true,
+        frequencia: true,
+        intervaloRecorrencia: true,
+      },
+    });
+    if (!modelo?.frequencia) return null;
+
+    const ocorrencias = await prisma.movimentacao.findMany({
+      where: { recorrenciaId: modeloId, usuarioId, excluidoEm: null },
+      select: { id: true, dataCompetencia: true, valor: true, situacao: true, descricao: true },
+      orderBy: { dataCompetencia: 'asc' },
+    });
+
+    return {
+      modelo: {
+        id: modelo.id,
+        descricao: modelo.descricao,
+        valor: modelo.valor,
+        frequencia: modelo.frequencia,
+        intervalo: modelo.intervaloRecorrencia ?? 1,
+      },
+      ocorrencias: ocorrencias.map((ocorrencia) => ({
+        id: ocorrencia.id,
+        dataCompetencia: ocorrencia.dataCompetencia,
+        valor: ocorrencia.valor,
+        situacao: ocorrencia.situacao,
+        divergeDoModelo:
+          !ocorrencia.valor.equals(modelo.valor) || ocorrencia.descricao !== modelo.descricao,
+      })),
+    };
   }
 
   /** RF-34: filtro base sempre presente (excluidoEm/ehModeloRecorrencia) —
