@@ -16,11 +16,10 @@ async function criarCategoria(usuarioId: string, nome = 'Lazer'): Promise<{ id: 
   return prisma.categoria.create({ data: { usuarioId, nome, tipo: 'DESPESA' } });
 }
 
-// Issue #33 ainda nao existe nesta migration — os testes aqui cobrem
-// apenas o que #32 promete (tabelas, tipos de coluna, indices, FKs e a
-// auto-relacao de recorrencia). CHECKs de dominio (valor > 0, escopo XOR
-// etc.) tem sua propria suite dedicada quando a migration de constraints
-// (#33) chegar.
+// Cobre apenas o que a issue #32 promete (tabelas, tipos de coluna,
+// indices, FKs e a auto-relacao de recorrencia). Os CHECKs de dominio
+// (valor > 0, escopo, coerencia de estado etc., issue #33) tem sua
+// propria suite em banco-constraints-movimentacoes.spec.ts.
 describe('banco: Movimentacao, Anexo, CompraParcelada', () => {
   beforeEach(async () => {
     await limparBanco();
