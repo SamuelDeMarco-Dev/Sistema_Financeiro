@@ -6,6 +6,8 @@ import {
   fabricarCategoria,
   fabricarConta,
   fabricarEtiqueta,
+  fabricarMovimentacao,
+  fabricarTransferencia,
   fabricarUsuario,
   prepararUsuarioComConta,
 } from '../fabricas';
@@ -57,5 +59,35 @@ describe('testes/fabricas', () => {
     expect(verificarAccessToken(accessToken).sub).toBe(usuario.id);
     expect(conta.usuarioId).toBe(usuario.id);
     expect(categoria.usuarioId).toBe(usuario.id);
+  });
+
+  it('fabricarMovimentacao cria uma movimentacao pertencente a usuario e conta', async () => {
+    const { usuario, conta } = await prepararUsuarioComConta();
+    const movimentacao = await fabricarMovimentacao(usuario.id, conta.id, {
+      tipo: 'RECEITA',
+      valor: '250.00',
+      situacao: 'PAGA',
+    });
+
+    expect(movimentacao.usuarioId).toBe(usuario.id);
+    expect(movimentacao.contaId).toBe(conta.id);
+    expect(movimentacao.tipo).toBe('RECEITA');
+    expect(movimentacao.valor.toFixed(2)).toBe('250.00');
+    expect(movimentacao.valorPago.toFixed(2)).toBe('250.00');
+    expect(movimentacao.dataEfetivacao).not.toBeNull();
+  });
+
+  it('fabricarTransferencia cria o par SAIDA/ENTRADA vinculado por transferenciaId', async () => {
+    const { usuario, conta: origem } = await prepararUsuarioComConta();
+    const destino = await fabricarConta(usuario.id, { nome: 'Destino' });
+
+    const transferenciaId = await fabricarTransferencia(usuario.id, origem.id, destino.id, {
+      valor: '75.00',
+    });
+
+    const pernas = await prisma.movimentacao.findMany({ where: { transferenciaId } });
+    expect(pernas).toHaveLength(2);
+    expect(pernas.map((perna) => perna.sentido).sort()).toEqual(['ENTRADA', 'SAIDA']);
+    expect(pernas.every((perna) => perna.valor.toFixed(2) === '75.00')).toBe(true);
   });
 });

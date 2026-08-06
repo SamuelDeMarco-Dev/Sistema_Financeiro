@@ -36,6 +36,9 @@ const Contas = lazy(() =>
 const Categorias = lazy(() =>
   import('@/paginas/Categorias').then((modulo) => ({ default: modulo.Categorias })),
 );
+const Movimentacoes = lazy(() =>
+  import('@/paginas/Movimentacoes').then((modulo) => ({ default: modulo.Movimentacoes })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -138,6 +141,14 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Categorias />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'movimentacoes',
+            element: (
+              <ComSuspense>
+                <Movimentacoes />
               </ComSuspense>
             ),
           },

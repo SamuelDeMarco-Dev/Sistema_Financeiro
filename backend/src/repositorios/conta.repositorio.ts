@@ -1,6 +1,7 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/banco/cliente';
 import { somar } from '@/utilitarios/dinheiro';
-import type { Conta, Prisma, TipoConta } from '@prisma/client';
+import type { Conta, TipoConta } from '@prisma/client';
 
 interface ContaComSaldoInicial {
   saldoInicial: Prisma.Decimal;
@@ -83,34 +84,76 @@ export class ContaRepositorio {
     await prisma.conta.update({ where: { id }, data: { excluidoEm: new Date() } });
   }
 
-  /** M2: `Movimentacao` ainda nao existe (chega em M3, issue #32) — nenhuma
-   * conta pode ter lancamentos ainda, entao a contagem e sempre zero. A
-   * exclusao (issue #24) ja fica pronta para o `409 RECURSO_EM_USO` real
-   * assim que a tabela existir. */
-  // eslint-disable-next-line @typescript-eslint/require-await -- assinatura assincrona preparada para a consulta real em M3.
-  async contarMovimentacoes(_id: string): Promise<number> {
-    return 0;
+  async contarMovimentacoes(id: string): Promise<number> {
+    return prisma.movimentacao.count({ where: { contaId: id, excluidoEm: null } });
   }
 
-  /** RN-01, RN-02, RN-03: nesta Milestone `Movimentacao` ainda nao existe
-   * (chega em M3, issue #32) — sem lancamentos para agregar, o saldo
-   * atual e o proprio saldo inicial. */
-  calcularSaldoAtual(conta: ContaComSaldoInicial): Prisma.Decimal {
-    return conta.saldoInicial;
+  /** RN-01, RN-02, RN-03: soma valorPago (nao valor) das movimentacoes
+   * efetivadas (PAGA/PAGA_PARCIALMENTE) — pagamento parcial afeta o saldo
+   * so pela parte paga. Transferencias somam por sentido. Modelos de
+   * recorrencia e movimentacoes excluidas nunca entram (mesmo filtro do
+   * indice parcial idx_mov_saldo). M4 (issue #46) substitui isto por
+   * `vw_saldo_conta` para nao repetir esta agregacao em toda consulta. */
+  async calcularSaldoAtual(conta: ContaComSaldoInicial & { id: string }): Promise<Prisma.Decimal> {
+    const grupos = await prisma.movimentacao.groupBy({
+      by: ['tipo', 'sentido'],
+      where: {
+        contaId: conta.id,
+        excluidoEm: null,
+        ehModeloRecorrencia: false,
+        situacao: { in: ['PAGA', 'PAGA_PARCIALMENTE'] },
+      },
+      _sum: { valorPago: true },
+    });
+
+    let saldo = conta.saldoInicial;
+    for (const grupo of grupos) {
+      const valor = grupo._sum.valorPago ?? new Prisma.Decimal(0);
+      if (grupo.tipo === 'RECEITA') saldo = saldo.plus(valor);
+      else if (grupo.tipo === 'DESPESA') saldo = saldo.minus(valor);
+      // Unico tipo restante e TRANSFERENCIA — o sinal vem do sentido.
+      else if (grupo.sentido === 'ENTRADA') saldo = saldo.plus(valor);
+      else if (grupo.sentido === 'SAIDA') saldo = saldo.minus(valor);
+    }
+    return saldo;
   }
 
-  /** RN-04: soma pendentes/atrasadas vencendo no periodo — nenhuma existe
-   * antes de M3, entao o previsto coincide com o atual. */
-  calcularSaldoPrevisto(conta: ContaComSaldoInicial): Prisma.Decimal {
-    return this.calcularSaldoAtual(conta);
+  /** RN-04: saldo atual acrescido das pendentes/atrasadas — sem recorte
+   * por periodo ainda (a query com `dataVencimento` dentro da janela do
+   * dashboard chega em M4, junto do endpoint que a consome). */
+  async calcularSaldoPrevisto(
+    conta: ContaComSaldoInicial & { id: string },
+  ): Promise<Prisma.Decimal> {
+    const saldoAtual = await this.calcularSaldoAtual(conta);
+    const grupos = await prisma.movimentacao.groupBy({
+      by: ['tipo'],
+      where: {
+        contaId: conta.id,
+        excluidoEm: null,
+        ehModeloRecorrencia: false,
+        situacao: { in: ['PENDENTE', 'ATRASADA'] },
+      },
+      _sum: { valor: true },
+    });
+
+    let saldo = saldoAtual;
+    for (const grupo of grupos) {
+      const valor = grupo._sum.valor ?? new Prisma.Decimal(0);
+      if (grupo.tipo === 'RECEITA') saldo = saldo.plus(valor);
+      else if (grupo.tipo === 'DESPESA') saldo = saldo.minus(valor);
+    }
+    return saldo;
   }
 
   /** RN-05: soma apenas contas nao arquivadas, nao excluidas e marcadas
    * para entrar no total. */
-  calcularSaldoConsolidado(contas: ContaConsolidavel[]): Prisma.Decimal {
+  async calcularSaldoConsolidado(
+    contas: (ContaConsolidavel & { id: string })[],
+  ): Promise<Prisma.Decimal> {
     const elegiveis = contas.filter(
       (conta) => conta.incluirNoSaldoTotal && !conta.arquivadaEm && !conta.excluidoEm,
     );
-    return somar(...elegiveis.map((conta) => this.calcularSaldoAtual(conta)));
+    const saldos = await Promise.all(elegiveis.map((conta) => this.calcularSaldoAtual(conta)));
+    return somar(...saldos);
   }
 }

@@ -30,11 +30,15 @@ export class EtiquetaRepositorio {
     await prisma.etiqueta.delete({ where: { id } });
   }
 
-  /** M2: `MovimentacaoEtiqueta` ainda nao existe (chega em M3, issue #32)
-   * — nenhuma etiqueta pode estar em uso ainda, entao a contagem e
-   * sempre zero. */
-  // eslint-disable-next-line @typescript-eslint/require-await -- assinatura assincrona preparada para a consulta real em M3.
-  async contarUso(_id: string): Promise<number> {
-    return 0;
+  async contarUso(id: string): Promise<number> {
+    return prisma.movimentacaoEtiqueta.count({
+      where: { etiquetaId: id, movimentacao: { excluidoEm: null } },
+    });
+  }
+
+  /** RF-33: valida propriedade de todas as etiquetas de uma vez — usado
+   * ao vincular etiquetas a uma movimentacao (issue #34). */
+  async listarPorIds(ids: string[], usuarioId: string): Promise<Etiqueta[]> {
+    return prisma.etiqueta.findMany({ where: { id: { in: ids }, usuarioId } });
   }
 }

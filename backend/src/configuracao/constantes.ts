@@ -29,3 +29,18 @@ export const TIPOS_MIME_AVATAR_PERMITIDOS: ReadonlySet<string> = new Set([
 ]);
 export const LIMITE_UPLOADS_AVATAR_POR_HORA = 50;
 export const MINUTOS_JANELA_UPLOAD_AVATAR = 60;
+
+/** RF-32: anexos de movimentacao (issue #40). */
+export const LIMITE_ANEXOS_POR_MOVIMENTACAO = 5;
+export const TIPOS_MIME_ANEXO_PERMITIDOS: ReadonlySet<string> = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+]);
+export const EXTENSOES_POR_MIME_ANEXO: ReadonlyMap<string, string> = new Map([
+  ['application/pdf', 'pdf'],
+  ['image/jpeg', 'jpg'],
+  ['image/png', 'png'],
+]);
+export const LIMITE_UPLOADS_ANEXO_POR_HORA = 50;
+export const MINUTOS_JANELA_UPLOAD_ANEXO = 60;

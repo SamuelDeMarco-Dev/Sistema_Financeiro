@@ -41,17 +41,17 @@ export class ContaServico {
       incluirArquivadas: filtros.incluirArquivadas,
     });
 
-    const linhas = await Promise.all(contas.map((conta) => this.paraDTO(conta, usuario)));
+    const [linhas, saldoTotal] = await Promise.all([
+      Promise.all(contas.map((conta) => this.paraDTO(conta, usuario))),
+      this.repositorio.calcularSaldoConsolidado(contas),
+    ]);
     linhas.sort(
       (a, b) => compararContas(a, b, filtros.ordenarPor) * (filtros.ordem === 'asc' ? 1 : -1),
     );
 
     return {
       contas: linhas,
-      totalizadores: {
-        saldoTotal: this.repositorio.calcularSaldoConsolidado(contas),
-        quantidadeContas: linhas.length,
-      },
+      totalizadores: { saldoTotal, quantidadeContas: linhas.length },
     };
   }
 
@@ -150,13 +150,11 @@ export class ContaServico {
   }
 
   private async paraDTO(conta: Conta, usuario: UsuarioAutenticado): Promise<ContaDTO> {
-    const quantidadeMovimentacoes = await this.repositorio.contarMovimentacoes(conta.id);
-    return mapearConta(
-      conta,
-      usuario,
+    const [quantidadeMovimentacoes, saldoAtual, saldoPrevisto] = await Promise.all([
+      this.repositorio.contarMovimentacoes(conta.id),
       this.repositorio.calcularSaldoAtual(conta),
       this.repositorio.calcularSaldoPrevisto(conta),
-      quantidadeMovimentacoes,
-    );
+    ]);
+    return mapearConta(conta, usuario, saldoAtual, saldoPrevisto, quantidadeMovimentacoes);
   }
 }

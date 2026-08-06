@@ -1,4 +1,4 @@
-import { TokenExpiredError } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { NaoAutenticadoErro, TokenExpiradoErro } from '@/erros';
 import { asyncHandler } from '@/middlewares/async-handler';
 import { AutenticacaoServico } from '@/servicos/autenticacao.servico';
@@ -26,7 +26,7 @@ export const autenticar = asyncHandler(async (req, _res, next) => {
   try {
     payload = verificarAccessToken(token);
   } catch (erro) {
-    if (erro instanceof TokenExpiredError) {
+    if (erro instanceof jwt.TokenExpiredError) {
       throw new TokenExpiradoErro('Token expirado.');
     }
     throw new NaoAutenticadoErro('Token invalido.');
