@@ -1052,6 +1052,16 @@ Recurso central da API. Estas regras valem para todos os endpoints desta seção
         "transferencia": null,
         "recorrencia": null,
         "parcelamento": null,
+        "anexos": [
+          {
+            "id": "clx_anx_1",
+            "nomeOriginal": "nota-fiscal.pdf",
+            "tipoMime": "application/pdf",
+            "tamanhoBytes": 204800,
+            "url": "/api/v1/anexos/clx_anx_1/conteudo",
+            "criadoEm": "2026-07-15T18:22:03.001Z"
+          }
+        ],
         "quantidadeAnexos": 1,
         "criadoEm": "2026-07-15T18:22:03.001Z",
         "atualizadoEm": "2026-07-15T18:22:03.001Z"
@@ -1481,6 +1491,8 @@ Exclui os dois lados na mesma transação (RN-26, RN-39). `204`.
 ---
 
 ## 14. Anexos
+
+Não há endpoint dedicado de listagem: o recurso `Movimentacao` (§12) já carrega `anexos` (array completo — mesma forma de `data.anexos[]` abaixo) e `quantidadeAnexos` (a mesma contagem, para a listagem não precisar ler o array inteiro). O cliente busca a movimentação para saber quais anexos existem; os endpoints abaixo só criam, baixam ou excluem.
 
 ### 14.1 `POST /movimentacoes/:id/anexos` 🔒
 

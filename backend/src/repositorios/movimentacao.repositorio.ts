@@ -17,6 +17,10 @@ const INCLUDE_COMPLETO = {
       recorrenciaFimEm: true,
     },
   },
+  anexos: {
+    select: { id: true, nomeOriginal: true, tipoMime: true, tamanhoBytes: true, criadoEm: true },
+    orderBy: { criadoEm: 'asc' },
+  },
   _count: { select: { anexos: true } },
 } satisfies Prisma.MovimentacaoInclude;
 

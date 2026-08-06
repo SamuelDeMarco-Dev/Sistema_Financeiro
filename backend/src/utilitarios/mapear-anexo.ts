@@ -9,7 +9,12 @@ export interface AnexoDTO {
   criadoEm: Date;
 }
 
-export function mapearAnexo(anexo: Anexo): AnexoDTO {
+type AnexoParaMapear = Pick<
+  Anexo,
+  'id' | 'nomeOriginal' | 'tipoMime' | 'tamanhoBytes' | 'criadoEm'
+>;
+
+export function mapearAnexo(anexo: AnexoParaMapear): AnexoDTO {
   return {
     id: anexo.id,
     nomeOriginal: anexo.nomeOriginal,

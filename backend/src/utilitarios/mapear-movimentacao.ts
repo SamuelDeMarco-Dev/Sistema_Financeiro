@@ -3,6 +3,8 @@ import type {
   MovimentacaoCompleta,
 } from '@/repositorios/movimentacao.repositorio';
 import { calcularOrdinalOcorrencia, paraDataIso } from './data';
+import { mapearAnexo } from './mapear-anexo';
+import type { AnexoDTO } from './mapear-anexo';
 import type { FrequenciaRecorrencia, Prisma, SentidoTransferencia } from '@prisma/client';
 
 export interface MovimentacaoDTO {
@@ -42,6 +44,7 @@ export interface MovimentacaoDTO {
     ocorrenciaAtual: number;
   } | null;
   parcelamento: null;
+  anexos: AnexoDTO[];
   quantidadeAnexos: number;
   criadoEm: Date;
   atualizadoEm: Date;
@@ -111,6 +114,7 @@ export function mapearMovimentacao(
     transferencia,
     recorrencia,
     parcelamento: null,
+    anexos: movimentacao.anexos.map(mapearAnexo),
     quantidadeAnexos: movimentacao._count.anexos,
     criadoEm: movimentacao.criadoEm,
     atualizadoEm: movimentacao.atualizadoEm,
