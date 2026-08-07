@@ -142,4 +142,20 @@ export class ContaRepositorio {
     const saldos = await Promise.all(elegiveis.map((conta) => this.calcularSaldoAtual(conta)));
     return somar(...saldos);
   }
+
+  /** RN-01, RN-05: mesma elegibilidade de `calcularSaldoConsolidado`
+   * (nao arquivada, nao excluida, incluirNoSaldoTotal), mas numa unica
+   * consulta agregada em `vw_saldo_conta` — o dashboard (#47) nao pode
+   * pagar uma query por conta do usuario a cada carregamento. */
+  async calcularSaldoConsolidadoPorUsuario(usuarioId: string): Promise<Prisma.Decimal> {
+    const linhas = await prisma.$queryRaw<LinhaVwSaldoConta[]>`
+      SELECT COALESCE(SUM(v.saldo_atual), 0) AS saldo_atual
+      FROM vw_saldo_conta v
+      JOIN contas c ON c.id = v.conta_id
+      WHERE v.usuario_id = ${usuarioId}
+        AND c.incluir_no_saldo_total = true
+        AND c.arquivada_em IS NULL
+    `;
+    return linhas[0]?.saldo_atual ?? new Prisma.Decimal(0);
+  }
 }
