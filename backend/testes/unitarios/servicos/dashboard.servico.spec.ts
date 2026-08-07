@@ -160,4 +160,38 @@ describe('DashboardServico', () => {
       expect(periodo.dataFim).toBe('2026-07-31');
     });
   });
+
+  describe('obterFluxoCaixa', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('resolve a janela de meses a partir do mes corrente no timezone do perfil e mapeia as linhas', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-15T12:00:00.000Z'));
+      perfilRepositorio.buscarPorUsuarioId.mockResolvedValue(
+        fabricarPerfil({ timezone: 'America/Sao_Paulo' }),
+      );
+      repositorio.obterFluxoCaixa.mockResolvedValue([
+        {
+          mes: new Date('2026-08-01T00:00:00.000Z'),
+          receitas: new Prisma.Decimal('1000.00'),
+          despesas: new Prisma.Decimal('400.00'),
+        },
+      ]);
+
+      const pontos = await servico.obterFluxoCaixa('usuario-1', { meses: 1 });
+
+      expect(repositorio.obterFluxoCaixa).toHaveBeenCalledWith('usuario-1', {
+        dataInicio: new Date('2026-08-01T00:00:00.000Z'),
+        dataFim: new Date('2026-08-31T00:00:00.000Z'),
+      });
+      expect(pontos).toHaveLength(1);
+      expect(pontos[0]?.mes).toBe('2026-08');
+      expect(pontos[0]?.rotulo).toBe('ago/26');
+      expect(pontos[0]?.receitas.toFixed(2)).toBe('1000.00');
+      expect(pontos[0]?.despesas.toFixed(2)).toBe('400.00');
+      expect(pontos[0]?.resultado.toFixed(2)).toBe('600.00');
+    });
+  });
 });

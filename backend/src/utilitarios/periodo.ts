@@ -18,6 +18,19 @@ export function primeiroEUltimoDiaDoMes(data: Date): Periodo {
   };
 }
 
+/** RF-41: janela de `quantidadeMeses` meses terminando no mes de
+ * `dataReferencia` (inclusive) — usada pelo fluxo de caixa, que sempre
+ * conta "para tras" a partir do mes corrente, nunca a partir de um
+ * `dataFim` escolhido pelo usuario (o endpoint so aceita `meses`). */
+export function ultimosMeses(quantidadeMeses: number, dataReferencia: Date): Periodo {
+  const ano = dataReferencia.getUTCFullYear();
+  const mes = dataReferencia.getUTCMonth();
+  return {
+    dataInicio: new Date(Date.UTC(ano, mes - (quantidadeMeses - 1), 1)),
+    dataFim: new Date(Date.UTC(ano, mes + 1, 0)),
+  };
+}
+
 /** RF-47 (variacao dos indicadores): periodo imediatamente anterior, com a
  * mesma duracao em dias — nao "o mes anterior", que teria um numero
  * diferente de dias (fevereiro inclusive). Comparar por duracao igual e o

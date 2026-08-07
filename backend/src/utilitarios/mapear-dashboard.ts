@@ -1,6 +1,7 @@
-import { paraDataIso } from '@/utilitarios/data';
+import type { LinhaFluxoCaixa } from '@/repositorios/dashboard.repositorio';
+import { paraDataIso, paraMesIso } from '@/utilitarios/data';
 import type { Periodo } from '@/utilitarios/periodo';
-import { rotuloMesCompleto } from '@/utilitarios/rotulos-data';
+import { rotuloMesAbreviado, rotuloMesCompleto } from '@/utilitarios/rotulos-data';
 import type { Prisma } from '@prisma/client';
 
 export interface PeriodoDTO {
@@ -26,4 +27,22 @@ export function mapearPeriodo(periodo: Periodo): PeriodoDTO {
     dataFim: paraDataIso(periodo.dataFim),
     rotulo: rotuloMesCompleto(periodo.dataInicio),
   };
+}
+
+export interface FluxoCaixaPontoDTO {
+  mes: string;
+  rotulo: string;
+  receitas: Prisma.Decimal;
+  despesas: Prisma.Decimal;
+  resultado: Prisma.Decimal;
+}
+
+export function mapearFluxoCaixa(linhas: LinhaFluxoCaixa[]): FluxoCaixaPontoDTO[] {
+  return linhas.map((linha) => ({
+    mes: paraMesIso(linha.mes),
+    rotulo: rotuloMesAbreviado(linha.mes),
+    receitas: linha.receitas,
+    despesas: linha.despesas,
+    resultado: linha.receitas.minus(linha.despesas),
+  }));
 }

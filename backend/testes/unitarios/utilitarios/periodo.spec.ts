@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { paraDataIso } from '@/utilitarios/data';
-import { periodoAnterior, primeiroEUltimoDiaDoMes } from '@/utilitarios/periodo';
+import { periodoAnterior, primeiroEUltimoDiaDoMes, ultimosMeses } from '@/utilitarios/periodo';
 
 describe('primeiroEUltimoDiaDoMes', () => {
   it('devolve o primeiro e o ultimo dia de um mes de 31 dias', () => {
@@ -51,5 +51,19 @@ describe('periodoAnterior', () => {
     });
     expect(paraDataIso(anterior.dataInicio)).toBe('2026-07-14');
     expect(paraDataIso(anterior.dataFim)).toBe('2026-07-14');
+  });
+});
+
+describe('ultimosMeses', () => {
+  it('devolve 12 meses terminando no mes de referencia, cruzando o ano anterior', () => {
+    const periodo = ultimosMeses(12, new Date(Date.UTC(2026, 6, 15)));
+    expect(paraDataIso(periodo.dataInicio)).toBe('2025-08-01');
+    expect(paraDataIso(periodo.dataFim)).toBe('2026-07-31');
+  });
+
+  it('devolve 1 mes: so o mes de referencia', () => {
+    const periodo = ultimosMeses(1, new Date(Date.UTC(2026, 6, 15)));
+    expect(paraDataIso(periodo.dataInicio)).toBe('2026-07-01');
+    expect(paraDataIso(periodo.dataFim)).toBe('2026-07-31');
   });
 });

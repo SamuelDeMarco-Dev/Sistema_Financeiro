@@ -7,6 +7,12 @@ export interface AgregadoReceitaDespesa {
   despesas: Prisma.Decimal;
 }
 
+export interface LinhaFluxoCaixa {
+  mes: Date;
+  receitas: Prisma.Decimal;
+  despesas: Prisma.Decimal;
+}
+
 export class DashboardRepositorio {
   /** RF-40, RN-25: soma o `valor` nominal (nao `valorPago`) de receitas e
    * despesas por `dataCompetencia` dentro do periodo, excluindo
@@ -64,5 +70,35 @@ export class DashboardRepositorio {
       else if (grupo.tipo === 'DESPESA') efeito = efeito.minus(valor);
     }
     return efeito;
+  }
+
+  /** RF-41, 03-DATABASE.md §8.4: `generate_series` garante um ponto por
+   * mes mesmo sem nenhuma movimentacao (o LEFT JOIN nao teria como criar
+   * uma linha para um mes ausente) — sem ele o grafico teria lacunas.
+   * RN-25: exclui transferencias e canceladas; mesma base de #47. */
+  async obterFluxoCaixa(usuarioId: string, periodo: Periodo): Promise<LinhaFluxoCaixa[]> {
+    return prisma.$queryRaw<LinhaFluxoCaixa[]>`
+      WITH meses AS (
+        SELECT generate_series(
+          date_trunc('month', ${periodo.dataInicio}::date),
+          date_trunc('month', ${periodo.dataFim}::date),
+          '1 month'
+        )::date AS mes
+      )
+      SELECT
+        ms.mes,
+        COALESCE(SUM(CASE WHEN m.tipo = 'RECEITA' THEN m.valor END), 0) AS receitas,
+        COALESCE(SUM(CASE WHEN m.tipo = 'DESPESA' THEN m.valor END), 0) AS despesas
+      FROM meses ms
+      LEFT JOIN movimentacoes m
+        ON date_trunc('month', m.data_competencia) = ms.mes
+       AND m.usuario_id = ${usuarioId}
+       AND m.tipo IN ('RECEITA', 'DESPESA')
+       AND m.situacao <> 'CANCELADA'
+       AND m.excluido_em IS NULL
+       AND m.eh_modelo_recorrencia = false
+      GROUP BY ms.mes
+      ORDER BY ms.mes
+    `;
   }
 }

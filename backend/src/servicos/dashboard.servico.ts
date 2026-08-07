@@ -3,11 +3,18 @@ import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
-import { mapearPeriodo } from '@/utilitarios/mapear-dashboard';
-import type { IndicadoresDTO, PeriodoDTO } from '@/utilitarios/mapear-dashboard';
-import { periodoAnterior, primeiroEUltimoDiaDoMes } from '@/utilitarios/periodo';
+import { mapearFluxoCaixa, mapearPeriodo } from '@/utilitarios/mapear-dashboard';
+import type {
+  FluxoCaixaPontoDTO,
+  IndicadoresDTO,
+  PeriodoDTO,
+} from '@/utilitarios/mapear-dashboard';
+import { periodoAnterior, primeiroEUltimoDiaDoMes, ultimosMeses } from '@/utilitarios/periodo';
 import type { Periodo } from '@/utilitarios/periodo';
-import type { ObterIndicadoresQuery } from '@/validadores/dashboard.validador';
+import type {
+  ObterFluxoCaixaQuery,
+  ObterIndicadoresQuery,
+} from '@/validadores/dashboard.validador';
 
 const CASAS_PERCENTUAL = 2;
 
@@ -78,7 +85,25 @@ export class DashboardServico {
     if (query.dataInicio !== undefined && query.dataFim !== undefined) {
       return { dataInicio: deDataIso(query.dataInicio), dataFim: deDataIso(query.dataFim) };
     }
+    const hoje = await this.hojeDoUsuario(usuarioId);
+    return primeiroEUltimoDiaDoMes(hoje);
+  }
+
+  /** RF-41: sempre `query.meses` pontos terminando no mes corrente (no
+   * timezone do perfil) — o endpoint nao aceita `dataFim` escolhido pelo
+   * cliente, so a quantidade de meses a olhar para tras. */
+  async obterFluxoCaixa(
+    usuarioId: string,
+    query: ObterFluxoCaixaQuery,
+  ): Promise<FluxoCaixaPontoDTO[]> {
+    const hoje = await this.hojeDoUsuario(usuarioId);
+    const periodo = ultimosMeses(query.meses, hoje);
+    const linhas = await this.repositorio.obterFluxoCaixa(usuarioId, periodo);
+    return mapearFluxoCaixa(linhas);
+  }
+
+  private async hojeDoUsuario(usuarioId: string): Promise<Date> {
     const perfil = await this.perfilRepositorio.buscarPorUsuarioId(usuarioId);
-    return primeiroEUltimoDiaDoMes(hojeNoTimezone(perfil?.timezone ?? 'America/Sao_Paulo'));
+    return hojeNoTimezone(perfil?.timezone ?? 'America/Sao_Paulo');
   }
 }

@@ -46,3 +46,20 @@ export const obterIndicadoresSchema = z.object({
 });
 
 export type ObterIndicadoresQuery = z.infer<typeof obterIndicadoresSchema>['query'];
+
+// RF-41: padrao 12, maximo 36 (3 anos) — acima disso o grafico perde
+// legibilidade e a consulta deixa de ser um caso de uso real do dashboard.
+export const obterFluxoCaixaSchema = z.object({
+  query: z.object({
+    meses: z.coerce
+      .number()
+      .int('Numero de meses invalido.')
+      .min(1, 'Informe ao menos 1 mes.')
+      .max(36, 'O maximo e 36 meses.')
+      .optional()
+      .default(12),
+    contaCompartilhadaId: contaCompartilhadaIdSchema,
+  }),
+});
+
+export type ObterFluxoCaixaQuery = z.infer<typeof obterFluxoCaixaSchema>['query'];
