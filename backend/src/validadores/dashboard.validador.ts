@@ -15,6 +15,33 @@ const contaCompartilhadaIdSchema = z
 
 // RF-47: dataInicio/dataFim vem juntas ou nenhuma das duas (usa o periodo
 // padrao — mes corrente no timezone do perfil, resolvido no servico).
+// Reaproveitado por todo endpoint de dashboard com periodo opcional (#47,
+// #49, e os de relatorios de periodo livre em #52).
+function validarParDatas(
+  dados: { dataInicio?: string | undefined; dataFim?: string | undefined },
+  ctx: z.RefinementCtx,
+): void {
+  if ((dados.dataInicio === undefined) !== (dados.dataFim === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dataFim'],
+      message: 'Informe dataInicio e dataFim juntas, ou nenhuma das duas.',
+    });
+    return;
+  }
+  if (
+    dados.dataInicio !== undefined &&
+    dados.dataFim !== undefined &&
+    dados.dataInicio > dados.dataFim
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dataFim'],
+      message: 'dataFim deve ser maior ou igual a dataInicio.',
+    });
+  }
+}
+
 export const obterIndicadoresSchema = z.object({
   query: z
     .object({
@@ -22,27 +49,7 @@ export const obterIndicadoresSchema = z.object({
       dataFim: dataIsoSchema.optional(),
       contaCompartilhadaId: contaCompartilhadaIdSchema,
     })
-    .superRefine((dados, ctx) => {
-      if ((dados.dataInicio === undefined) !== (dados.dataFim === undefined)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['dataFim'],
-          message: 'Informe dataInicio e dataFim juntas, ou nenhuma das duas.',
-        });
-        return;
-      }
-      if (
-        dados.dataInicio !== undefined &&
-        dados.dataFim !== undefined &&
-        dados.dataInicio > dados.dataFim
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['dataFim'],
-          message: 'dataFim deve ser maior ou igual a dataInicio.',
-        });
-      }
-    }),
+    .superRefine(validarParDatas),
 });
 
 export type ObterIndicadoresQuery = z.infer<typeof obterIndicadoresSchema>['query'];
@@ -63,3 +70,25 @@ export const obterFluxoCaixaSchema = z.object({
 });
 
 export type ObterFluxoCaixaQuery = z.infer<typeof obterFluxoCaixaSchema>['query'];
+
+const TIPOS_POR_CATEGORIA = ['RECEITA', 'DESPESA'] as const;
+
+// RF-42: `incluirSubcategorias` default false — agrupa na raiz por padrao
+// (criterio de aceite de #49).
+export const obterPorCategoriaSchema = z.object({
+  query: z
+    .object({
+      tipo: z.enum(TIPOS_POR_CATEGORIA).optional().default('DESPESA'),
+      dataInicio: dataIsoSchema.optional(),
+      dataFim: dataIsoSchema.optional(),
+      incluirSubcategorias: z
+        .enum(['true', 'false'])
+        .optional()
+        .default('false')
+        .transform((valor) => valor === 'true'),
+      contaCompartilhadaId: contaCompartilhadaIdSchema,
+    })
+    .superRefine(validarParDatas),
+});
+
+export type ObterPorCategoriaQuery = z.infer<typeof obterPorCategoriaSchema>['query'];

@@ -3,18 +3,29 @@ import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
-import { mapearFluxoCaixa, mapearPeriodo } from '@/utilitarios/mapear-dashboard';
+import {
+  mapearFluxoCaixa,
+  mapearPeriodo,
+  mapearPorCategoria,
+} from '@/utilitarios/mapear-dashboard';
 import type {
   FluxoCaixaPontoDTO,
   IndicadoresDTO,
   PeriodoDTO,
+  PorCategoriaItemDTO,
 } from '@/utilitarios/mapear-dashboard';
 import { periodoAnterior, primeiroEUltimoDiaDoMes, ultimosMeses } from '@/utilitarios/periodo';
 import type { Periodo } from '@/utilitarios/periodo';
 import type {
   ObterFluxoCaixaQuery,
   ObterIndicadoresQuery,
+  ObterPorCategoriaQuery,
 } from '@/validadores/dashboard.validador';
+
+interface PeriodoOpcionalQuery {
+  dataInicio?: string | undefined;
+  dataFim?: string | undefined;
+}
 
 const CASAS_PERCENTUAL = 2;
 
@@ -81,7 +92,7 @@ export class DashboardServico {
   /** RF-47: periodo padrao e o mes corrente no timezone do perfil, nao no
    * do processo Node — so entra em jogo quando o cliente nao informa
    * dataInicio/dataFim (o schema exige as duas juntas, ou nenhuma). */
-  async resolverPeriodo(usuarioId: string, query: ObterIndicadoresQuery): Promise<Periodo> {
+  async resolverPeriodo(usuarioId: string, query: PeriodoOpcionalQuery): Promise<Periodo> {
     if (query.dataInicio !== undefined && query.dataFim !== undefined) {
       return { dataInicio: deDataIso(query.dataInicio), dataFim: deDataIso(query.dataFim) };
     }
@@ -100,6 +111,23 @@ export class DashboardServico {
     const periodo = ultimosMeses(query.meses, hoje);
     const linhas = await this.repositorio.obterFluxoCaixa(usuarioId, periodo);
     return mapearFluxoCaixa(linhas);
+  }
+
+  /** RF-42: reaproveita `resolverPeriodo` (mesma regra de periodo padrao
+   * de #47) — "sem categoria" e "agrupar na raiz" ficam a cargo do
+   * repositorio/mapeador, o servico so orquestra periodo + agregacao. */
+  async obterPorCategoria(
+    usuarioId: string,
+    query: ObterPorCategoriaQuery,
+  ): Promise<PorCategoriaItemDTO[]> {
+    const periodo = await this.resolverPeriodo(usuarioId, query);
+    const linhas = await this.repositorio.obterPorCategoria(
+      usuarioId,
+      query.tipo,
+      periodo,
+      query.incluirSubcategorias,
+    );
+    return mapearPorCategoria(linhas);
   }
 
   private async hojeDoUsuario(usuarioId: string): Promise<Date> {

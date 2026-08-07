@@ -4,6 +4,7 @@ import { respostaSucesso } from '@/utilitarios/resposta';
 import type {
   ObterFluxoCaixaQuery,
   ObterIndicadoresQuery,
+  ObterPorCategoriaQuery,
 } from '@/validadores/dashboard.validador';
 import type { Request, Response } from 'express';
 
@@ -22,5 +23,12 @@ export class DashboardControlador {
     const fluxoCaixa = await this.servico.obterFluxoCaixa(req.usuario.id, query);
 
     res.status(200).json(respostaSucesso({ fluxoCaixa }, 'Fluxo de caixa calculado.'));
+  });
+
+  porCategoria = asyncHandler(async (req: Request, res: Response) => {
+    const query = req.query as unknown as ObterPorCategoriaQuery;
+    const porCategoria = await this.servico.obterPorCategoria(req.usuario.id, query);
+
+    res.status(200).json(respostaSucesso({ porCategoria }, 'Agregacao por categoria calculada.'));
   });
 }

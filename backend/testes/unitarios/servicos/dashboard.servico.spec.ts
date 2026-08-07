@@ -194,4 +194,39 @@ describe('DashboardServico', () => {
       expect(pontos[0]?.resultado.toFixed(2)).toBe('600.00');
     });
   });
+
+  describe('obterPorCategoria', () => {
+    it('repassa tipo, periodo resolvido e incluirSubcategorias ao repositorio', async () => {
+      repositorio.obterPorCategoria.mockResolvedValue([
+        {
+          categoria_id: 'cat-1',
+          categoria_nome: 'Mercado',
+          categoria_cor: '#F97316',
+          categoria_icone: 'shopping-cart',
+          total: new Prisma.Decimal('300.00'),
+          quantidade: 3,
+        },
+      ]);
+
+      const itens = await servico.obterPorCategoria('usuario-1', {
+        tipo: 'DESPESA',
+        dataInicio: '2026-07-01',
+        dataFim: '2026-07-31',
+        incluirSubcategorias: true,
+      });
+
+      expect(repositorio.obterPorCategoria).toHaveBeenCalledWith(
+        'usuario-1',
+        'DESPESA',
+        {
+          dataInicio: new Date('2026-07-01T00:00:00.000Z'),
+          dataFim: new Date('2026-07-31T00:00:00.000Z'),
+        },
+        true,
+      );
+      expect(itens).toHaveLength(1);
+      expect(itens[0]?.categoria.nome).toBe('Mercado');
+      expect(itens[0]?.percentual).toBe(100);
+    });
+  });
 });
