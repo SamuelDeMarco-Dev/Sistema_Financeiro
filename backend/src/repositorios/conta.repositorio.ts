@@ -29,6 +29,10 @@ export interface FiltrosListarContas {
 
 export type ContaResumo = Pick<Conta, 'id' | 'nome' | 'tipo' | 'cor' | 'icone'>;
 
+interface LinhaVwSaldoConta {
+  saldo_atual: Prisma.Decimal;
+}
+
 export class ContaRepositorio {
   async listarPorUsuario(usuarioId: string, filtros: FiltrosListarContas): Promise<Conta[]> {
     return prisma.conta.findMany({
@@ -88,34 +92,16 @@ export class ContaRepositorio {
     return prisma.movimentacao.count({ where: { contaId: id, excluidoEm: null } });
   }
 
-  /** RN-01, RN-02, RN-03: soma valorPago (nao valor) das movimentacoes
-   * efetivadas (PAGA/PAGA_PARCIALMENTE) — pagamento parcial afeta o saldo
-   * so pela parte paga. Transferencias somam por sentido. Modelos de
-   * recorrencia e movimentacoes excluidas nunca entram (mesmo filtro do
-   * indice parcial idx_mov_saldo). M4 (issue #46) substitui isto por
-   * `vw_saldo_conta` para nao repetir esta agregacao em toda consulta. */
+  /** RN-01, RN-02, RN-03: le o saldo agregado (saldoInicial + receitas -
+   * despesas + entradas - saidas de transferencia, tudo por valorPago) de
+   * `vw_saldo_conta` (03-DATABASE.md §8.7, issue #46) em vez de repetir o
+   * `groupBy` em toda consulta. A view nao e materializada (ADR-005): o
+   * resultado e sempre consistente com a escrita mais recente. */
   async calcularSaldoAtual(conta: ContaComSaldoInicial & { id: string }): Promise<Prisma.Decimal> {
-    const grupos = await prisma.movimentacao.groupBy({
-      by: ['tipo', 'sentido'],
-      where: {
-        contaId: conta.id,
-        excluidoEm: null,
-        ehModeloRecorrencia: false,
-        situacao: { in: ['PAGA', 'PAGA_PARCIALMENTE'] },
-      },
-      _sum: { valorPago: true },
-    });
-
-    let saldo = conta.saldoInicial;
-    for (const grupo of grupos) {
-      const valor = grupo._sum.valorPago ?? new Prisma.Decimal(0);
-      if (grupo.tipo === 'RECEITA') saldo = saldo.plus(valor);
-      else if (grupo.tipo === 'DESPESA') saldo = saldo.minus(valor);
-      // Unico tipo restante e TRANSFERENCIA — o sinal vem do sentido.
-      else if (grupo.sentido === 'ENTRADA') saldo = saldo.plus(valor);
-      else if (grupo.sentido === 'SAIDA') saldo = saldo.minus(valor);
-    }
-    return saldo;
+    const linhas = await prisma.$queryRaw<LinhaVwSaldoConta[]>`
+      SELECT saldo_atual FROM vw_saldo_conta WHERE conta_id = ${conta.id}
+    `;
+    return linhas[0]?.saldo_atual ?? conta.saldoInicial;
   }
 
   /** RN-04: saldo atual acrescido das pendentes/atrasadas — sem recorte
