@@ -150,4 +150,20 @@ export class DashboardRepositorio {
       ORDER BY total DESC
     `);
   }
+
+  /** RF-46 (parcial nesta milestone: so vencimentos, orcamento/fatura
+   * chegam em M8/M9): quantas pendentes/atrasadas vencem entre hoje e
+   * D+7, inclusive nos dois extremos — a contagem alimenta o alerta
+   * "N contas vencem nos proximos 7 dias" do endpoint agregado (#50). */
+  async contarVencimentosProximos(usuarioId: string, hoje: Date, limite: Date): Promise<number> {
+    return prisma.movimentacao.count({
+      where: {
+        usuarioId,
+        excluidoEm: null,
+        ehModeloRecorrencia: false,
+        situacao: { in: ['PENDENTE', 'ATRASADA'] },
+        dataVencimento: { gte: hoje, lte: limite },
+      },
+    });
+  }
 }

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import type { ContaComSaldo } from '@/repositorios/conta.repositorio';
 import type { LinhaFluxoCaixa, LinhaPorCategoria } from '@/repositorios/dashboard.repositorio';
 import { paraDataIso, paraMesIso } from '@/utilitarios/data';
 import type { Periodo } from '@/utilitarios/periodo';
@@ -97,4 +98,31 @@ export function mapearPorCategoria(linhas: LinhaPorCategoria[]): PorCategoriaIte
   }
 
   return itens;
+}
+
+export interface ContaResumoDashboardDTO {
+  id: string;
+  nome: string;
+  tipo: ContaComSaldo['tipo'];
+  saldoAtual: Prisma.Decimal;
+  cor: string;
+  icone: string;
+}
+
+export function mapearContasComSaldo(contas: ContaComSaldo[]): ContaResumoDashboardDTO[] {
+  return contas.map((conta) => ({
+    id: conta.id,
+    nome: conta.nome,
+    tipo: conta.tipo,
+    saldoAtual: conta.saldoAtual,
+    cor: conta.cor,
+    icone: conta.icone,
+  }));
+}
+
+export interface AlertaDTO {
+  tipo: 'DESPESA_A_VENCER';
+  severidade: 'INFORMACAO' | 'ATENCAO' | 'CRITICO';
+  titulo: string;
+  urlAcao: string;
 }

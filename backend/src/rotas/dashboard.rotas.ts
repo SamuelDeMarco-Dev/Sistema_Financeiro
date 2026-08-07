@@ -13,6 +13,7 @@ const controlador = new DashboardControlador();
 
 dashboardRotas.use(autenticar);
 
+dashboardRotas.get('/dashboard', validar(obterIndicadoresSchema), controlador.dashboard);
 dashboardRotas.get(
   '/dashboard/indicadores',
   validar(obterIndicadoresSchema),

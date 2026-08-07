@@ -31,4 +31,11 @@ export class DashboardControlador {
 
     res.status(200).json(respostaSucesso({ porCategoria }, 'Agregacao por categoria calculada.'));
   });
+
+  dashboard = asyncHandler(async (req: Request, res: Response) => {
+    const query = req.query as unknown as ObterIndicadoresQuery;
+    const dados = await this.servico.obterDashboard(req.usuario.id, query);
+
+    res.status(200).json(respostaSucesso(dados, 'Dashboard carregado.'));
+  });
 }

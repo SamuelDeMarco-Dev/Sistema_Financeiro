@@ -5,6 +5,7 @@ import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { DashboardServico } from '@/servicos/dashboard.servico';
+import { MovimentacaoServico } from '@/servicos/movimentacao.servico';
 import type { Perfil } from '@prisma/client';
 
 function fabricarPerfil(sobrescritas: Partial<Perfil> = {}): Perfil {
@@ -31,19 +32,48 @@ describe('DashboardServico', () => {
   let repositorio: MockProxy<DashboardRepositorio>;
   let contaRepositorio: MockProxy<ContaRepositorio>;
   let perfilRepositorio: MockProxy<PerfilRepositorio>;
+  let movimentacaoServico: MockProxy<MovimentacaoServico>;
 
   beforeEach(() => {
     repositorio = mock();
     contaRepositorio = mock();
     perfilRepositorio = mock();
-    servico = new DashboardServico(repositorio, contaRepositorio, perfilRepositorio);
+    movimentacaoServico = mock();
+    servico = new DashboardServico(
+      repositorio,
+      contaRepositorio,
+      perfilRepositorio,
+      movimentacaoServico,
+    );
 
     contaRepositorio.calcularSaldoConsolidadoPorUsuario.mockResolvedValue(new Prisma.Decimal(0));
+    contaRepositorio.listarComSaldoPorUsuario.mockResolvedValue([]);
     repositorio.somarReceitasEDespesas.mockResolvedValue({
       receitas: new Prisma.Decimal(0),
       despesas: new Prisma.Decimal(0),
     });
     repositorio.somarEfeitoPendentesAteData.mockResolvedValue(new Prisma.Decimal(0));
+    repositorio.obterFluxoCaixa.mockResolvedValue([]);
+    repositorio.obterPorCategoria.mockResolvedValue([]);
+    repositorio.contarVencimentosProximos.mockResolvedValue(0);
+    movimentacaoServico.listar.mockResolvedValue({
+      itens: [],
+      paginacao: {
+        pagina: 1,
+        limite: 10,
+        total: 0,
+        totalPaginas: 1,
+        temProxima: false,
+        temAnterior: false,
+      },
+      totalizadores: {
+        receitas: '0.00',
+        despesas: '0.00',
+        resultado: '0.00',
+        receitasPendentes: '0.00',
+        despesasPendentes: '0.00',
+      },
+    });
   });
 
   describe('resolverPeriodo', () => {
@@ -227,6 +257,94 @@ describe('DashboardServico', () => {
       expect(itens).toHaveLength(1);
       expect(itens[0]?.categoria.nome).toBe('Mercado');
       expect(itens[0]?.percentual).toBe(100);
+    });
+  });
+
+  describe('obterDashboard', () => {
+    it('devolve todas as chaves documentadas, mesmo vazias (contasCompartilhadas/metas/orcamentos/cartoes)', async () => {
+      const dashboard = await servico.obterDashboard('usuario-1', {});
+
+      expect(Object.keys(dashboard).sort()).toEqual(
+        [
+          'alertas',
+          'cartoes',
+          'contas',
+          'contasCompartilhadas',
+          'despesasPorCategoria',
+          'fluxoCaixa',
+          'indicadores',
+          'metas',
+          'orcamentos',
+          'periodo',
+          'receitasPorCategoria',
+          'ultimasMovimentacoes',
+        ].sort(),
+      );
+      expect(dashboard.contasCompartilhadas).toEqual([]);
+      expect(dashboard.metas).toEqual([]);
+      expect(dashboard.orcamentos).toEqual([]);
+      expect(dashboard.cartoes).toEqual([]);
+    });
+
+    it('nao gera alertas quando nao ha vencimentos proximos', async () => {
+      repositorio.contarVencimentosProximos.mockResolvedValue(0);
+
+      const dashboard = await servico.obterDashboard('usuario-1', {});
+
+      expect(dashboard.alertas).toEqual([]);
+    });
+
+    it('gera um alerta de vencimento no singular para 1 conta', async () => {
+      repositorio.contarVencimentosProximos.mockResolvedValue(1);
+
+      const dashboard = await servico.obterDashboard('usuario-1', {});
+
+      expect(dashboard.alertas).toEqual([
+        {
+          tipo: 'DESPESA_A_VENCER',
+          severidade: 'INFORMACAO',
+          titulo: '1 conta vence nos próximos 7 dias',
+          urlAcao: '/movimentacoes?situacao=PENDENTE',
+        },
+      ]);
+    });
+
+    it('gera um alerta de vencimento no plural para varias contas', async () => {
+      repositorio.contarVencimentosProximos.mockResolvedValue(3);
+
+      const dashboard = await servico.obterDashboard('usuario-1', {});
+
+      expect(dashboard.alertas[0]?.titulo).toBe('3 contas vencem nos próximos 7 dias');
+    });
+
+    it('executa as consultas em paralelo, nao em serie (tempo total perto do bloco mais lento)', async () => {
+      const ATRASO_MS = 60;
+      const atrasar = <T>(valor: T): Promise<T> =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(valor);
+          }, ATRASO_MS);
+        });
+
+      contaRepositorio.calcularSaldoConsolidadoPorUsuario.mockImplementation(() =>
+        atrasar(new Prisma.Decimal(0)),
+      );
+      repositorio.somarReceitasEDespesas.mockImplementation(() =>
+        atrasar({ receitas: new Prisma.Decimal(0), despesas: new Prisma.Decimal(0) }),
+      );
+      repositorio.obterFluxoCaixa.mockImplementation(() => atrasar([]));
+      repositorio.obterPorCategoria.mockImplementation(() => atrasar([]));
+      contaRepositorio.listarComSaldoPorUsuario.mockImplementation(() => atrasar([]));
+      repositorio.contarVencimentosProximos.mockImplementation(() => atrasar(0));
+
+      const inicio = Date.now();
+      await servico.obterDashboard('usuario-1', {});
+      const duracaoMs = Date.now() - inicio;
+
+      // Sequencial custaria bem mais que 7 * ATRASO_MS; em paralelo fica
+      // perto de um unico ATRASO_MS (com folga generosa para nao ser
+      // flaky em maquina ocupada).
+      expect(duracaoMs).toBeLessThan(ATRASO_MS * 3);
     });
   });
 });

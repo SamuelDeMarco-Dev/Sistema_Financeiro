@@ -2,20 +2,26 @@ import { Prisma } from '@prisma/client';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
+import { MovimentacaoServico } from '@/servicos/movimentacao.servico';
 import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
 import {
+  mapearContasComSaldo,
   mapearFluxoCaixa,
   mapearPeriodo,
   mapearPorCategoria,
 } from '@/utilitarios/mapear-dashboard';
 import type {
+  AlertaDTO,
+  ContaResumoDashboardDTO,
   FluxoCaixaPontoDTO,
   IndicadoresDTO,
   PeriodoDTO,
   PorCategoriaItemDTO,
 } from '@/utilitarios/mapear-dashboard';
+import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
 import { periodoAnterior, primeiroEUltimoDiaDoMes, ultimosMeses } from '@/utilitarios/periodo';
 import type { Periodo } from '@/utilitarios/periodo';
+import { registrador } from '@/utilitarios/registrador';
 import type {
   ObterFluxoCaixaQuery,
   ObterIndicadoresQuery,
@@ -27,6 +33,25 @@ interface PeriodoOpcionalQuery {
   dataFim?: string | undefined;
 }
 
+export interface DashboardDTO {
+  periodo: PeriodoDTO;
+  indicadores: IndicadoresDTO;
+  fluxoCaixa: FluxoCaixaPontoDTO[];
+  despesasPorCategoria: PorCategoriaItemDTO[];
+  receitasPorCategoria: PorCategoriaItemDTO[];
+  ultimasMovimentacoes: MovimentacaoDTO[];
+  contas: ContaResumoDashboardDTO[];
+  contasCompartilhadas: never[];
+  metas: never[];
+  orcamentos: never[];
+  alertas: AlertaDTO[];
+  cartoes: never[];
+}
+
+const MESES_FLUXO_CAIXA_PADRAO = 12;
+const DIAS_ALERTA_VENCIMENTO = 7;
+const UM_DIA_MS = 24 * 60 * 60 * 1000;
+const ULTIMAS_MOVIMENTACOES_LIMITE = 10;
 const CASAS_PERCENTUAL = 2;
 
 /** RF-47: variacao percentual de `atual` contra `anterior` — 0 quando nao
@@ -43,6 +68,7 @@ export class DashboardServico {
     private readonly repositorio = new DashboardRepositorio(),
     private readonly contaRepositorio = new ContaRepositorio(),
     private readonly perfilRepositorio = new PerfilRepositorio(),
+    private readonly movimentacaoServico = new MovimentacaoServico(),
   ) {}
 
   async obterIndicadores(
@@ -128,6 +154,84 @@ export class DashboardServico {
       query.incluirSubcategorias,
     );
     return mapearPorCategoria(linhas);
+  }
+
+  /** RF-40 a RF-47, RF-43: tudo o que a tela inicial precisa numa unica
+   * viagem — todas as consultas rodam em `Promise.all` (nunca em serie)
+   * para o tempo total ficar perto do bloco mais lento, nao da soma de
+   * todos. `contasCompartilhadas`/`metas`/`orcamentos`/`cartoes` sao
+   * arrays vazios ate as Milestones correspondentes (M6/M7/M9/M8) — a
+   * chave existe desde ja para o frontend nao precisar de un branch por
+   * milestone. */
+  async obterDashboard(usuarioId: string, query: ObterIndicadoresQuery): Promise<DashboardDTO> {
+    const inicio = process.hrtime.bigint();
+    const periodo = await this.resolverPeriodo(usuarioId, query);
+    const hoje = await this.hojeDoUsuario(usuarioId);
+    const fluxoCaixaPeriodo = ultimosMeses(MESES_FLUXO_CAIXA_PADRAO, hoje);
+    const limiteAlerta = new Date(hoje.getTime() + DIAS_ALERTA_VENCIMENTO * UM_DIA_MS);
+
+    const [
+      { indicadores },
+      fluxoCaixaLinhas,
+      despesasLinhas,
+      receitasLinhas,
+      ultimasMovimentacoes,
+      contas,
+      vencimentosProximos,
+    ] = await Promise.all([
+      this.calcularIndicadores(usuarioId, periodo),
+      this.repositorio.obterFluxoCaixa(usuarioId, fluxoCaixaPeriodo),
+      this.repositorio.obterPorCategoria(usuarioId, 'DESPESA', periodo, false),
+      this.repositorio.obterPorCategoria(usuarioId, 'RECEITA', periodo, false),
+      this.buscarUltimasMovimentacoes(usuarioId),
+      this.contaRepositorio.listarComSaldoPorUsuario(usuarioId),
+      this.repositorio.contarVencimentosProximos(usuarioId, hoje, limiteAlerta),
+    ]);
+
+    const duracaoMs = Number(process.hrtime.bigint() - inicio) / 1_000_000;
+    registrador.info(
+      { usuarioId, duracaoMs: Math.round(duracaoMs * 100) / 100 },
+      'Dashboard agregado calculado.',
+    );
+
+    return {
+      periodo: mapearPeriodo(periodo),
+      indicadores,
+      fluxoCaixa: mapearFluxoCaixa(fluxoCaixaLinhas),
+      despesasPorCategoria: mapearPorCategoria(despesasLinhas),
+      receitasPorCategoria: mapearPorCategoria(receitasLinhas),
+      ultimasMovimentacoes,
+      contas: mapearContasComSaldo(contas),
+      contasCompartilhadas: [],
+      metas: [],
+      orcamentos: [],
+      alertas: this.gerarAlertas(vencimentosProximos),
+      cartoes: [],
+    };
+  }
+
+  private gerarAlertas(vencimentosProximos: number): AlertaDTO[] {
+    if (vencimentosProximos === 0) return [];
+    const plural = vencimentosProximos === 1 ? 'conta' : 'contas';
+    return [
+      {
+        tipo: 'DESPESA_A_VENCER',
+        severidade: 'INFORMACAO',
+        titulo: `${vencimentosProximos} ${plural} vence${vencimentosProximos === 1 ? '' : 'm'} nos próximos 7 dias`,
+        urlAcao: '/movimentacoes?situacao=PENDENTE',
+      },
+    ];
+  }
+
+  private async buscarUltimasMovimentacoes(usuarioId: string): Promise<MovimentacaoDTO[]> {
+    const { itens } = await this.movimentacaoServico.listar(usuarioId, {
+      pagina: 1,
+      limite: ULTIMAS_MOVIMENTACOES_LIMITE,
+      ordenarPor: 'dataCompetencia',
+      ordem: 'desc',
+      campoData: 'COMPETENCIA',
+    });
+    return itens;
   }
 
   private async hojeDoUsuario(usuarioId: string): Promise<Date> {

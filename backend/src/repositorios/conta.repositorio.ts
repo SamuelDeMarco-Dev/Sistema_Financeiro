@@ -33,6 +33,24 @@ interface LinhaVwSaldoConta {
   saldo_atual: Prisma.Decimal;
 }
 
+export interface ContaComSaldo {
+  id: string;
+  nome: string;
+  tipo: TipoConta;
+  cor: string;
+  icone: string;
+  saldoAtual: Prisma.Decimal;
+}
+
+interface LinhaContaComSaldo {
+  id: string;
+  nome: string;
+  tipo: TipoConta;
+  cor: string;
+  icone: string;
+  saldo_atual: Prisma.Decimal;
+}
+
 export class ContaRepositorio {
   async listarPorUsuario(usuarioId: string, filtros: FiltrosListarContas): Promise<Conta[]> {
     return prisma.conta.findMany({
@@ -157,5 +175,30 @@ export class ContaRepositorio {
         AND c.arquivada_em IS NULL
     `;
     return linhas[0]?.saldo_atual ?? new Prisma.Decimal(0);
+  }
+
+  /** RF-40: cartoes-resumo de contas do dashboard — todas as contas
+   * ativas do usuario (nao arquivadas/excluidas), com o saldo ja
+   * resolvido via `vw_saldo_conta` numa unica consulta, independente de
+   * `incluirNoSaldoTotal` (aqui o usuario quer ver o cartao da conta,
+   * nao so as que somam no total geral). */
+  async listarComSaldoPorUsuario(usuarioId: string): Promise<ContaComSaldo[]> {
+    const linhas = await prisma.$queryRaw<LinhaContaComSaldo[]>`
+      SELECT c.id, c.nome, c.tipo, c.cor, c.icone, v.saldo_atual
+      FROM contas c
+      JOIN vw_saldo_conta v ON v.conta_id = c.id
+      WHERE c.usuario_id = ${usuarioId}
+        AND c.excluido_em IS NULL
+        AND c.arquivada_em IS NULL
+      ORDER BY c.ordem ASC
+    `;
+    return linhas.map((linha) => ({
+      id: linha.id,
+      nome: linha.nome,
+      tipo: linha.tipo,
+      cor: linha.cor,
+      icone: linha.icone,
+      saldoAtual: linha.saldo_atual,
+    }));
   }
 }
