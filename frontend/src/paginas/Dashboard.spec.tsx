@@ -85,6 +85,16 @@ beforeEach(() => {
   });
   vi.mocked(categoriaServico.listarCategorias).mockResolvedValue([]);
   vi.mocked(etiquetaServico.listarEtiquetas).mockResolvedValue([]);
+  // GraficoLinha/GraficoPizza usam usePrefersReducedMotion, que chama
+  // matchMedia no mount — jsdom nao implementa isto por padrao.
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  );
 });
 
 describe('Dashboard', () => {

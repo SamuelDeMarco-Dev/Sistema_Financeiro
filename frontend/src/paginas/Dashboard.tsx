@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { EstadoErro, EstadoVazio } from '@/componentes/feedback';
+import { GraficoLinha, GraficoPizza } from '@/componentes/graficos';
 import { Botao } from '@/componentes/ui/Botao';
 import { AcaoRapidaMobile } from '@/funcionalidades/dashboard/componentes/AcaoRapidaMobile';
 import { EsqueletoSecao } from '@/funcionalidades/dashboard/componentes/EsqueletoSecao';
 import { SecaoAlertas } from '@/funcionalidades/dashboard/componentes/SecaoAlertas';
 import { SecaoContas } from '@/funcionalidades/dashboard/componentes/SecaoContas';
-import { SecaoFluxoCaixa } from '@/funcionalidades/dashboard/componentes/SecaoFluxoCaixa';
 import { SecaoIndicadores } from '@/funcionalidades/dashboard/componentes/SecaoIndicadores';
-import { SecaoPorCategoria } from '@/funcionalidades/dashboard/componentes/SecaoPorCategoria';
 import { SecaoUltimasMovimentacoes } from '@/funcionalidades/dashboard/componentes/SecaoUltimasMovimentacoes';
 import { SelecionadorPeriodo } from '@/funcionalidades/dashboard/componentes/SelecionadorPeriodo';
 import { useDashboard } from '@/funcionalidades/dashboard/hooks/useDashboard';
@@ -97,8 +96,8 @@ export function Dashboard(): ReactElement {
             <SecaoIndicadores indicadores={data.indicadores} />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <SecaoFluxoCaixa pontos={data.fluxoCaixa} />
-              <SecaoPorCategoria itens={data.despesasPorCategoria} />
+              <GraficoLinha titulo="Fluxo de caixa (12 meses)" pontos={data.fluxoCaixa} />
+              <GraficoPizza titulo="Despesas por categoria" itens={data.despesasPorCategoria} />
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
