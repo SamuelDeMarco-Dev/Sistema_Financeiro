@@ -9,7 +9,7 @@ import type { ReactElement } from 'react';
 import type { TooltipValueType } from 'recharts';
 
 export interface ItemGraficoPizza {
-  categoria: { id: string; nome: string; cor: string };
+  categoria: { id?: string; nome: string; cor: string };
   total: string;
   percentual: number;
 }
@@ -80,7 +80,7 @@ export function GraficoPizza({ titulo, itens }: GraficoPizzaProps): ReactElement
           titulo={titulo}
           colunas={COLUNAS}
           linhas={itens}
-          obterChaveLinha={(item) => item.categoria.id}
+          obterChaveLinha={(item) => item.categoria.id ?? item.categoria.nome}
         />
       }
     >

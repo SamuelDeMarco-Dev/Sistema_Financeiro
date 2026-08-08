@@ -9,7 +9,7 @@ export function MenuLateral(): ReactElement {
   return (
     <nav
       aria-label="Navegação principal"
-      className="hidden w-56 shrink-0 border-r border-borda bg-superficie p-4 lg:block"
+      className="hidden w-56 shrink-0 border-r border-borda bg-superficie p-4 lg:block print:hidden"
     >
       <ul className="flex flex-col gap-1">
         {ITENS_NAVEGACAO.map((item) => (

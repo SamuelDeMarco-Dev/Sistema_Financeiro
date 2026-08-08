@@ -12,6 +12,7 @@ export interface ItemNavegacao {
 export const ITENS_NAVEGACAO: ItemNavegacao[] = [
   { rotulo: 'Início', para: '/', fim: true },
   { rotulo: 'Movimentações', para: '/movimentacoes' },
+  { rotulo: 'Relatórios', para: '/relatorios' },
   { rotulo: 'Contas', para: '/contas' },
   { rotulo: 'Categorias', para: '/categorias' },
   { rotulo: 'Configurações', para: '/configuracoes' },

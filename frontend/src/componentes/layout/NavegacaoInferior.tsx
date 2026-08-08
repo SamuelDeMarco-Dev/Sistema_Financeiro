@@ -10,7 +10,7 @@ export function NavegacaoInferior(): ReactElement {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-10 flex border-t border-borda bg-superficie lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-10 flex border-t border-borda bg-superficie lg:hidden print:hidden"
     >
       {ITENS_NAVEGACAO.map((item) => (
         <NavLink
