@@ -1,25 +1,34 @@
 import { Prisma } from '@prisma/client';
 import { RelatorioRepositorio } from '@/repositorios/relatorio.repositorio';
+import { deDataIso } from '@/utilitarios/data';
 import {
+  mapearFluxoAcumulado,
   mapearMaioresDespesas,
   mapearPorCategoriaSimples,
   mapearPorConta,
+  mapearPorContaComSaldos,
   mapearPorDia,
   mapearPorMes,
 } from '@/utilitarios/mapear-relatorio';
 import type {
   MaiorDespesaDTO,
+  PontoFluxoAcumuladoDTO,
   PorCategoriaSimplesDTO,
+  PorContaComSaldosDTO,
   PorContaDTO,
   PorDiaDTO,
   PorMesDTO,
 } from '@/utilitarios/mapear-relatorio';
 import { percentualVariacao } from '@/utilitarios/percentual';
 import { mesAnteriorCalendario, primeiroEUltimoDiaDoMes } from '@/utilitarios/periodo';
+import type { Periodo } from '@/utilitarios/periodo';
 import { rotuloMesCompleto } from '@/utilitarios/rotulos-data';
 import type {
   ObterRelatorioAnualQuery,
+  ObterRelatorioFluxoCaixaQuery,
   ObterRelatorioMensalQuery,
+  ObterRelatorioPorCategoriaQuery,
+  ObterRelatorioPorContaQuery,
 } from '@/validadores/relatorios.validador';
 
 const CASAS_PERCENTUAL = 2;
@@ -178,6 +187,101 @@ export class RelatorioServico {
       piorMes: { mes: piorMes.mes, resultado: piorMes.resultado },
     };
   }
+
+  /** RF-73 (#52): periodo livre (dataInicio/dataFim obrigatorias, teto de
+   * 5 anos ja validado no schema) — mesma base de caixa da classe, agora
+   * com `incluirSubcategorias` (#49 tem o mesmo parametro no dashboard). */
+  async obterPorCategoria(
+    usuarioId: string,
+    query: ObterRelatorioPorCategoriaQuery,
+  ): Promise<{
+    periodo: { dataInicio: string; dataFim: string };
+    tipo: ObterRelatorioPorCategoriaQuery['tipo'];
+    itens: PorCategoriaSimplesDTO[];
+    total: Prisma.Decimal;
+  }> {
+    const periodo = periodoDaQuery(query);
+    const linhas = await this.repositorio.obterPorCategoriaEfetivada(
+      usuarioId,
+      query.tipo,
+      periodo,
+      query.incluirSubcategorias,
+    );
+    const itens = mapearPorCategoriaSimples(linhas);
+
+    return {
+      periodo: { dataInicio: query.dataInicio, dataFim: query.dataFim },
+      tipo: query.tipo,
+      itens,
+      total: somarDecimais(itens.map((item) => item.total)),
+    };
+  }
+
+  /** RF-73 (#52): saldoInicial/saldoFinal calculados por conta (nao so o
+   * consolidado do relatorio mensal) — "soma por conta confere com o
+   * total geral do periodo" e satisfeito porque `itens` e `totais` vem
+   * da mesma consulta base (`obterPorConta`), so agregada diferente. */
+  async obterPorConta(
+    usuarioId: string,
+    query: ObterRelatorioPorContaQuery,
+  ): Promise<{
+    periodo: { dataInicio: string; dataFim: string };
+    itens: PorContaComSaldosDTO[];
+    totais: { receitas: Prisma.Decimal; despesas: Prisma.Decimal; resultado: Prisma.Decimal };
+  }> {
+    const periodo = periodoDaQuery(query);
+    const inicioProximoDia = new Date(periodo.dataFim.getTime() + UM_DIA_MS);
+
+    const [linhas, saldoInicialPorConta, saldoFinalPorConta] = await Promise.all([
+      this.repositorio.obterPorConta(usuarioId, periodo),
+      this.repositorio.calcularSaldoPorContaAntesDe(usuarioId, periodo.dataInicio),
+      this.repositorio.calcularSaldoPorContaAntesDe(usuarioId, inicioProximoDia),
+    ]);
+    const itens = mapearPorContaComSaldos(linhas, saldoInicialPorConta, saldoFinalPorConta);
+    const receitas = somarDecimais(itens.map((item) => item.receitas));
+    const despesas = somarDecimais(itens.map((item) => item.despesas));
+
+    return {
+      periodo: { dataInicio: query.dataInicio, dataFim: query.dataFim },
+      itens,
+      totais: { receitas, despesas, resultado: receitas.minus(despesas) },
+    };
+  }
+
+  /** RF-74 (#52): saldo acumulado a partir do saldoInicial consolidado —
+   * "termina no saldo atual da conta" (criterio de aceite) vale quando
+   * `dataFim` cobre todas as efetivacoes ja registradas (ex.: hoje). */
+  async obterFluxoCaixa(
+    usuarioId: string,
+    query: ObterRelatorioFluxoCaixaQuery,
+  ): Promise<{
+    periodo: { dataInicio: string; dataFim: string };
+    granularidade: ObterRelatorioFluxoCaixaQuery['granularidade'];
+    saldoInicial: Prisma.Decimal;
+    pontos: PontoFluxoAcumuladoDTO[];
+    saldoFinal: Prisma.Decimal;
+  }> {
+    const periodo = periodoDaQuery(query);
+
+    const [saldoInicial, linhas] = await Promise.all([
+      this.repositorio.calcularSaldoAntesDe(usuarioId, periodo.dataInicio),
+      this.repositorio.obterFluxoAcumulado(usuarioId, periodo, query.granularidade),
+    ]);
+    const pontos = mapearFluxoAcumulado(linhas, saldoInicial);
+    const ultimoPonto = pontos[pontos.length - 1];
+
+    return {
+      periodo: { dataInicio: query.dataInicio, dataFim: query.dataFim },
+      granularidade: query.granularidade,
+      saldoInicial,
+      pontos,
+      saldoFinal: ultimoPonto?.saldoAcumulado ?? saldoInicial,
+    };
+  }
+}
+
+function periodoDaQuery(query: { dataInicio: string; dataFim: string }): Periodo {
+  return { dataInicio: deDataIso(query.dataInicio), dataFim: deDataIso(query.dataFim) };
 }
 
 function somarDecimais(valores: Prisma.Decimal[]): Prisma.Decimal {

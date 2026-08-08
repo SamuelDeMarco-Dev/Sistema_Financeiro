@@ -48,6 +48,18 @@ interface LinhaSaldo {
   saldo: Prisma.Decimal;
 }
 
+interface LinhaSaldoPorConta {
+  conta_id: string;
+  saldo: Prisma.Decimal;
+}
+
+export interface LinhaFluxoAcumulado {
+  bucket: Date;
+  delta: Prisma.Decimal;
+}
+
+export type Granularidade = 'DIARIA' | 'MENSAL';
+
 /** Base compartilhada por todas as consultas deste repositorio: RN-01/
  * RN-02/RN-03 na integra (valorPago, situacao PAGA/PAGA_PARCIALMENTE,
  * dataEfetivacao) — um relatorio de fechamento e um extrato de caixa, nao
@@ -89,6 +101,90 @@ export class RelatorioRepositorio {
     return linhas[0]?.saldo ?? new Prisma.Decimal(0);
   }
 
+  /** Mesma ideia de `calcularSaldoAntesDe`, mas por conta — usada pelo
+   * relatorio por conta (#52), que precisa do saldoInicial/saldoFinal de
+   * CADA conta, nao so do consolidado. */
+  async calcularSaldoPorContaAntesDe(
+    usuarioId: string,
+    data: Date,
+  ): Promise<Map<string, Prisma.Decimal>> {
+    const linhas = await prisma.$queryRaw<LinhaSaldoPorConta[]>`
+      SELECT c.id AS conta_id, c.saldo_inicial + COALESCE(SUM(
+        CASE
+          WHEN m.tipo = 'RECEITA' THEN m.valor_pago
+          WHEN m.tipo = 'DESPESA' THEN -m.valor_pago
+          WHEN m.tipo = 'TRANSFERENCIA' AND m.sentido = 'ENTRADA' THEN m.valor_pago
+          WHEN m.tipo = 'TRANSFERENCIA' AND m.sentido = 'SAIDA'   THEN -m.valor_pago
+        END
+      ), 0) AS saldo
+      FROM contas c
+      LEFT JOIN movimentacoes m
+        ON m.conta_id = c.id
+       AND m.excluido_em IS NULL
+       AND m.eh_modelo_recorrencia = false
+       AND m.situacao IN ('PAGA', 'PAGA_PARCIALMENTE')
+       AND m.data_efetivacao < ${data}::date
+      WHERE c.usuario_id = ${usuarioId}
+        AND c.excluido_em IS NULL
+      GROUP BY c.id, c.saldo_inicial
+    `;
+    return new Map(linhas.map((linha) => [linha.conta_id, linha.saldo]));
+  }
+
+  /** RF-74: delta assinado (RN-01, inclui transferencias) por "bucket" de
+   * tempo — a base do fluxo de caixa acumulado, diferente de
+   * `obterPorConta`/`obterPorCategoriaEfetivada` (que excluem
+   * transferencias, RN-25): aqui o objetivo e reconciliar o saldo, nao
+   * medir receita/despesa. `generate_series` preenche buckets sem
+   * movimentacao com delta zero, mesmo padrao de `obterPorMesDoAno`. */
+  async obterFluxoAcumulado(
+    usuarioId: string,
+    periodo: Periodo,
+    granularidade: Granularidade,
+  ): Promise<LinhaFluxoAcumulado[]> {
+    // `date_trunc`/`generate_series` aceitam a unidade como parametro de
+    // texto (nao um identificador SQL) — nao precisa de Prisma.raw aqui,
+    // so passar 'day'/'month' como valor normal, ja parametrizado.
+    const unidade = granularidade === 'DIARIA' ? 'day' : 'month';
+    const passo = granularidade === 'DIARIA' ? '1 day' : '1 month';
+
+    return prisma.$queryRaw<LinhaFluxoAcumulado[]>(Prisma.sql`
+      WITH buckets AS (
+        SELECT generate_series(
+          date_trunc(${unidade}, ${periodo.dataInicio}::date),
+          date_trunc(${unidade}, ${periodo.dataFim}::date),
+          ${passo}::interval
+        )::date AS bucket
+      )
+      SELECT
+        b.bucket,
+        COALESCE(SUM(
+          CASE
+            WHEN m.tipo = 'RECEITA' THEN m.valor_pago
+            WHEN m.tipo = 'DESPESA' THEN -m.valor_pago
+            WHEN m.tipo = 'TRANSFERENCIA' AND m.sentido = 'ENTRADA' THEN m.valor_pago
+            WHEN m.tipo = 'TRANSFERENCIA' AND m.sentido = 'SAIDA'   THEN -m.valor_pago
+          END
+        ), 0) AS delta
+      FROM buckets b
+      LEFT JOIN movimentacoes m
+        ON date_trunc(${unidade}, m.data_efetivacao) = b.bucket
+       AND m.usuario_id = ${usuarioId}
+       AND m.excluido_em IS NULL
+       AND m.eh_modelo_recorrencia = false
+       AND m.situacao IN ('PAGA', 'PAGA_PARCIALMENTE')
+       AND m.conta_id IN (
+         SELECT id FROM contas
+         WHERE usuario_id = ${usuarioId}
+           AND excluido_em IS NULL
+           AND arquivada_em IS NULL
+           AND incluir_no_saldo_total = true
+       )
+      GROUP BY b.bucket
+      ORDER BY b.bucket
+    `);
+  }
+
   /** RN-25: exclui transferencias (tipo fixo RECEITA/DESPESA); so conta o
    * que de fato efetivou (cash basis) dentro do periodo. */
   async somarReceitasEDespesasEfetivadas(
@@ -119,12 +215,18 @@ export class RelatorioRepositorio {
   }
 
   /** Mesma agregacao por categoria de #49, mas em base de caixa — ver
-   * nota de classe. */
+   * nota de classe. `incluirSubcategorias` (usada por #52; #51 sempre
+   * agrupa na raiz) segue o mesmo padrao de `DashboardRepositorio`. */
   async obterPorCategoriaEfetivada(
     usuarioId: string,
     tipo: TipoMovimentacao,
     periodo: Periodo,
+    incluirSubcategorias = false,
   ): Promise<LinhaPorCategoria[]> {
+    const chaveAgrupamento = incluirSubcategorias
+      ? Prisma.sql`cat.id`
+      : Prisma.sql`COALESCE(cat.categoria_pai_id, cat.id)`;
+
     return prisma.$queryRaw<LinhaPorCategoria[]>(Prisma.sql`
       SELECT
         grp.id AS categoria_id,
@@ -135,7 +237,7 @@ export class RelatorioRepositorio {
         COUNT(*)::int AS quantidade
       FROM movimentacoes m
       LEFT JOIN categorias cat ON cat.id = m.categoria_id
-      LEFT JOIN categorias grp ON grp.id = COALESCE(cat.categoria_pai_id, cat.id)
+      LEFT JOIN categorias grp ON grp.id = ${chaveAgrupamento}
       WHERE m.usuario_id = ${usuarioId}
         AND m.tipo = ${tipo}::"TipoMovimentacao"
         AND m.situacao IN ('PAGA', 'PAGA_PARCIALMENTE')

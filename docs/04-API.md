@@ -2551,7 +2551,80 @@ Agrega em **uma** requisição tudo o que a tela inicial precisa, evitando 6 cha
 }
 ```
 
-### 22.3 `GET /relatorios/comparativo` 🔒
+### 22.3 `GET /relatorios/por-categoria` 🔒
+
+Período livre (não tem padrão — `dataInicio`/`dataFim` são obrigatórias), diferente do bloco equivalente do dashboard (`/dashboard/por-categoria`, §21.2), que sempre usa o mês corrente como padrão. Base de caixa (RN-01 a RN-03: `valorPago`/`dataEfetivacao`), igual aos relatórios mensal/anual — não a projeção por competência do dashboard.
+
+**Query:** `dataInicio`, `dataFim` (obrig., intervalo máximo de 5 anos), `tipo` (`RECEITA`|`DESPESA`, padrão `DESPESA`), `incluirSubcategorias` (padrão `false` — agrupa na raiz), `contaCompartilhadaId`.
+
+```json
+{
+  "success": true,
+  "message": "Relatório por categoria gerado.",
+  "data": {
+    "periodo": { "dataInicio": "2026-01-01", "dataFim": "2026-12-31" },
+    "tipo": "DESPESA",
+    "itens": [
+      {
+        "categoria": { "nome": "Mercado", "cor": "#F97316" },
+        "total": "5842.30",
+        "percentual": 24.16,
+        "quantidade": 42
+      }
+    ],
+    "total": "24180.55"
+  }
+}
+```
+
+### 22.4 `GET /relatorios/por-conta` 🔒
+
+**Query:** `dataInicio`, `dataFim` (obrig., intervalo máximo de 5 anos), `contaCompartilhadaId`.
+
+```json
+{
+  "success": true,
+  "message": "Relatório por conta gerado.",
+  "data": {
+    "periodo": { "dataInicio": "2026-01-01", "dataFim": "2026-12-31" },
+    "itens": [
+      {
+        "conta": { "id": "clx_conta_1", "nome": "Banco Principal" },
+        "receitas": "38400.00",
+        "despesas": "22480.15",
+        "resultado": "15919.85",
+        "saldoInicial": "2150.80",
+        "saldoFinal": "18070.65"
+      }
+    ],
+    "totais": { "receitas": "38400.00", "despesas": "22480.15", "resultado": "15919.85" }
+  }
+}
+```
+
+A soma de `itens[].receitas`/`despesas` sempre confere com `totais` — mesma base de dados, só agregada de outra forma.
+
+### 22.5 `GET /relatorios/fluxo-caixa` 🔒
+
+Evolução do saldo consolidado do usuário ao longo do período, dia a dia ou mês a mês — diferente de `/dashboard/fluxo-caixa` (§21.2), que é sempre mensal e sempre "os últimos N meses". `saldoAcumulado` do último ponto coincide com o saldo atual consolidado quando `dataFim` cobre todas as efetivações já registradas (ex.: hoje).
+
+**Query:** `dataInicio`, `dataFim` (obrig., intervalo máximo de 5 anos), `granularidade` (`DIARIA`|`MENSAL`, padrão `MENSAL`), `contaCompartilhadaId`.
+
+```json
+{
+  "success": true,
+  "message": "Relatório de fluxo de caixa gerado.",
+  "data": {
+    "periodo": { "dataInicio": "2026-01-01", "dataFim": "2026-12-31" },
+    "granularidade": "MENSAL",
+    "saldoInicial": "2150.80",
+    "pontos": [{ "data": "2026-01-01", "delta": "1655.90", "saldoAcumulado": "3806.70" }],
+    "saldoFinal": "18070.65"
+  }
+}
+```
+
+### 22.6 `GET /relatorios/comparativo` 🔒
 
 **Query:** `periodoAInicio`, `periodoAFim`, `periodoBInicio`, `periodoBFim`, `agruparPor` (`CATEGORIA`|`CONTA`|`MES`).
 
@@ -2575,7 +2648,7 @@ Agrega em **uma** requisição tudo o que a tela inicial precisa, evitando 6 cha
 }
 ```
 
-### 22.4 `POST /relatorios/exportar` 🔒
+### 22.7 `POST /relatorios/exportar` 🔒
 
 ```json
 {
