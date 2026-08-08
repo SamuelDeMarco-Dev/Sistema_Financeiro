@@ -16,6 +16,7 @@ export function MenuLateral(): ReactElement {
           <li key={item.para}>
             <NavLink
               to={item.para}
+              end={item.fim ?? false}
               className={({ isActive }) =>
                 cn(
                   'block rounded-md px-3 py-2 text-sm font-medium text-texto transition-colors hover:bg-borda',

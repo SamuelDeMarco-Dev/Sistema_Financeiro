@@ -9,8 +9,8 @@ import type { ReactElement, ReactNode } from 'react';
 
 // React.lazy: cada pagina vira um chunk separado, carregado sob demanda na
 // navegacao (nunca no bundle inicial).
-const Inicio = lazy(() =>
-  import('@/paginas/Inicio').then((modulo) => ({ default: modulo.Inicio })),
+const Dashboard = lazy(() =>
+  import('@/paginas/Dashboard').then((modulo) => ({ default: modulo.Dashboard })),
 );
 const Entrar = lazy(() =>
   import('@/paginas/Entrar').then((modulo) => ({ default: modulo.Entrar })),
@@ -51,14 +51,6 @@ export const rotas = createBrowserRouter([
   {
     element: <LayoutPublico />,
     children: [
-      {
-        index: true,
-        element: (
-          <ComSuspense>
-            <Inicio />
-          </ComSuspense>
-        ),
-      },
       {
         // Acessivel independente de sessao: o link do e-mail pode ser aberto
         // deslogado (caso comum) ou logado, e verificar precisa funcionar
@@ -117,9 +109,17 @@ export const rotas = createBrowserRouter([
     children: [
       {
         element: <LayoutAutenticado />,
-        // Demais paginas autenticadas (Dashboard, Movimentacoes, ...) entram
-        // aqui conforme cada funcionalidade chega, uma issue por vez.
+        // Demais paginas autenticadas entram aqui conforme cada
+        // funcionalidade chega, uma issue por vez.
         children: [
+          {
+            index: true,
+            element: (
+              <ComSuspense>
+                <Dashboard />
+              </ComSuspense>
+            ),
+          },
           {
             path: 'configuracoes',
             element: (

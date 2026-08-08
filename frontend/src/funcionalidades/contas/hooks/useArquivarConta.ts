@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificar } from '@/componentes/feedback';
+import { chavesDashboard } from '@/funcionalidades/dashboard/hooks/useDashboard';
 import type { ErroApi } from '@/servicos/erro-api';
 import { chavesContas } from './useContas';
 import { arquivarConta } from '../servicos/conta.servico';
@@ -13,6 +14,7 @@ export function useArquivarConta(): UseMutationResult<Conta, ErroApi, string> {
     mutationFn: arquivarConta,
     onSuccess: () => {
       void clienteConsulta.invalidateQueries({ queryKey: chavesContas.todas });
+      void clienteConsulta.invalidateQueries({ queryKey: chavesDashboard.todas });
       notificar.sucesso('Conta arquivada.');
     },
   });

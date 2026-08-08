@@ -16,6 +16,7 @@ export function NavegacaoInferior(): ReactElement {
         <NavLink
           key={item.para}
           to={item.para}
+          end={item.fim ?? false}
           className={({ isActive }) =>
             cn(
               'flex min-h-[44px] flex-1 items-center justify-center text-sm font-medium text-textoSuave transition-colors',
