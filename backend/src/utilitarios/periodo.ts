@@ -31,6 +31,16 @@ export function ultimosMeses(quantidadeMeses: number, dataReferencia: Date): Per
   };
 }
 
+/** RF-72: primeiro/ultimo dia do mes de CALENDARIO anterior a (ano, mes)
+ * 1-indexado — usado pelo comparativo do relatorio mensal, que compara
+ * com "o mes anterior" mesmo (fevereiro vs janeiro), nao com um periodo
+ * de mesma duracao em dias (isso e RF-47, que serve ao dashboard, cujo
+ * periodo pode ser arbitrario). `Date.UTC` com mes -1 rola para dezembro
+ * do ano anterior de proposito — evita um `if (mes === 1)` a parte. */
+export function mesAnteriorCalendario(ano: number, mes: number): Periodo {
+  return primeiroEUltimoDiaDoMes(new Date(Date.UTC(ano, mes - 2, 1)));
+}
+
 /** RF-47 (variacao dos indicadores): periodo imediatamente anterior, com a
  * mesma duracao em dias — nao "o mes anterior", que teria um numero
  * diferente de dias (fevereiro inclusive). Comparar por duracao igual e o

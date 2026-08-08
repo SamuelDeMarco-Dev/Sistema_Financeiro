@@ -46,3 +46,9 @@ export function rotuloMesAbreviado(data: Date): string {
   const anoCurto = String(data.getUTCFullYear()).slice(-2);
   return `${mes}/${anoCurto}`;
 }
+
+/** RF-72: rotulo do `porMes` do relatorio anual — "jan", sem ano (o ano
+ * ja e um campo proprio da resposta, repeti-lo em cada mes seria ruido). */
+export function rotuloMesSemAno(data: Date): string {
+  return MESES_ABREVIADOS[data.getUTCMonth()] ?? '???';
+}

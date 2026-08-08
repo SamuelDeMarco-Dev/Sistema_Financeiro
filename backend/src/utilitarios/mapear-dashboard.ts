@@ -2,10 +2,10 @@ import { Prisma } from '@prisma/client';
 import type { ContaComSaldo } from '@/repositorios/conta.repositorio';
 import type { LinhaFluxoCaixa, LinhaPorCategoria } from '@/repositorios/dashboard.repositorio';
 import { paraDataIso, paraMesIso } from '@/utilitarios/data';
+import { distribuirPercentuais } from '@/utilitarios/percentual';
 import type { Periodo } from '@/utilitarios/periodo';
 import { rotuloMesAbreviado, rotuloMesCompleto } from '@/utilitarios/rotulos-data';
 
-const CASAS_PERCENTUAL = 2;
 export const SEM_CATEGORIA_ID = 'sem-categoria';
 
 export interface PeriodoDTO {
@@ -58,18 +58,14 @@ export interface PorCategoriaItemDTO {
   quantidade: number;
 }
 
-/** RF-42: cada `total`/`quantidade` vem pronto da consulta (issue #49);
- * so o `percentual` precisa de pos-processamento — arredondar cada item
- * para 2 casas e depois somar tudo quase nunca da exatamente 100,00 (erro
- * de arredondamento). Em vez disso, calcula todos os itens exceto o
- * ultimo (a lista vem ordenada por total decrescente) e da ao ultimo o
- * que falta para fechar 100,00 — a soma dos percentuais e SEMPRE exata. */
+/** RF-42: cada `total`/`quantidade` vem pronto da consulta (issue #49); o
+ * `percentual` vem de `distribuirPercentuais` (soma sempre exata 100,00,
+ * absorvendo o erro de arredondamento no ultimo item — por isso a lista
+ * ja precisa vir ordenada por total decrescente, como o repositorio faz). */
 export function mapearPorCategoria(linhas: LinhaPorCategoria[]): PorCategoriaItemDTO[] {
-  if (linhas.length === 0) return [];
+  const percentuais = distribuirPercentuais(linhas.map((linha) => linha.total));
 
-  const somaTotal = linhas.reduce((soma, linha) => soma.plus(linha.total), new Prisma.Decimal(0));
-
-  const itens = linhas.map((linha) => ({
+  return linhas.map((linha, indice) => ({
     categoria: {
       id: linha.categoria_id ?? SEM_CATEGORIA_ID,
       nome: linha.categoria_nome ?? 'Sem categoria',
@@ -77,27 +73,9 @@ export function mapearPorCategoria(linhas: LinhaPorCategoria[]): PorCategoriaIte
       icone: linha.categoria_icone ?? 'tag',
     },
     total: linha.total,
-    percentual: 0,
+    percentual: percentuais[indice] ?? 0,
     quantidade: linha.quantidade,
   }));
-
-  let somaPercentuais = 0;
-  for (let indice = 0; indice < itens.length - 1; indice += 1) {
-    const item = itens[indice];
-    if (!item) continue;
-    item.percentual = somaTotal.isZero()
-      ? 0
-      : Number(item.total.dividedBy(somaTotal).times(100).toDecimalPlaces(CASAS_PERCENTUAL));
-    somaPercentuais += item.percentual;
-  }
-  const ultimo = itens[itens.length - 1];
-  if (ultimo) {
-    ultimo.percentual = somaTotal.isZero()
-      ? 0
-      : Number((100 - somaPercentuais).toFixed(CASAS_PERCENTUAL));
-  }
-
-  return itens;
 }
 
 export interface ContaResumoDashboardDTO {

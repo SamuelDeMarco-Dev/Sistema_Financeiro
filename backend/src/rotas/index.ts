@@ -7,6 +7,7 @@ import { dashboardRotas } from '@/rotas/dashboard.rotas';
 import { etiquetasRotas } from '@/rotas/etiquetas.rotas';
 import { movimentacoesRotas } from '@/rotas/movimentacoes.rotas';
 import { perfilRotas } from '@/rotas/perfil.rotas';
+import { relatoriosRotas } from '@/rotas/relatorios.rotas';
 import { saudeRotas } from '@/rotas/saude.rotas';
 import { transferenciasRotas } from '@/rotas/transferencias.rotas';
 
@@ -24,3 +25,4 @@ rotas.use(movimentacoesRotas);
 rotas.use(transferenciasRotas);
 rotas.use(anexosRotas);
 rotas.use(dashboardRotas);
+rotas.use(relatoriosRotas);

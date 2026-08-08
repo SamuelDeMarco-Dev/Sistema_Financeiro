@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
@@ -19,6 +18,7 @@ import type {
   PorCategoriaItemDTO,
 } from '@/utilitarios/mapear-dashboard';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
+import { percentualVariacao } from '@/utilitarios/percentual';
 import { periodoAnterior, primeiroEUltimoDiaDoMes, ultimosMeses } from '@/utilitarios/periodo';
 import type { Periodo } from '@/utilitarios/periodo';
 import { registrador } from '@/utilitarios/registrador';
@@ -53,15 +53,6 @@ const DIAS_ALERTA_VENCIMENTO = 7;
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const ULTIMAS_MOVIMENTACOES_LIMITE = 10;
 const CASAS_PERCENTUAL = 2;
-
-/** RF-47: variacao percentual de `atual` contra `anterior` — 0 quando nao
- * ha base de comparacao (periodo anterior zerado), nunca `NaN`/`Infinity`. */
-function percentualVariacao(atual: Prisma.Decimal, anterior: Prisma.Decimal): number {
-  if (anterior.isZero()) return 0;
-  return Number(
-    atual.minus(anterior).dividedBy(anterior).times(100).toDecimalPlaces(CASAS_PERCENTUAL),
-  );
-}
 
 export class DashboardServico {
   constructor(
