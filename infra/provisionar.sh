@@ -55,6 +55,13 @@ mkdir -p /var/www/{pfm,pfm-staging,certbot}
 chown -R "$USUARIO_DEPLOY:$USUARIO_DEPLOY" /var/pfm /var/www/pfm /var/www/pfm-staging
 chmod 750 /var/pfm/uploads /var/pfm/backups
 
+# /var/pfm/uploads e bind mount de dentro do container (docker-compose.prod.yml),
+# onde o processo roda como o usuario `node` da imagem node:22-alpine — uid/gid
+# 1000 fixo, nao o do usuario `deploy` do host. Sem isto, a API sobe mas
+# /api/v1/saude/prontidao reporta "armazenamento: EACCES" (achado no ensaio
+# de rollback da issue #61).
+chown 1000:1000 /var/pfm/uploads
+
 echo "▶ Swap de 2 GB"
 if [ ! -f /swapfile ]; then
   fallocate -l 2G /swapfile
