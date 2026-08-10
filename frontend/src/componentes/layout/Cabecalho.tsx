@@ -20,7 +20,7 @@ export function Cabecalho(): ReactElement {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-borda bg-superficie px-4 py-3 md:px-8">
+    <header className="flex items-center justify-between border-b border-borda bg-superficie px-4 py-3 md:px-8 print:hidden">
       <span className="text-lg font-semibold text-texto">Gerenciador de Finanças</span>
 
       {usuario ? (

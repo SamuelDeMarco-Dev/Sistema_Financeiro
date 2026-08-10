@@ -171,6 +171,14 @@ export function paraDataIso(data: Date): string {
   return `${ano}-${mes}-${dia}`;
 }
 
+/** RF-41: chave de mes no formato AAAA-MM — identifica cada ponto do fluxo
+ * de caixa, independente do rotulo (que e o abreviado em pt-BR). */
+export function paraMesIso(data: Date): string {
+  const ano = String(data.getUTCFullYear()).padStart(4, '0');
+  const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+  return `${ano}-${mes}`;
+}
+
 /** RN-13: dataCompetencia entre hoje-20anos e hoje+10anos. Os limites sao
  * calculados a cada chamada (nunca no carregamento do modulo) para que o
  * teste de fronteira nao dependa de quando o processo comecou a rodar. */

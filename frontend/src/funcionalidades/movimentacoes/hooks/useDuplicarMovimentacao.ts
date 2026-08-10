@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificar } from '@/componentes/feedback';
 import { chavesContas } from '@/funcionalidades/contas/hooks/useContas';
+import { chavesDashboard } from '@/funcionalidades/dashboard/hooks/useDashboard';
 import type { ErroApi } from '@/servicos/erro-api';
 import { chavesMovimentacoes } from './useMovimentacoes';
 import { duplicarMovimentacao } from '../servicos/movimentacao.servico';
@@ -15,6 +16,7 @@ export function useDuplicarMovimentacao(): UseMutationResult<Movimentacao, ErroA
     onSuccess: () => {
       void clienteConsulta.invalidateQueries({ queryKey: chavesMovimentacoes.todas });
       void clienteConsulta.invalidateQueries({ queryKey: chavesContas.todas });
+      void clienteConsulta.invalidateQueries({ queryKey: chavesDashboard.todas });
       notificar.sucesso('Movimentação duplicada.');
     },
   });

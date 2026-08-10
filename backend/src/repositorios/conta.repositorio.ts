@@ -29,6 +29,28 @@ export interface FiltrosListarContas {
 
 export type ContaResumo = Pick<Conta, 'id' | 'nome' | 'tipo' | 'cor' | 'icone'>;
 
+interface LinhaVwSaldoConta {
+  saldo_atual: Prisma.Decimal;
+}
+
+export interface ContaComSaldo {
+  id: string;
+  nome: string;
+  tipo: TipoConta;
+  cor: string;
+  icone: string;
+  saldoAtual: Prisma.Decimal;
+}
+
+interface LinhaContaComSaldo {
+  id: string;
+  nome: string;
+  tipo: TipoConta;
+  cor: string;
+  icone: string;
+  saldo_atual: Prisma.Decimal;
+}
+
 export class ContaRepositorio {
   async listarPorUsuario(usuarioId: string, filtros: FiltrosListarContas): Promise<Conta[]> {
     return prisma.conta.findMany({
@@ -88,34 +110,16 @@ export class ContaRepositorio {
     return prisma.movimentacao.count({ where: { contaId: id, excluidoEm: null } });
   }
 
-  /** RN-01, RN-02, RN-03: soma valorPago (nao valor) das movimentacoes
-   * efetivadas (PAGA/PAGA_PARCIALMENTE) — pagamento parcial afeta o saldo
-   * so pela parte paga. Transferencias somam por sentido. Modelos de
-   * recorrencia e movimentacoes excluidas nunca entram (mesmo filtro do
-   * indice parcial idx_mov_saldo). M4 (issue #46) substitui isto por
-   * `vw_saldo_conta` para nao repetir esta agregacao em toda consulta. */
+  /** RN-01, RN-02, RN-03: le o saldo agregado (saldoInicial + receitas -
+   * despesas + entradas - saidas de transferencia, tudo por valorPago) de
+   * `vw_saldo_conta` (03-DATABASE.md §8.7, issue #46) em vez de repetir o
+   * `groupBy` em toda consulta. A view nao e materializada (ADR-005): o
+   * resultado e sempre consistente com a escrita mais recente. */
   async calcularSaldoAtual(conta: ContaComSaldoInicial & { id: string }): Promise<Prisma.Decimal> {
-    const grupos = await prisma.movimentacao.groupBy({
-      by: ['tipo', 'sentido'],
-      where: {
-        contaId: conta.id,
-        excluidoEm: null,
-        ehModeloRecorrencia: false,
-        situacao: { in: ['PAGA', 'PAGA_PARCIALMENTE'] },
-      },
-      _sum: { valorPago: true },
-    });
-
-    let saldo = conta.saldoInicial;
-    for (const grupo of grupos) {
-      const valor = grupo._sum.valorPago ?? new Prisma.Decimal(0);
-      if (grupo.tipo === 'RECEITA') saldo = saldo.plus(valor);
-      else if (grupo.tipo === 'DESPESA') saldo = saldo.minus(valor);
-      // Unico tipo restante e TRANSFERENCIA — o sinal vem do sentido.
-      else if (grupo.sentido === 'ENTRADA') saldo = saldo.plus(valor);
-      else if (grupo.sentido === 'SAIDA') saldo = saldo.minus(valor);
-    }
-    return saldo;
+    const linhas = await prisma.$queryRaw<LinhaVwSaldoConta[]>`
+      SELECT saldo_atual FROM vw_saldo_conta WHERE conta_id = ${conta.id}
+    `;
+    return linhas[0]?.saldo_atual ?? conta.saldoInicial;
   }
 
   /** RN-04: saldo atual acrescido das pendentes/atrasadas — sem recorte
@@ -155,5 +159,46 @@ export class ContaRepositorio {
     );
     const saldos = await Promise.all(elegiveis.map((conta) => this.calcularSaldoAtual(conta)));
     return somar(...saldos);
+  }
+
+  /** RN-01, RN-05: mesma elegibilidade de `calcularSaldoConsolidado`
+   * (nao arquivada, nao excluida, incluirNoSaldoTotal), mas numa unica
+   * consulta agregada em `vw_saldo_conta` — o dashboard (#47) nao pode
+   * pagar uma query por conta do usuario a cada carregamento. */
+  async calcularSaldoConsolidadoPorUsuario(usuarioId: string): Promise<Prisma.Decimal> {
+    const linhas = await prisma.$queryRaw<LinhaVwSaldoConta[]>`
+      SELECT COALESCE(SUM(v.saldo_atual), 0) AS saldo_atual
+      FROM vw_saldo_conta v
+      JOIN contas c ON c.id = v.conta_id
+      WHERE v.usuario_id = ${usuarioId}
+        AND c.incluir_no_saldo_total = true
+        AND c.arquivada_em IS NULL
+    `;
+    return linhas[0]?.saldo_atual ?? new Prisma.Decimal(0);
+  }
+
+  /** RF-40: cartoes-resumo de contas do dashboard — todas as contas
+   * ativas do usuario (nao arquivadas/excluidas), com o saldo ja
+   * resolvido via `vw_saldo_conta` numa unica consulta, independente de
+   * `incluirNoSaldoTotal` (aqui o usuario quer ver o cartao da conta,
+   * nao so as que somam no total geral). */
+  async listarComSaldoPorUsuario(usuarioId: string): Promise<ContaComSaldo[]> {
+    const linhas = await prisma.$queryRaw<LinhaContaComSaldo[]>`
+      SELECT c.id, c.nome, c.tipo, c.cor, c.icone, v.saldo_atual
+      FROM contas c
+      JOIN vw_saldo_conta v ON v.conta_id = c.id
+      WHERE c.usuario_id = ${usuarioId}
+        AND c.excluido_em IS NULL
+        AND c.arquivada_em IS NULL
+      ORDER BY c.ordem ASC
+    `;
+    return linhas.map((linha) => ({
+      id: linha.id,
+      nome: linha.nome,
+      tipo: linha.tipo,
+      cor: linha.cor,
+      icone: linha.icone,
+      saldoAtual: linha.saldo_atual,
+    }));
   }
 }

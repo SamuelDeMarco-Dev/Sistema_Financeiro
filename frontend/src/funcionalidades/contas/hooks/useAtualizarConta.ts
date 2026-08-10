@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificar } from '@/componentes/feedback';
+import { chavesDashboard } from '@/funcionalidades/dashboard/hooks/useDashboard';
 import type { ErroApi } from '@/servicos/erro-api';
 import { chavesContas } from './useContas';
 import { atualizarConta } from '../servicos/conta.servico';
@@ -18,6 +19,7 @@ export function useAtualizarConta(): UseMutationResult<
     mutationFn: ({ id, dados }) => atualizarConta(id, dados),
     onSuccess: () => {
       void clienteConsulta.invalidateQueries({ queryKey: chavesContas.todas });
+      void clienteConsulta.invalidateQueries({ queryKey: chavesDashboard.todas });
       notificar.sucesso('Conta atualizada com sucesso.');
     },
   });

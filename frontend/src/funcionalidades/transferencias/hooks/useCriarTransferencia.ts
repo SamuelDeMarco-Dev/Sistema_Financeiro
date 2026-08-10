@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificar } from '@/componentes/feedback';
 import { chavesContas } from '@/funcionalidades/contas/hooks/useContas';
+import { chavesDashboard } from '@/funcionalidades/dashboard/hooks/useDashboard';
 import { chavesMovimentacoes } from '@/funcionalidades/movimentacoes/hooks/useMovimentacoes';
 import type { ErroApi } from '@/servicos/erro-api';
 import { criarTransferencia } from '../servicos/transferencia.servico';
@@ -20,6 +21,7 @@ export function useCriarTransferencia(): UseMutationResult<
     onSuccess: () => {
       void clienteConsulta.invalidateQueries({ queryKey: chavesMovimentacoes.todas });
       void clienteConsulta.invalidateQueries({ queryKey: chavesContas.todas });
+      void clienteConsulta.invalidateQueries({ queryKey: chavesDashboard.todas });
       notificar.sucesso('Transferência realizada com sucesso.');
     },
   });
