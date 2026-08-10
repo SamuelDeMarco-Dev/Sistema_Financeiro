@@ -8,6 +8,10 @@ const app = criarServidor();
 
 const servidor = app.listen(ambiente.PORTA, () => {
   registrador.info(`API ouvindo em http://localhost:${ambiente.PORTA}`);
+  // Sinaliza prontidao ao PM2 (ecosystem.config.cjs `wait_ready`) — sem
+  // isto, o reload em cluster roteia trafego para instancias que ainda
+  // nao terminaram de subir.
+  process.send?.('ready');
 });
 
 iniciarAgendador();

@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.exemplo
+**/*.log
+.git
+backend/testes
+backend/uploads
+frontend
+docs
+infra
+*.md
