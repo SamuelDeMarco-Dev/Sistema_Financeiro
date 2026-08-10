@@ -1,4 +1,18 @@
 services:
+  # `docker compose run --rm migrator` (nao sobe com `up -d`, so via
+  # `run` — RN 08-CICD.md §7): imagem separada da `api` porque o CLI
+  # `prisma` (necessario so para `migrate deploy`) nao entra na imagem
+  # que fica no ar o tempo todo (backend/Dockerfile, estagio `runtime`
+  # vs. `migrator`).
+  migrator:
+    image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api-migrator:${TAG_IMAGEM:-latest}
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [pfm]
+    profiles: ['migrate']
+
   api:
     image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api:${TAG_IMAGEM:-latest}
     container_name: pfm-api
