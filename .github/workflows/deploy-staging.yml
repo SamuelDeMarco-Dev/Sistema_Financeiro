@@ -1,17 +1,12 @@
-name: Deploy Produção
+name: Deploy Homologação
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      tag_imagem:
-        description: 'Tag da imagem a publicar (vazio = SHA atual)'
-        required: false
+    branches: [staging]
 
 concurrency:
-  group: deploy-producao
-  cancel-in-progress: false # nunca cancelar um deploy em andamento
+  group: deploy-staging
+  cancel-in-progress: true # ao contrário de produção: staging pode cancelar um deploy antigo por um novo
 
 env:
   NODE_VERSAO: '22'
@@ -31,11 +26,10 @@ jobs:
     name: Construir artefatos
     needs: verificar
     runs-on: ubuntu-latest
-    # Sem isto, `secrets.URL_BASE_FRONTEND` (secret por-ambiente, RN
-    # 08-CICD.md §2.2) não resolveria aqui — só jobs com `environment:`
-    # enxergam o valor do ambiente correspondente.
+    # Sem isto, os secrets por-ambiente (08-CICD.md §2.2) resolveriam
+    # para o valor de "producao" (ou nenhum), nao o de "staging".
     environment:
-      name: producao
+      name: staging
     permissions:
       contents: read
       packages: write
@@ -45,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - id: tag
-        run: echo "valor=${{ inputs.tag_imagem || github.sha }}" >> "$GITHUB_OUTPUT"
+        run: echo "valor=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -54,10 +48,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Contexto = raiz do monorepo (workspaces npm, um único
-      # package-lock.json) — backend/Dockerfile depende do lockfile da
-      # raiz. `--target` é obrigatório: sem ele o build pega o último
-      # estágio do Dockerfile (`migrator`), não `runtime`.
       - name: Build e push da imagem da API (runtime)
         uses: docker/build-push-action@v5
         with:
@@ -67,7 +57,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:latest
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -80,7 +70,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:latest
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -90,13 +80,13 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # Build nativo no runner (nao via Docker): o frontend nao tem
-      # container proprio em producao (ADR-009).
+      # VITE_AMBIENTE=staging aciona o BannerHomologacao (RF #62) — a
+      # unica diferenca real do build de producao.
       - name: Build do frontend
         env:
           VITE_API_URL: ${{ secrets.URL_BASE_FRONTEND }}/api/v1
-          VITE_AMBIENTE: production
-          VITE_NOME_APP: 'Gerenciador de Finanças'
+          VITE_AMBIENTE: staging
+          VITE_NOME_APP: 'Gerenciador de Finanças (Homologação)'
         run: |
           npm ci
           npm run build --workspace=frontend
@@ -104,24 +94,21 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: frontend-dist
+          name: frontend-dist-staging
           path: frontend-dist.tar.gz
           retention-days: 3
 
   # ─────────────────────────────────────────────
   implantar:
-    name: Implantar na VPS
+    name: Implantar na VPS (homologação)
     needs: construir
     runs-on: ubuntu-latest
-    # `environment.url` só aceita os contextos env/github/inputs/job/matrix/
-    # needs/runner/steps/strategy/vars — "secrets" não é um deles, por isso
-    # não há `url:` aqui (URL_BASE_FRONTEND é secret, não var).
     environment:
-      name: producao
+      name: staging
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        with: { name: frontend-dist }
+        with: { name: frontend-dist-staging }
 
       - name: Configurar SSH
         run: |
@@ -135,19 +122,25 @@ jobs:
           scp -i ~/.ssh/id_deploy -P ${{ secrets.VPS_PORTA_SSH }} \
             frontend-dist.tar.gz \
             docker-compose.prod.yml \
-            infra/verificar-saude.sh infra/reverter.sh infra/backup.sh \
-            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }}:/var/pfm/producao/
+            infra/verificar-saude.sh \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }}:/var/pfm/staging/
 
       - name: Gerar .env no servidor
+        env:
+          TAG: ${{ needs.construir.outputs.tag }}
         run: |
           ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
             ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
-            "cat > /var/pfm/producao/.env && chmod 600 /var/pfm/producao/.env" <<'ENVEOF'
+            "cat > /var/pfm/staging/.env && chmod 600 /var/pfm/staging/.env" <<'ENVEOF'
           NODE_ENV=production
           PORTA=3333
           URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
           TAG_IMAGEM=${{ needs.construir.outputs.tag }}
           GITHUB_REPOSITORIO=${{ github.repository }}
+          NOME_CONTAINER_API=pfm-staging-api
+          NOME_CONTAINER_POSTGRES=pfm-staging-postgres
+          PORTA_API_PUBLICADA=3334
+          PORTA_POSTGRES_PUBLICADA=5433
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           POSTGRES_USUARIO=${{ secrets.POSTGRES_USUARIO }}
           POSTGRES_SENHA=${{ secrets.POSTGRES_SENHA }}
@@ -157,7 +150,7 @@ jobs:
           REFRESH_TOKEN_EXPIRACAO_DIAS=7
           REFRESH_TOKEN_EXPIRACAO_DIAS_LEMBRAR=30
           BCRYPT_CUSTO=12
-          ORIGENS_PERMITIDAS=${{ secrets.ORIGENS_PERMITIDAS }}
+          ORIGENS_PERMITIDAS=${{ secrets.URL_BASE_FRONTEND }}
           URL_BASE_FRONTEND=${{ secrets.URL_BASE_FRONTEND }}
           SMTP_HOST=${{ secrets.SMTP_HOST }}
           SMTP_PORTA=${{ secrets.SMTP_PORTA }}
@@ -171,28 +164,21 @@ jobs:
           RATE_LIMIT_JANELA_MINUTOS=15
           RATE_LIMIT_MAXIMO=1000
           NIVEL_LOG=info
-          HABILITAR_TAREFAS_AGENDADAS=true
-          TOKEN_METRICAS=${{ secrets.TOKEN_METRICAS }}
+          HABILITAR_TAREFAS_AGENDADAS=false
           ENVEOF
 
+      # Sem backup pré-migration (dispensável em staging, dados
+      # descartáveis) e sem rollback automático (08-CICD.md §8): o
+      # objetivo do ambiente é expor a versão quebrada para diagnóstico,
+      # não escondê-la atrás de um rollback silencioso.
       - name: Executar deploy
-        env:
-          TAG: ${{ needs.construir.outputs.tag }}
         run: |
           ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
             ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
-            "TAG_NOVA='${TAG}' bash -s" <<'DEPLOYEOF'
+            'bash -s' <<'DEPLOYEOF'
           set -euo pipefail
-          cd /var/pfm/producao
-          chmod +x verificar-saude.sh reverter.sh backup.sh
-
-          echo "▶ Registrando a versão atual para rollback"
-          TAG_ANTERIOR=$(grep -oP '(?<=^TAG_IMAGEM=).*' .env.anterior 2>/dev/null || echo "")
-          echo "$TAG_ANTERIOR" > .tag-anterior
-          cp .env .env.anterior 2>/dev/null || true
-
-          echo "▶ Backup pré-migration"
-          ./backup.sh pre-deploy
+          cd /var/pfm/staging
+          chmod +x verificar-saude.sh
 
           echo "▶ Baixando as novas imagens"
           docker compose -f docker-compose.prod.yml pull api
@@ -205,33 +191,17 @@ jobs:
           docker compose -f docker-compose.prod.yml up -d --no-deps api
 
           echo "▶ Verificando prontidão"
-          if ! ./verificar-saude.sh; then
-            echo "::error::Health check falhou — revertendo"
-            ./reverter.sh
-            exit 1
-          fi
+          URL_SAUDE="http://127.0.0.1:3334/api/v1/saude/prontidao" \
+            CONTAINER_API="pfm-staging-api" \
+            ./verificar-saude.sh || echo "::warning::Homologação não ficou pronta — falha fica exposta de propósito, sem rollback"
 
           echo "▶ Publicando o frontend"
-          tar -xzf frontend-dist.tar.gz -C /var/www/pfm --overwrite
+          tar -xzf frontend-dist.tar.gz -C /var/www/pfm-staging --overwrite
           rm -f frontend-dist.tar.gz
 
-          echo "▶ Limpando imagens antigas (mantém as 3 últimas)"
-          docker image prune -af --filter "until=168h" || true
-
-          echo "$(date -Iseconds) SUCESSO ${TAG_NOVA} (anterior: ${TAG_ANTERIOR})" \
-            >> /var/pfm/releases/historico.log
-
-          echo "✔ Deploy concluído"
+          echo "✔ Deploy de homologação concluído"
           DEPLOYEOF
-
-      - name: Verificação externa pós-deploy
-        run: |
-          sleep 5
-          RESP=$(curl -fsS "${{ secrets.URL_BASE_FRONTEND }}/api/v1/saude/prontidao")
-          echo "$RESP"
-          echo "$RESP" | grep -q '"status":"pronto"' || { echo "::error::Prontidão externa falhou"; exit 1; }
-          curl -fsSI "${{ secrets.URL_BASE_FRONTEND }}" | head -1
 
       - name: Registrar falha
         if: failure()
-        run: echo "::error::Deploy de produção falhou. Consulte /var/pfm/releases/historico.log na VPS."
+        run: echo "::error::Deploy de homologação falhou."

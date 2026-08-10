@@ -4,6 +4,7 @@ set -uo pipefail
 URL="${URL_SAUDE:-http://127.0.0.1:3333/api/v1/saude/prontidao}"
 TENTATIVAS="${TENTATIVAS:-18}"      # 18 × 5s = 90s
 INTERVALO="${INTERVALO:-5}"
+CONTAINER_API="${CONTAINER_API:-pfm-api}" # staging usa pfm-staging-api (mesma VPS que produção)
 
 echo "Verificando prontidão em ${URL} (até $((TENTATIVAS * INTERVALO))s)"
 
@@ -29,5 +30,5 @@ done
 
 echo "✖ Serviço não ficou pronto em $((TENTATIVAS * INTERVALO))s"
 echo "── Últimas 60 linhas do log da API ──"
-docker logs pfm-api --tail 60 2>&1 || true
+docker logs "$CONTAINER_API" --tail 60 2>&1 || true
 exit 1

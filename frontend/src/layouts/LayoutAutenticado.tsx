@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { BannerHomologacao } from '@/componentes/layout/BannerHomologacao';
 import { Cabecalho } from '@/componentes/layout/Cabecalho';
 import { MenuLateral } from '@/componentes/layout/MenuLateral';
 import { NavegacaoInferior } from '@/componentes/layout/NavegacaoInferior';
@@ -7,6 +8,7 @@ import type { ReactElement } from 'react';
 export function LayoutAutenticado(): ReactElement {
   return (
     <div className="flex min-h-screen flex-col bg-fundo text-texto">
+      <BannerHomologacao />
       <Cabecalho />
       <div className="flex flex-1">
         <MenuLateral />
