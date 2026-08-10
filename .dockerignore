@@ -7,7 +7,7 @@
 .git
 backend/testes
 backend/uploads
-frontend
+frontend/testes
 docs
 infra
 *.md
