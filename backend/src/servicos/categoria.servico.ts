@@ -17,6 +17,13 @@ export class CategoriaServico {
     await this.repositorio.copiarPadraoParaUsuario(usuarioId, tx);
   }
 
+  async copiarPadraoParaGrupo(
+    contaCompartilhadaId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.repositorio.copiarPadraoParaGrupo(contaCompartilhadaId, tx);
+  }
+
   async listarArvore(
     usuarioId: string,
     filtros: Pick<ListarCategoriasQuery, 'tipo' | 'apenasRaiz'>,

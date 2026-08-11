@@ -106,4 +106,47 @@ export class CategoriaRepositorio {
       }
     }
   }
+
+  /** RF-53 (issue #67): mesma copia de `copiarPadraoParaUsuario`, mas para
+   * o escopo do grupo — cada grupo tem sua propria copia editavel,
+   * independente da lista global (chk_categoria_escopo exige
+   * conta_compartilhada_id XOR usuario_id, nunca a referencia direta a
+   * uma categoria com ehPadraoSistema=true fora do proprio catalogo). */
+  async copiarPadraoParaGrupo(
+    contaCompartilhadaId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const raizes = await tx.categoria.findMany({
+      where: { ehPadraoSistema: true, categoriaPaiId: null },
+      include: { subcategorias: { where: { ehPadraoSistema: true }, orderBy: { ordem: 'asc' } } },
+      orderBy: { ordem: 'asc' },
+    });
+
+    for (const raiz of raizes) {
+      const novaRaiz = await tx.categoria.create({
+        data: {
+          contaCompartilhadaId,
+          nome: raiz.nome,
+          tipo: raiz.tipo,
+          cor: raiz.cor,
+          icone: raiz.icone,
+          ordem: raiz.ordem,
+        },
+      });
+
+      if (raiz.subcategorias.length > 0) {
+        await tx.categoria.createMany({
+          data: raiz.subcategorias.map((sub) => ({
+            contaCompartilhadaId,
+            nome: sub.nome,
+            tipo: sub.tipo,
+            cor: sub.cor,
+            icone: sub.icone,
+            ordem: sub.ordem,
+            categoriaPaiId: novaRaiz.id,
+          })),
+        });
+      }
+    }
+  }
 }

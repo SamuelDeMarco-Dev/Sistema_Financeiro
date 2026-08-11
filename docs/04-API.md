@@ -1780,7 +1780,10 @@ Detalhe com membros e contas do grupo:
         "podeGerenciarMembros": true,
         "podeGerenciarCategorias": true,
         "podeCriarMovimentacao": true,
+        "podeEditarMovimentacaoPropria": true,
         "podeEditarMovimentacaoDeTerceiro": true,
+        "podeExcluirMovimentacaoPropria": true,
+        "podeExcluirMovimentacaoDeTerceiro": true,
         "podeVerAuditoria": true
       },
       "saldoTotal": "1284.60",
@@ -1825,7 +1828,7 @@ Detalhe com membros e contas do grupo:
 }
 ```
 
-`minhasPermissoes` é a matriz RN-30 já resolvida para o solicitante. O frontend consome esse objeto em vez de reimplementar a matriz — uma única fonte de verdade para as permissões, ainda que a decisão real permaneça no servidor.
+`minhasPermissoes` é a matriz RN-30/RN-31 já resolvida para o solicitante (`podeEditarMovimentacaoPropria`/`podeExcluirMovimentacaoPropria` refletem `permiteParticipanteEditarProprias` para o `PARTICIPANTE`; para os demais papéis, o valor é fixo). O frontend consome esse objeto em vez de reimplementar a matriz — uma única fonte de verdade para as permissões, ainda que a decisão real permaneça no servidor.
 
 ### 16.4 `PATCH /contas-compartilhadas/:id` 👑
 

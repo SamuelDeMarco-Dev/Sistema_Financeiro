@@ -26,6 +26,15 @@ export class ProibidoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'PROIBIDO';
 }
 
+/** 403 — RN-30: membro ativo do grupo, mas o papel nao autoriza a acao
+ * (ex.: PARTICIPANTE/OBSERVADOR tentando uma acao so de ADMINISTRADOR).
+ * Distinto de ProibidoErro para o frontend poder oferecer "peca ao
+ * administrador" em vez de um erro generico. */
+export class PapelInsuficienteErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'PAPEL_INSUFICIENTE';
+}
+
 /** 404 — recurso inexistente ou fora do escopo do usuario. */
 export class NaoEncontradoErro extends ErroAplicacao {
   readonly statusHttp = 404;
