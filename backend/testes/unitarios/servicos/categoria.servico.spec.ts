@@ -171,7 +171,7 @@ describe('CategoriaServico', () => {
 
   describe('atualizar', () => {
     it('permite trocar o tipo quando nao ha movimentacoes vinculadas', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria({ tipo: 'DESPESA' }));
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria({ tipo: 'DESPESA' }));
       repositorio.contarMovimentacoes.mockResolvedValue(0);
       repositorio.atualizar.mockResolvedValue(fabricarCategoria({ tipo: 'RECEITA' }));
 
@@ -181,7 +181,7 @@ describe('CategoriaServico', () => {
     });
 
     it('rejeita trocar o tipo quando ha movimentacoes vinculadas', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria({ tipo: 'DESPESA' }));
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria({ tipo: 'DESPESA' }));
       repositorio.contarMovimentacoes.mockResolvedValue(5);
 
       await expect(
@@ -191,7 +191,7 @@ describe('CategoriaServico', () => {
     });
 
     it('permite atualizar outros campos sem o guard de tipo (so 1 chamada de contarMovimentacoes, para o DTO)', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
       repositorio.atualizar.mockResolvedValue(fabricarCategoria({ nome: 'Novo nome' }));
 
       await servico.atualizar('categoria-1', 'usuario-1', { nome: 'Novo nome' });
@@ -205,7 +205,7 @@ describe('CategoriaServico', () => {
 
   describe('excluir', () => {
     it('exclui logicamente quando nao ha subcategorias nem movimentacoes', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
 
       await servico.excluir('categoria-1', 'usuario-1');
 
@@ -213,7 +213,7 @@ describe('CategoriaServico', () => {
     });
 
     it('rejeita excluir categoria com subcategorias', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
       repositorio.contarSubcategorias.mockResolvedValue(2);
 
       await expect(servico.excluir('categoria-1', 'usuario-1')).rejects.toThrow(RegraNegocioErro);
@@ -221,7 +221,7 @@ describe('CategoriaServico', () => {
     });
 
     it('rejeita excluir categoria em uso sem recategorizarPara', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
       repositorio.contarMovimentacoes.mockResolvedValue(10);
 
       await expect(servico.excluir('categoria-1', 'usuario-1')).rejects.toThrow(RecursoEmUsoErro);
@@ -229,7 +229,8 @@ describe('CategoriaServico', () => {
     });
 
     it('exclui quando ha movimentacoes e um destino valido e informado', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
+      repositorio.buscarPorId.mockResolvedValue(fabricarCategoria({ id: 'categoria-destino' }));
       repositorio.contarMovimentacoes.mockResolvedValue(10);
 
       await servico.excluir('categoria-1', 'usuario-1', 'categoria-destino');
@@ -239,9 +240,9 @@ describe('CategoriaServico', () => {
     });
 
     it('lanca NaoEncontradoErro quando o destino de recategorizacao nao existe', async () => {
-      repositorio.buscarPorId.mockResolvedValueOnce(fabricarCategoria());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarCategoria());
       repositorio.contarMovimentacoes.mockResolvedValue(10);
-      repositorio.buscarPorId.mockResolvedValueOnce(null);
+      repositorio.buscarPorId.mockResolvedValue(null);
 
       await expect(
         servico.excluir('categoria-1', 'usuario-1', 'categoria-inexistente'),
@@ -250,7 +251,7 @@ describe('CategoriaServico', () => {
     });
 
     it('lanca NaoEncontradoErro para categoria de outro usuario', async () => {
-      repositorio.buscarPorId.mockResolvedValue(null);
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(null);
       await expect(servico.excluir('categoria-alheia', 'usuario-1')).rejects.toThrow(
         NaoEncontradoErro,
       );

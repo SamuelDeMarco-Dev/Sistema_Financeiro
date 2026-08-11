@@ -15,15 +15,19 @@ export interface ContaDTO {
   ordem: number;
   arquivada: boolean;
   quantidadeMovimentacoes: number;
-  escopo: { tipo: 'PESSOAL'; id: string; nome: string };
+  escopo:
+    { tipo: 'PESSOAL'; id: string; nome: string } | { tipo: 'GRUPO'; id: string; nome: string };
   criadoEm: Date;
 }
 
 /** 04-API.md §9.1: mistura campos persistidos com saldos derivados
- * (RN-06 — nunca uma coluna gravada) e o escopo de quem consultou. */
+ * (RN-06 — nunca uma coluna gravada) e o escopo de quem consultou —
+ * `escopo` reflete o DONO real da conta (issue #72), nao quem esta
+ * consultando: um membro visualizando a conta de um grupo ve
+ * `{ tipo: 'GRUPO', ... }`, nunca `PESSOAL`. */
 export function mapearConta(
   conta: Conta,
-  usuario: { id: string; nome: string },
+  escopo: { tipo: 'PESSOAL' | 'GRUPO'; id: string; nome: string },
   saldoAtual: Prisma.Decimal,
   saldoPrevisto: Prisma.Decimal,
   quantidadeMovimentacoes: number,
@@ -43,7 +47,7 @@ export function mapearConta(
     ordem: conta.ordem,
     arquivada: conta.arquivadaEm !== null,
     quantidadeMovimentacoes,
-    escopo: { tipo: 'PESSOAL', id: usuario.id, nome: usuario.nome },
+    escopo,
     criadoEm: conta.criadoEm,
   };
 }

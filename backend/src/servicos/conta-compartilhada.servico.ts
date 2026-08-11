@@ -15,6 +15,7 @@ import {
 import { ContaCompartilhadaRepositorio } from '@/repositorios/conta-compartilhada.repositorio';
 import { MembroCompartilhadoRepositorio } from '@/repositorios/membro-compartilhado.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
+import { autorizarPapelNoGrupo } from '@/servicos/autorizacao-grupo.servico';
 import { CategoriaServico } from '@/servicos/categoria.servico';
 import { hojeNoTimezone } from '@/utilitarios/data';
 import {
@@ -124,6 +125,20 @@ export class ContaCompartilhadaServico {
     usuarioId: string,
   ): Promise<MembroCompartilhado | null> {
     return this.membroRepositorio.buscarAtivo(contaCompartilhadaId, usuarioId);
+  }
+
+  /** Mesma decisao que `autorizarCompartilhada` (middleware, issue #68)
+   * toma para rotas com `contaCompartilhadaId` na URL — usada aqui pelos
+   * servicos de conta/categoria/etiqueta/movimentacao (issue #72) quando
+   * o id do grupo vem do CORPO da requisicao, nao dos params, entao o
+   * middleware de rota nao se aplica. Nao membro ou membro inativo cai em
+   * 404 (RN-51); papel fora da lista permitida cai em 403 PAPEL_INSUFICIENTE. */
+  async autorizarPapel(
+    contaCompartilhadaId: string,
+    usuarioId: string,
+    papeisPermitidos: PapelMembro[],
+  ): Promise<MembroCompartilhado> {
+    return autorizarPapelNoGrupo(contaCompartilhadaId, usuarioId, papeisPermitidos);
   }
 
   /** A autorizacao (membro ativo? papel permitido?) ja foi decidida pelo
@@ -285,10 +300,12 @@ export class ContaCompartilhadaServico {
     return hojeNoTimezone(perfil?.timezone ?? 'America/Sao_Paulo');
   }
 
-  /** So chega aqui depois do middleware confirmar a existencia do vinculo
-   * ativo — esta busca e so uma leitura defensiva do proprio registro do
-   * grupo (nunca uma decisao de autorizacao). */
-  private async buscarGrupoOuFalhar(id: string): Promise<ContaCompartilhada> {
+  /** So chega aqui depois do middleware/`autorizarPapel` confirmar a
+   * existencia do vinculo ativo — esta busca e so uma leitura defensiva
+   * do proprio registro do grupo (nunca uma decisao de autorizacao).
+   * Publico: outros servicos (conta/categoria/etiqueta/movimentacao,
+   * issue #72) tambem precisam do registro do grupo (ex.: `moeda`). */
+  async buscarGrupoOuFalhar(id: string): Promise<ContaCompartilhada> {
     const grupo = await this.repositorio.buscarPorId(id);
     if (!grupo) {
       throw new NaoEncontradoErro('Conta compartilhada nao encontrada.');

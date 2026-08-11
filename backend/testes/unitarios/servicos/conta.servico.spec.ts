@@ -1,11 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mock, type MockProxy } from 'vitest-mock-extended';
-import { NaoEncontradoErro, RecursoEmUsoErro } from '@/erros';
+import { NaoEncontradoErro, PapelInsuficienteErro, RecursoEmUsoErro } from '@/erros';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
+import { ContaCompartilhadaServico } from '@/servicos/conta-compartilhada.servico';
 import { ContaServico } from '@/servicos/conta.servico';
 import type { ListarContasQuery } from '@/validadores/contas.validador';
-import type { Conta } from '@prisma/client';
+import type { Conta, ContaCompartilhada, MembroCompartilhado } from '@prisma/client';
 
 vi.mock('@/banco/transacao', () => ({
   executarTransacao: vi.fn((fn: (tx: undefined) => Promise<unknown>) => fn(undefined)),
@@ -41,17 +42,54 @@ const FILTROS_PADRAO: ListarContasQuery = {
   ordem: 'asc',
 };
 
+function fabricarGrupo(sobrescritas: Partial<ContaCompartilhada> = {}): ContaCompartilhada {
+  return {
+    id: 'grupo-1',
+    nome: 'Casa',
+    descricao: null,
+    imagemUrl: null,
+    moeda: 'BRL',
+    cor: '#2563EB',
+    permiteParticipanteEditarProprias: true,
+    criadoPorId: 'usuario-1',
+    criadoEm: new Date('2026-01-01T00:00:00.000Z'),
+    atualizadoEm: new Date('2026-01-01T00:00:00.000Z'),
+    excluidoEm: null,
+    ...sobrescritas,
+  };
+}
+
+function fabricarMembro(sobrescritas: Partial<MembroCompartilhado> = {}): MembroCompartilhado {
+  return {
+    id: 'membro-1',
+    contaCompartilhadaId: 'grupo-1',
+    usuarioId: 'usuario-1',
+    papel: 'ADMINISTRADOR',
+    situacao: 'ATIVO',
+    entrouEm: new Date('2026-01-01T00:00:00.000Z'),
+    saiuEm: null,
+    convidadoPorId: null,
+    criadoEm: new Date('2026-01-01T00:00:00.000Z'),
+    atualizadoEm: new Date('2026-01-01T00:00:00.000Z'),
+    ...sobrescritas,
+  };
+}
+
 describe('ContaServico', () => {
   let servico: ContaServico;
   let repositorio: MockProxy<ContaRepositorio>;
+  let contaCompartilhadaServico: MockProxy<ContaCompartilhadaServico>;
 
   beforeEach(() => {
     repositorio = mock();
-    servico = new ContaServico(repositorio);
+    contaCompartilhadaServico = mock();
+    servico = new ContaServico(repositorio, contaCompartilhadaServico);
     repositorio.calcularSaldoAtual.mockImplementation((c) => Promise.resolve(c.saldoInicial));
     repositorio.calcularSaldoPrevisto.mockImplementation((c) => Promise.resolve(c.saldoInicial));
     repositorio.calcularSaldoConsolidado.mockResolvedValue(new Prisma.Decimal('0'));
     repositorio.contarMovimentacoes.mockResolvedValue(0);
+    contaCompartilhadaServico.autorizarPapel.mockResolvedValue(fabricarMembro());
+    contaCompartilhadaServico.buscarGrupoOuFalhar.mockResolvedValue(fabricarGrupo());
   });
 
   describe('listar', () => {
@@ -144,15 +182,23 @@ describe('ContaServico', () => {
 
   describe('buscarPorId', () => {
     it('devolve a conta mapeada quando encontrada', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarConta());
 
       const resultado = await servico.buscarPorId('conta-1', USUARIO);
 
       expect(resultado.id).toBe('conta-1');
     });
 
-    it('lanca NaoEncontradoErro quando a conta nao existe ou e de outro usuario (RN-51)', async () => {
-      repositorio.buscarPorId.mockResolvedValue(null);
+    it('lanca NaoEncontradoErro quando a conta nao existe', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(null);
+
+      await expect(servico.buscarPorId('conta-alheia', USUARIO)).rejects.toThrow(NaoEncontradoErro);
+    });
+
+    it('lanca NaoEncontradoErro (RN-51) quando a conta pertence a outro usuario', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(
+        fabricarConta({ usuarioId: 'outro-usuario' }),
+      );
 
       await expect(servico.buscarPorId('conta-alheia', USUARIO)).rejects.toThrow(NaoEncontradoErro);
     });
@@ -201,8 +247,8 @@ describe('ContaServico', () => {
   });
 
   describe('atualizar', () => {
-    it('lanca NaoEncontradoErro quando a conta nao pertence ao usuario', async () => {
-      repositorio.buscarPorId.mockResolvedValue(null);
+    it('lanca NaoEncontradoErro quando a conta nao existe', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(null);
 
       await expect(servico.atualizar('conta-1', USUARIO, { nome: 'Novo nome' })).rejects.toThrow(
         NaoEncontradoErro,
@@ -211,7 +257,7 @@ describe('ContaServico', () => {
     });
 
     it('so envia ao repositorio os campos presentes no corpo', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarConta());
       repositorio.atualizar.mockResolvedValue(fabricarConta({ nome: 'Novo nome' }));
 
       await servico.atualizar('conta-1', USUARIO, { nome: 'Novo nome' });
@@ -222,7 +268,7 @@ describe('ContaServico', () => {
 
   describe('arquivar / desarquivar', () => {
     it('arquivar verifica posse antes de arquivar', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarConta());
       repositorio.arquivar.mockResolvedValue(fabricarConta({ arquivadaEm: new Date() }));
 
       const resultado = await servico.arquivar('conta-1', USUARIO);
@@ -231,7 +277,9 @@ describe('ContaServico', () => {
     });
 
     it('desarquivar verifica posse antes de desarquivar', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta({ arquivadaEm: new Date() }));
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(
+        fabricarConta({ arquivadaEm: new Date() }),
+      );
       repositorio.desarquivar.mockResolvedValue(fabricarConta({ arquivadaEm: null }));
 
       const resultado = await servico.desarquivar('conta-1', USUARIO);
@@ -239,8 +287,8 @@ describe('ContaServico', () => {
       expect(resultado.arquivada).toBe(false);
     });
 
-    it('arquivar lanca NaoEncontradoErro para conta de outro usuario', async () => {
-      repositorio.buscarPorId.mockResolvedValue(null);
+    it('arquivar lanca NaoEncontradoErro para conta inexistente', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(null);
 
       await expect(servico.arquivar('conta-alheia', USUARIO)).rejects.toThrow(NaoEncontradoErro);
     });
@@ -283,26 +331,141 @@ describe('ContaServico', () => {
 
   describe('excluir', () => {
     it('exclui logicamente quando nao ha movimentacoes', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarConta());
       repositorio.contarMovimentacoes.mockResolvedValue(0);
 
-      await servico.excluir('conta-1', 'usuario-1');
+      await servico.excluir('conta-1', USUARIO);
 
       expect(repositorio.excluirLogicamente).toHaveBeenCalledWith('conta-1');
     });
 
     it('lanca RecursoEmUsoErro quando ha movimentacoes vinculadas', async () => {
-      repositorio.buscarPorId.mockResolvedValue(fabricarConta());
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(fabricarConta());
       repositorio.contarMovimentacoes.mockResolvedValue(87);
 
-      await expect(servico.excluir('conta-1', 'usuario-1')).rejects.toThrow(RecursoEmUsoErro);
+      await expect(servico.excluir('conta-1', USUARIO)).rejects.toThrow(RecursoEmUsoErro);
       expect(repositorio.excluirLogicamente).not.toHaveBeenCalled();
     });
 
-    it('lanca NaoEncontradoErro para conta de outro usuario', async () => {
-      repositorio.buscarPorId.mockResolvedValue(null);
+    it('lanca NaoEncontradoErro para conta inexistente', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(null);
 
-      await expect(servico.excluir('conta-alheia', 'usuario-1')).rejects.toThrow(NaoEncontradoErro);
+      await expect(servico.excluir('conta-alheia', USUARIO)).rejects.toThrow(NaoEncontradoErro);
+    });
+  });
+
+  describe('escopo de grupo (issue #72)', () => {
+    it('criar com contaCompartilhadaId autoriza ADMINISTRADOR e usa a moeda do grupo', async () => {
+      contaCompartilhadaServico.buscarGrupoOuFalhar.mockResolvedValue(
+        fabricarGrupo({ moeda: 'USD' }),
+      );
+      repositorio.criarDeGrupo.mockResolvedValue(
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1', moeda: 'USD' }),
+      );
+
+      const resultado = await servico.criar(USUARIO, {
+        nome: 'Caixa da Casa',
+        tipo: 'CARTEIRA',
+        saldoInicial: '0.00',
+        cor: '#2563EB',
+        icone: 'wallet',
+        incluirNoSaldoTotal: true,
+        contaCompartilhadaId: 'grupo-1',
+      });
+
+      expect(contaCompartilhadaServico.autorizarPapel).toHaveBeenCalledWith(
+        'grupo-1',
+        'usuario-1',
+        ['ADMINISTRADOR'],
+      );
+      expect(repositorio.criarDeGrupo).toHaveBeenCalledWith(
+        'grupo-1',
+        expect.objectContaining({ moeda: 'USD' }),
+      );
+      expect(resultado.escopo).toEqual({ tipo: 'GRUPO', id: 'grupo-1', nome: 'Casa' });
+      expect(resultado.moeda).toBe('USD');
+    });
+
+    it('criar com contaCompartilhadaId propaga PapelInsuficienteErro para nao-administrador', async () => {
+      contaCompartilhadaServico.autorizarPapel.mockRejectedValue(
+        new PapelInsuficienteErro('Seu papel no grupo nao permite esta acao.'),
+      );
+
+      await expect(
+        servico.criar(USUARIO, {
+          nome: 'Caixa da Casa',
+          tipo: 'CARTEIRA',
+          saldoInicial: '0.00',
+          cor: '#2563EB',
+          icone: 'wallet',
+          incluirNoSaldoTotal: true,
+          contaCompartilhadaId: 'grupo-1',
+        }),
+      ).rejects.toThrow(PapelInsuficienteErro);
+      expect(repositorio.criarDeGrupo).not.toHaveBeenCalled();
+    });
+
+    it('listar com contaCompartilhadaId autoriza qualquer membro ativo e usa listarPorGrupo', async () => {
+      repositorio.listarPorGrupo.mockResolvedValue([
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1' }),
+      ]);
+
+      const resultado = await servico.listar(USUARIO, {
+        ...FILTROS_PADRAO,
+        contaCompartilhadaId: 'grupo-1',
+      });
+
+      expect(contaCompartilhadaServico.autorizarPapel).toHaveBeenCalledWith(
+        'grupo-1',
+        'usuario-1',
+        [],
+      );
+      expect(repositorio.listarPorGrupo).toHaveBeenCalled();
+      expect(repositorio.listarPorUsuario).not.toHaveBeenCalled();
+      expect(resultado.contas[0]?.escopo).toEqual({ tipo: 'GRUPO', id: 'grupo-1', nome: 'Casa' });
+    });
+
+    it('buscarPorId de uma conta de grupo autoriza qualquer membro ativo (leitura)', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1' }),
+      );
+
+      const resultado = await servico.buscarPorId('conta-1', USUARIO);
+
+      expect(contaCompartilhadaServico.autorizarPapel).toHaveBeenCalledWith(
+        'grupo-1',
+        'usuario-1',
+        [],
+      );
+      expect(resultado.escopo).toEqual({ tipo: 'GRUPO', id: 'grupo-1', nome: 'Casa' });
+    });
+
+    it('atualizar uma conta de grupo exige papel ADMINISTRADOR', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1' }),
+      );
+      repositorio.atualizar.mockResolvedValue(
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1', nome: 'Novo nome' }),
+      );
+
+      await servico.atualizar('conta-1', USUARIO, { nome: 'Novo nome' });
+
+      expect(contaCompartilhadaServico.autorizarPapel).toHaveBeenCalledWith(
+        'grupo-1',
+        'usuario-1',
+        ['ADMINISTRADOR'],
+      );
+    });
+
+    it('nao membro do grupo da conta recebe NaoEncontradoErro (RN-51), nunca 403', async () => {
+      repositorio.buscarPorIdSemEscopo.mockResolvedValue(
+        fabricarConta({ usuarioId: null, contaCompartilhadaId: 'grupo-1' }),
+      );
+      contaCompartilhadaServico.autorizarPapel.mockRejectedValue(
+        new NaoEncontradoErro('Conta compartilhada nao encontrada.'),
+      );
+
+      await expect(servico.buscarPorId('conta-1', USUARIO)).rejects.toThrow(NaoEncontradoErro);
     });
   });
 });

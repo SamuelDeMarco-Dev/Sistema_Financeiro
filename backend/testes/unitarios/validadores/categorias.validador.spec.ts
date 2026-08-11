@@ -37,10 +37,11 @@ describe('validadores/categorias', () => {
       expect(resultado.body.categoriaPaiId).toBe('pai-1');
     });
 
-    it('rejeita contaCompartilhadaId nao nulo (grupo chega em M6)', () => {
-      expect(() =>
-        criarCategoriaSchema.parse(corpoValido({ contaCompartilhadaId: 'grupo-1' })),
-      ).toThrow();
+    it('aceita contaCompartilhadaId nao nulo (issue #72: cria categoria de grupo)', () => {
+      const resultado = criarCategoriaSchema.parse(
+        corpoValido({ contaCompartilhadaId: 'grupo-1' }),
+      );
+      expect(resultado.body.contaCompartilhadaId).toBe('grupo-1');
     });
   });
 

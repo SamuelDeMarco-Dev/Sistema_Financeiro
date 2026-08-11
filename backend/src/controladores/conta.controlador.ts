@@ -73,7 +73,7 @@ export class ContaControlador {
 
   excluir = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as IdParam;
-    await this.servico.excluir(id, req.usuario.id);
+    await this.servico.excluir(id, req.usuario);
 
     res.status(204).send();
   });

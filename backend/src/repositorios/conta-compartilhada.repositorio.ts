@@ -29,6 +29,10 @@ interface LinhaVwSaldoConta {
   saldo_atual: Prisma.Decimal;
 }
 
+interface LinhaSaldoDireto {
+  saldo_direto: Prisma.Decimal;
+}
+
 interface LinhaContaDoGrupo {
   id: string;
   nome: string;
@@ -89,8 +93,20 @@ export class ContaCompartilhadaRepositorio {
   /** RN-05 aplicado ao grupo: soma so as contas do grupo marcadas para
    * entrar no total, nao arquivadas nem excluidas — mesma elegibilidade
    * de `ContaRepositorio.calcularSaldoConsolidado`, via `vw_saldo_conta`
-   * (nao materializada, ADR-005) para nao repetir o `groupBy` aqui. */
+   * (nao materializada, ADR-005) para nao repetir o `groupBy` aqui. Soma
+   * ainda o saldo das movimentacoes ligadas DIRETO ao grupo (issue #72,
+   * `calcularSaldoDireto`) — as duas parcelas nunca se sobrepoem
+   * (`chk_mov_escopo` garante contaId XOR contaCompartilhadaId por
+   * movimentacao). */
   async calcularSaldoTotal(contaCompartilhadaId: string): Promise<Prisma.Decimal> {
+    const [saldoSubContas, saldoDireto] = await Promise.all([
+      this.calcularSaldoSubContas(contaCompartilhadaId),
+      this.calcularSaldoDireto(contaCompartilhadaId),
+    ]);
+    return saldoSubContas.plus(saldoDireto);
+  }
+
+  private async calcularSaldoSubContas(contaCompartilhadaId: string): Promise<Prisma.Decimal> {
     const linhas = await prisma.$queryRaw<LinhaVwSaldoConta[]>`
       SELECT COALESCE(SUM(v.saldo_atual), 0) AS saldo_atual
       FROM vw_saldo_conta v
@@ -102,9 +118,32 @@ export class ContaCompartilhadaRepositorio {
     return linhas[0]?.saldo_atual ?? new Prisma.Decimal(0);
   }
 
+  /** RN-01 aplicada a movimentacoes ligadas DIRETO ao grupo (sem Conta,
+   * issue #72) — mesma formula de `vw_saldo_conta`, mas sem saldoInicial
+   * (nao existe "saldo inicial" para um grupo sem conta) e sem o ramo de
+   * TRANSFERENCIA (que so existe entre Contas, RN-23). */
+  async calcularSaldoDireto(contaCompartilhadaId: string): Promise<Prisma.Decimal> {
+    const linhas = await prisma.$queryRaw<LinhaSaldoDireto[]>`
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN tipo = 'RECEITA' THEN valor_pago
+          WHEN tipo = 'DESPESA' THEN -valor_pago
+          ELSE 0
+        END), 0) AS saldo_direto
+      FROM movimentacoes
+      WHERE conta_compartilhada_id = ${contaCompartilhadaId}
+        AND excluido_em IS NULL
+        AND eh_modelo_recorrencia = false
+        AND situacao IN ('PAGA', 'PAGA_PARCIALMENTE')
+    `;
+    return linhas[0]?.saldo_direto ?? new Prisma.Decimal(0);
+  }
+
   /** RN-12: por competencia, como o restante dos relatorios — nao conta
    * transferencias (RN-25) nem modelos de recorrencia ainda nao
-   * materializados. */
+   * materializados. Cobre as duas formas de ligacao ao grupo (issue #72):
+   * direta (`contaCompartilhadaId`) e via sub-conta (`conta.
+   * contaCompartilhadaId`) — mesmo raciocinio de `calcularSaldoTotal`. */
   async calcularResumoPeriodo(
     contaCompartilhadaId: string,
     periodo: Periodo,
@@ -112,7 +151,7 @@ export class ContaCompartilhadaRepositorio {
     const grupos = await prisma.movimentacao.groupBy({
       by: ['tipo'],
       where: {
-        contaCompartilhadaId,
+        OR: [{ contaCompartilhadaId }, { conta: { contaCompartilhadaId } }],
         excluidoEm: null,
         ehModeloRecorrencia: false,
         tipo: { in: ['RECEITA', 'DESPESA'] },

@@ -6,14 +6,39 @@ import type { Request, Response } from 'express';
 
 // autorizar-compartilhada.middleware.ts instancia `new
 // ContaCompartilhadaServico()` uma unica vez, no escopo do modulo — mesmo
-// raciocinio de autenticar.middleware.spec.ts.
+// raciocinio de autenticar.middleware.spec.ts. O middleware chama
+// `autorizarPapel` (issue #72: delegou para a funcao standalone
+// `autorizarPapelNoGrupo`, para evitar o ciclo de dependencia com
+// CategoriaServico/EtiquetaServico) — o fake abaixo replica a MESMA
+// decisao (nao membro -> NaoEncontradoErro; papel fora da lista ->
+// PapelInsuficienteErro), mas ainda passando por `buscarMeuMembroAtivoMock`
+// para preservar as asserções de chamada dos testes existentes.
 const { buscarMeuMembroAtivoMock } = vi.hoisted(() => ({
-  buscarMeuMembroAtivoMock: vi.fn(),
+  buscarMeuMembroAtivoMock:
+    vi.fn<
+      (contaCompartilhadaId: string, usuarioId: string) => Promise<MembroCompartilhado | null>
+    >(),
 }));
 
 vi.mock('@/servicos/conta-compartilhada.servico', () => ({
   ContaCompartilhadaServico: vi.fn().mockImplementation(function ServicoFalso() {
-    return { buscarMeuMembroAtivo: buscarMeuMembroAtivoMock };
+    return {
+      buscarMeuMembroAtivo: buscarMeuMembroAtivoMock,
+      autorizarPapel: async (
+        contaCompartilhadaId: string,
+        usuarioId: string,
+        papeisPermitidos: PapelMembro[],
+      ) => {
+        const membro = await buscarMeuMembroAtivoMock(contaCompartilhadaId, usuarioId);
+        if (!membro) {
+          throw new NaoEncontradoErro('Conta compartilhada nao encontrada.');
+        }
+        if (papeisPermitidos.length > 0 && !papeisPermitidos.includes(membro.papel)) {
+          throw new PapelInsuficienteErro('Seu papel no grupo nao permite esta acao.');
+        }
+        return membro;
+      },
+    };
   }),
 }));
 

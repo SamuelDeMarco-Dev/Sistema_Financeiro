@@ -19,7 +19,7 @@ export interface MovimentacaoDTO {
   dataVencimento: string | null;
   dataEfetivacao: string | null;
   conta: { id: string; nome: string; cor: string; icone: string } | null;
-  contaCompartilhada: null;
+  contaCompartilhada: { id: string; nome: string } | null;
   categoria: {
     id: string;
     nome: string;
@@ -100,8 +100,15 @@ export function mapearMovimentacao(
     dataCompetencia: paraDataIso(movimentacao.dataCompetencia),
     dataVencimento: movimentacao.dataVencimento ? paraDataIso(movimentacao.dataVencimento) : null,
     dataEfetivacao: movimentacao.dataEfetivacao ? paraDataIso(movimentacao.dataEfetivacao) : null,
-    conta: movimentacao.conta,
-    contaCompartilhada: null,
+    conta: movimentacao.conta
+      ? {
+          id: movimentacao.conta.id,
+          nome: movimentacao.conta.nome,
+          cor: movimentacao.conta.cor,
+          icone: movimentacao.conta.icone,
+        }
+      : null,
+    contaCompartilhada: movimentacao.contaCompartilhada,
     categoria: movimentacao.categoria,
     cartao: null,
     fatura: null,

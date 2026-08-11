@@ -49,13 +49,9 @@ const cartaoIdSchema = z
     message: 'Cartoes ainda nao sao suportados nesta versao.',
   });
 
-// M6: contas de grupo — mesmo padrao de contas.validador.ts.
-const contaCompartilhadaIdSchema = z
-  .unknown()
-  .optional()
-  .refine((valor) => valor === undefined || valor === null, {
-    message: 'Contas de grupo ainda nao sao suportadas nesta versao.',
-  });
+// RN-09/issue #72: se informado (e sem contaId), a movimentacao se liga
+// DIRETO ao grupo, sem uma Conta — mesmo padrao de contas.validador.ts.
+const contaCompartilhadaIdSchema = z.string().min(1).nullish();
 
 // RF-27: exclusividade entre fimEm/totalOcorrencias (RN nao numerada
 // explicitamente, mas 04-API.md §12.2) e verificada no servico, nao aqui —
@@ -84,7 +80,9 @@ export const criarMovimentacaoSchema = z.object({
       situacao: z.enum(SITUACOES).optional().default('PENDENTE'),
       dataEfetivacao: dataIsoSchema.optional(),
       valorPago: valorDecimalSchema.optional(),
-      contaId: z.string().min(1, 'Informe a conta.'),
+      // RN-09: contaId (pessoal ou sub-conta de grupo) XOR contaCompartilhadaId
+      // (grupo, ligacao direta, sem Conta) — checado no superRefine abaixo.
+      contaId: z.string().min(1).optional(),
       contaCompartilhadaId: contaCompartilhadaIdSchema,
       cartaoId: cartaoIdSchema,
       categoriaId: z.string().min(1, 'Informe a categoria.'),
@@ -92,6 +90,18 @@ export const criarMovimentacaoSchema = z.object({
       recorrencia: recorrenciaSchema.optional(),
     })
     .superRefine((dados, ctx) => {
+      // RN-09: exatamente um dos dois — nunca os dois, nunca nenhum.
+      const temConta = dados.contaId !== undefined;
+      const temGrupo =
+        dados.contaCompartilhadaId !== undefined && dados.contaCompartilhadaId !== null;
+      if (temConta === temGrupo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['contaId'],
+          message: 'Informe contaId ou contaCompartilhadaId, nunca os dois nem nenhum.',
+        });
+      }
+
       const efetivada = dados.situacao === 'PAGA' || dados.situacao === 'PAGA_PARCIALMENTE';
       if (efetivada && dados.dataEfetivacao === undefined) {
         ctx.addIssue({

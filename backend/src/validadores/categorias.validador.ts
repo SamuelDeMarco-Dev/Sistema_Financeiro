@@ -4,14 +4,10 @@ const TIPOS_CATEGORIA = ['RECEITA', 'DESPESA', 'AMBOS'] as const;
 
 const corSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor invalida. Use o formato hex #RRGGBB.');
 
-// M2: categorias de grupo chegam em M6 — aceito no corpo (contrato futuro
-// de 04-API.md §10.2) mas rejeitado explicitamente por enquanto.
-const contaCompartilhadaIdSchema = z
-  .unknown()
-  .optional()
-  .refine((valor) => valor === undefined || valor === null, {
-    message: 'Categorias de grupo ainda nao sao suportadas nesta versao.',
-  });
+// 04-API.md §10.2 (issue #72): se informado, cria/lista categoria de
+// grupo — requer papel ADMINISTRADOR na criacao (RN-30: "gerenciar
+// categorias do grupo"), qualquer membro ativo na leitura.
+const contaCompartilhadaIdSchema = z.string().min(1).nullish();
 
 export const listarCategoriasSchema = z.object({
   query: z.object({

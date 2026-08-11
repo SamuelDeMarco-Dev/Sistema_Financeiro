@@ -40,6 +40,32 @@ export class CategoriaRepositorio {
     return prisma.categoria.findFirst({ where: { id, usuarioId, excluidoEm: null } });
   }
 
+  /** Sem filtro de propriedade — usado quando a autorizacao (pessoal vs.
+   * grupo) e decidida pelo chamador (issue #72), nao pelo repositorio. */
+  async buscarPorIdSemEscopo(id: string): Promise<Categoria | null> {
+    return prisma.categoria.findFirst({ where: { id, excluidoEm: null } });
+  }
+
+  async listarRaizesComSubcategoriasDeGrupo(
+    contaCompartilhadaId: string,
+    filtros: FiltrosListarCategorias,
+  ): Promise<CategoriaComSubcategorias[]> {
+    return prisma.categoria.findMany({
+      where: {
+        contaCompartilhadaId,
+        excluidoEm: null,
+        categoriaPaiId: null,
+        ...(filtros.tipo ? { tipo: filtros.tipo } : {}),
+      },
+      include: { subcategorias: { where: { excluidoEm: null }, orderBy: { ordem: 'asc' } } },
+      orderBy: { ordem: 'asc' },
+    });
+  }
+
+  async criarDeGrupo(contaCompartilhadaId: string, dados: DadosCriarCategoria): Promise<Categoria> {
+    return prisma.categoria.create({ data: { contaCompartilhadaId, ...dados } });
+  }
+
   async contarSubcategorias(categoriaPaiId: string): Promise<number> {
     return prisma.categoria.count({ where: { categoriaPaiId, excluidoEm: null } });
   }
@@ -65,6 +91,18 @@ export class CategoriaRepositorio {
   async buscarPorIdOuPadrao(id: string, usuarioId: string): Promise<Categoria | null> {
     return prisma.categoria.findFirst({
       where: { id, excluidoEm: null, OR: [{ usuarioId }, { ehPadraoSistema: true }] },
+    });
+  }
+
+  /** RN-11 no escopo de grupo: a categoria de uma movimentacao de grupo
+   * pode ser do PROPRIO grupo ou uma categoria padrao do sistema — nunca
+   * uma categoria pessoal nem a de outro grupo. */
+  async buscarPorIdOuPadraoDeGrupo(
+    id: string,
+    contaCompartilhadaId: string,
+  ): Promise<Categoria | null> {
+    return prisma.categoria.findFirst({
+      where: { id, excluidoEm: null, OR: [{ contaCompartilhadaId }, { ehPadraoSistema: true }] },
     });
   }
 

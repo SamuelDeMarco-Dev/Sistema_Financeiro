@@ -4,7 +4,17 @@ import { calcularOrdinalOcorrencia, calcularProximaOcorrencia } from '@/utilitar
 import type { FrequenciaRecorrencia, SituacaoMovimentacao, TipoMovimentacao } from '@prisma/client';
 
 const INCLUDE_COMPLETO = {
-  conta: { select: { id: true, nome: true, cor: true, icone: true } },
+  conta: {
+    select: {
+      id: true,
+      nome: true,
+      cor: true,
+      icone: true,
+      usuarioId: true,
+      contaCompartilhadaId: true,
+    },
+  },
+  contaCompartilhada: { select: { id: true, nome: true } },
   categoria: { select: { id: true, nome: true, cor: true, icone: true, categoriaPaiId: true } },
   etiquetas: { include: { etiqueta: { select: { id: true, nome: true, cor: true } } } },
   usuario: { select: { id: true, nome: true, perfil: { select: { fotoUrl: true } } } },
@@ -30,7 +40,10 @@ export type MovimentacaoCompleta = Prisma.MovimentacaoGetPayload<{
 
 export interface DadosCriarMovimentacao {
   usuarioId: string;
-  contaId: string;
+  /** RN-09: exatamente um dos dois — contaId (pessoal ou sub-conta de
+   * grupo) OU contaCompartilhadaId (grupo, ligacao direta). */
+  contaId?: string | undefined;
+  contaCompartilhadaId?: string | undefined;
   categoriaId: string;
   tipo: TipoMovimentacao;
   descricao: string;
@@ -64,7 +77,8 @@ export interface DadosAtualizarPagamento {
 
 export interface DadosCriarRecorrencia {
   usuarioId: string;
-  contaId: string;
+  contaId?: string | undefined;
+  contaCompartilhadaId?: string | undefined;
   categoriaId: string;
   tipo: TipoMovimentacao;
   descricao: string;
@@ -118,6 +132,9 @@ export interface ContraparteTransferencia {
 }
 
 const SITUACOES_EFETIVADAS: SituacaoMovimentacao[] = ['PAGA', 'PAGA_PARCIALMENTE'];
+
+export type EscopoMovimentacoes =
+  { tipo: 'PESSOAL'; usuarioId: string } | { tipo: 'GRUPO'; contaCompartilhadaId: string };
 
 export interface FiltrosListarMovimentacoes {
   dataInicio?: Date | undefined;
@@ -184,7 +201,8 @@ export class MovimentacaoRepositorio {
     return prisma.movimentacao.create({
       data: {
         usuarioId: dados.usuarioId,
-        contaId: dados.contaId,
+        contaId: dados.contaId ?? null,
+        contaCompartilhadaId: dados.contaCompartilhadaId ?? null,
         categoriaId: dados.categoriaId,
         tipo: dados.tipo,
         descricao: dados.descricao,
@@ -206,6 +224,15 @@ export class MovimentacaoRepositorio {
   async buscarPorId(id: string, usuarioId: string): Promise<MovimentacaoCompleta | null> {
     return prisma.movimentacao.findFirst({
       where: { id, usuarioId, excluidoEm: null },
+      include: INCLUDE_COMPLETO,
+    });
+  }
+
+  /** Sem filtro de propriedade — usado quando a autorizacao (pessoal vs.
+   * grupo) e decidida pelo chamador (issue #72), nao pelo repositorio. */
+  async buscarPorIdSemEscopo(id: string): Promise<MovimentacaoCompleta | null> {
+    return prisma.movimentacao.findFirst({
+      where: { id, excluidoEm: null },
       include: INCLUDE_COMPLETO,
     });
   }
@@ -288,7 +315,8 @@ export class MovimentacaoRepositorio {
       tx.movimentacao.create({
         data: {
           usuarioId: dados.usuarioId,
-          contaId: dados.contaId,
+          contaId: dados.contaId ?? null,
+          contaCompartilhadaId: dados.contaCompartilhadaId ?? null,
           categoriaId: dados.categoriaId,
           tipo: dados.tipo,
           descricao: dados.descricao,
@@ -311,7 +339,8 @@ export class MovimentacaoRepositorio {
       const modelo = await tx.movimentacao.create({
         data: {
           usuarioId: dados.usuarioId,
-          contaId: dados.contaId,
+          contaId: dados.contaId ?? null,
+          contaCompartilhadaId: dados.contaCompartilhadaId ?? null,
           categoriaId: dados.categoriaId,
           tipo: dados.tipo,
           descricao: dados.descricao,
@@ -472,13 +501,14 @@ export class MovimentacaoRepositorio {
   }
 
   /** 04-API.md §12.8: `id` pode ser o modelo ou qualquer ocorrencia dele —
-   * resolve para o modelo antes de listar. */
+   * resolve para o modelo antes de listar. Sem filtro de propriedade — a
+   * autorizacao (pessoal vs. grupo, issue #72) ja foi decidida pelo
+   * servico antes de chegar aqui (via `buscarMovimentacaoOuFalhar`). */
   async buscarModeloEOcorrencias(
     id: string,
-    usuarioId: string,
   ): Promise<{ modelo: ModeloRecorrencia; ocorrencias: OcorrenciaRecorrencia[] } | null> {
     const referencia = await prisma.movimentacao.findFirst({
-      where: { id, usuarioId, excluidoEm: null },
+      where: { id, excluidoEm: null },
       select: { id: true, recorrenciaId: true, ehModeloRecorrencia: true },
     });
     if (!referencia) return null;
@@ -487,7 +517,7 @@ export class MovimentacaoRepositorio {
     if (modeloId === null) return null;
 
     const modelo = await prisma.movimentacao.findFirst({
-      where: { id: modeloId, usuarioId, excluidoEm: null, ehModeloRecorrencia: true },
+      where: { id: modeloId, excluidoEm: null, ehModeloRecorrencia: true },
       select: {
         id: true,
         descricao: true,
@@ -499,7 +529,7 @@ export class MovimentacaoRepositorio {
     if (!modelo?.frequencia) return null;
 
     const ocorrencias = await prisma.movimentacao.findMany({
-      where: { recorrenciaId: modeloId, usuarioId, excluidoEm: null },
+      where: { recorrenciaId: modeloId, excluidoEm: null },
       select: { id: true, dataCompetencia: true, valor: true, situacao: true, descricao: true },
       orderBy: { dataCompetencia: 'asc' },
     });
@@ -523,60 +553,77 @@ export class MovimentacaoRepositorio {
     };
   }
 
-  /** RF-34: filtro base sempre presente (excluidoEm/ehModeloRecorrencia) —
-   * modelos de recorrencia nunca aparecem na listagem (consulte-os por
-   * `/movimentacoes/:id/ocorrencias`, issue #38). */
+  /** RF-34/issue #72: filtro base sempre presente (excluidoEm/
+   * ehModeloRecorrencia) — modelos de recorrencia nunca aparecem na
+   * listagem (consulte-os por `/movimentacoes/:id/ocorrencias`, issue
+   * #38). `escopo` decide entre movimentacoes pessoais (usuarioId) e as
+   * de UM grupo — nas de grupo, cobre tanto a ligacao direta
+   * (`contaCompartilhadaId`) quanto as sub-contas do grupo (`conta.
+   * contaCompartilhadaId`), nunca misturando com outro usuario/grupo. */
   async montarWhere(
-    usuarioId: string,
+    escopo: EscopoMovimentacoes,
     filtros: FiltrosListarMovimentacoes,
   ): Promise<Prisma.MovimentacaoWhereInput> {
-    const where: Prisma.MovimentacaoWhereInput = {
-      usuarioId,
-      excluidoEm: null,
-      ehModeloRecorrencia: false,
-    };
+    const condicoes: Prisma.MovimentacaoWhereInput[] = [
+      { excluidoEm: null, ehModeloRecorrencia: false },
+      escopo.tipo === 'GRUPO'
+        ? {
+            OR: [
+              { contaCompartilhadaId: escopo.contaCompartilhadaId },
+              { conta: { contaCompartilhadaId: escopo.contaCompartilhadaId } },
+            ],
+          }
+        : // `usuarioId` sozinho nao basta: e sempre o AUTOR, mesmo em
+          // movimentacao de grupo (sub-conta) que esse mesmo usuario criou —
+          // sem excluir a sub-conta de grupo aqui, ela vazaria para a
+          // listagem pessoal de quem a criou (chk_mov_escopo garante que
+          // `conta` sempre existe quando contaCompartilhadaId e null).
+          { usuarioId: escopo.usuarioId, conta: { contaCompartilhadaId: null } },
+    ];
 
-    if (filtros.tipo) where.tipo = { in: filtros.tipo };
-    if (filtros.situacao) where.situacao = { in: filtros.situacao };
-    if (filtros.contaId) where.contaId = { in: filtros.contaId };
+    if (filtros.tipo) condicoes.push({ tipo: { in: filtros.tipo } });
+    if (filtros.situacao) condicoes.push({ situacao: { in: filtros.situacao } });
+    if (filtros.contaId) condicoes.push({ contaId: { in: filtros.contaId } });
     if (filtros.categoriaId) {
-      where.categoriaId = { in: await this.expandirCategoriaIds(filtros.categoriaId) };
+      condicoes.push({ categoriaId: { in: await this.expandirCategoriaIds(filtros.categoriaId) } });
     }
     if (filtros.etiquetaId) {
-      where.etiquetas = { some: { etiquetaId: { in: filtros.etiquetaId } } };
+      condicoes.push({ etiquetas: { some: { etiquetaId: { in: filtros.etiquetaId } } } });
     }
-    if (filtros.cartaoId) where.cartaoId = { in: filtros.cartaoId };
+    if (filtros.cartaoId) condicoes.push({ cartaoId: { in: filtros.cartaoId } });
     if (filtros.apenasRecorrentes !== undefined) {
-      where.recorrenciaId = filtros.apenasRecorrentes ? { not: null } : null;
+      condicoes.push({ recorrenciaId: filtros.apenasRecorrentes ? { not: null } : null });
     }
     if (filtros.apenasParceladas !== undefined) {
-      where.compraParceladaId = filtros.apenasParceladas ? { not: null } : null;
+      condicoes.push({ compraParceladaId: filtros.apenasParceladas ? { not: null } : null });
     }
 
     if (filtros.dataInicio ?? filtros.dataFim) {
       const filtroData: Prisma.DateTimeFilter<'Movimentacao'> = {};
       if (filtros.dataInicio) filtroData.gte = filtros.dataInicio;
       if (filtros.dataFim) filtroData.lte = filtros.dataFim;
-      if (filtros.campoData === 'VENCIMENTO') where.dataVencimento = filtroData;
-      else if (filtros.campoData === 'EFETIVACAO') where.dataEfetivacao = filtroData;
-      else where.dataCompetencia = filtroData;
+      if (filtros.campoData === 'VENCIMENTO') condicoes.push({ dataVencimento: filtroData });
+      else if (filtros.campoData === 'EFETIVACAO') condicoes.push({ dataEfetivacao: filtroData });
+      else condicoes.push({ dataCompetencia: filtroData });
     }
 
     if (filtros.valorMinimo ?? filtros.valorMaximo) {
       const filtroValor: Prisma.DecimalFilter<'Movimentacao'> = {};
       if (filtros.valorMinimo) filtroValor.gte = filtros.valorMinimo;
       if (filtros.valorMaximo) filtroValor.lte = filtros.valorMaximo;
-      where.valor = filtroValor;
+      condicoes.push({ valor: filtroValor });
     }
 
     if (filtros.busca) {
-      where.OR = [
-        { descricao: { contains: filtros.busca, mode: 'insensitive' } },
-        { observacao: { contains: filtros.busca, mode: 'insensitive' } },
-      ];
+      condicoes.push({
+        OR: [
+          { descricao: { contains: filtros.busca, mode: 'insensitive' } },
+          { observacao: { contains: filtros.busca, mode: 'insensitive' } },
+        ],
+      });
     }
 
-    return where;
+    return { AND: condicoes };
   }
 
   async listarComTotalizadores(
@@ -683,6 +730,7 @@ export class MovimentacaoRepositorio {
         id: true,
         usuarioId: true,
         contaId: true,
+        contaCompartilhadaId: true,
         categoriaId: true,
         tipo: true,
         descricao: true,
@@ -699,7 +747,12 @@ export class MovimentacaoRepositorio {
 
     let totalGerado = 0;
     for (const modelo of modelos) {
-      if (!modelo.frequencia || !modelo.contaId || !modelo.categoriaId || !modelo.dataVencimento) {
+      if (
+        !modelo.frequencia ||
+        (!modelo.contaId && !modelo.contaCompartilhadaId) ||
+        !modelo.categoriaId ||
+        !modelo.dataVencimento
+      ) {
         continue;
       }
       const intervalo = modelo.intervaloRecorrencia ?? 1;
@@ -738,6 +791,7 @@ export class MovimentacaoRepositorio {
           data: {
             usuarioId: modelo.usuarioId,
             contaId: modelo.contaId,
+            contaCompartilhadaId: modelo.contaCompartilhadaId,
             categoriaId: modelo.categoriaId,
             tipo: modelo.tipo,
             descricao: modelo.descricao,
