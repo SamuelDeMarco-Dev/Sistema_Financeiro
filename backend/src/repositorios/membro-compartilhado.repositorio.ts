@@ -45,6 +45,25 @@ export class MembroCompartilhadoRepositorio {
     });
   }
 
+  /** RF-55/RN-39 (issue #70): aceite de convite. `@@unique([contaCompartilhadaId,
+   * usuarioId])` permite so UMA linha por par grupo/usuario para sempre —
+   * um ex-membro (REMOVIDO/SAIU) que aceita um novo convite precisa
+   * REATIVAR a linha antiga, nao criar uma segunda (que violaria a
+   * unicidade). `upsert` cobre os dois casos numa unica instrucao. */
+  async criarOuReativarMembro(
+    contaCompartilhadaId: string,
+    usuarioId: string,
+    papel: PapelMembro,
+    convidadoPorId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<MembroCompartilhado> {
+    return tx.membroCompartilhado.upsert({
+      where: { contaCompartilhadaId_usuarioId: { contaCompartilhadaId, usuarioId } },
+      create: { contaCompartilhadaId, usuarioId, papel, convidadoPorId },
+      update: { papel, situacao: 'ATIVO', saiuEm: null, convidadoPorId },
+    });
+  }
+
   async buscarAtivo(
     contaCompartilhadaId: string,
     usuarioId: string,

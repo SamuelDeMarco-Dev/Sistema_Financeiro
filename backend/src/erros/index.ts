@@ -60,6 +60,25 @@ export class EmailJaCadastradoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'EMAIL_JA_CADASTRADO';
 }
 
+/** 409 — RN-36: ja existe um convite PENDENTE para este e-mail neste grupo. */
+export class ConviteDuplicadoErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'CONVITE_DUPLICADO';
+}
+
+/** 409 — RN-38: o e-mail convidado ja e membro ativo do grupo. */
+export class JaEMembroErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'JA_E_MEMBRO';
+}
+
+/** 422 — RN-35: convite expirou (validade de 7 dias) e nao pode mais ser
+ * aceito nem recusado. */
+export class ConviteExpiradoErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'CONVITE_EXPIRADO';
+}
+
 /** 401 — e-mail inexistente ou senha errada. Mesma mensagem para os dois
  * casos (RN): nao da para um atacante distinguir se o e-mail existe. */
 export class CredenciaisInvalidasErro extends ErroAplicacao {
