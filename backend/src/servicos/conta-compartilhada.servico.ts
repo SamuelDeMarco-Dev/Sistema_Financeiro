@@ -5,12 +5,7 @@ import sharp from 'sharp';
 import { executarTransacao } from '@/banco/transacao';
 import { ambiente } from '@/configuracao/ambiente';
 import { TIPOS_MIME_AVATAR_PERMITIDOS } from '@/configuracao/constantes';
-import {
-  NaoEncontradoErro,
-  PapelInsuficienteErro,
-  TipoArquivoInvalidoErro,
-  ValidacaoErro,
-} from '@/erros';
+import { NaoEncontradoErro, TipoArquivoInvalidoErro, ValidacaoErro } from '@/erros';
 import { ContaCompartilhadaRepositorio } from '@/repositorios/conta-compartilhada.repositorio';
 import { MembroCompartilhadoRepositorio } from '@/repositorios/membro-compartilhado.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
@@ -37,11 +32,6 @@ const QUALIDADE_WEBP = 85;
 export interface UsuarioAutenticado {
   id: string;
   nome: string;
-}
-
-interface GrupoEMembro {
-  grupo: ContaCompartilhada;
-  meuMembro: MembroCompartilhado;
 }
 
 export class ContaCompartilhadaServico {
@@ -116,20 +106,32 @@ export class ContaCompartilhadaServico {
     return this.paraDetalheDTO(grupo, 'ADMINISTRADOR');
   }
 
-  async buscarPorId(id: string, usuarioId: string): Promise<ContaCompartilhadaDetalheDTO> {
-    const membro = await this.buscarMeuMembroOuFalhar(id, usuarioId);
+  /** 02-ARCHITECTURE.md §8.3 nivel 2 (issue #68): unico ponto de resolucao
+   * do vinculo usuario-grupo, chamado pelo middleware `autorizarCompartilhada`
+   * — nunca reimplementado aqui nem em outro servico. */
+  async buscarMeuMembroAtivo(
+    contaCompartilhadaId: string,
+    usuarioId: string,
+  ): Promise<MembroCompartilhado | null> {
+    return this.membroRepositorio.buscarAtivo(contaCompartilhadaId, usuarioId);
+  }
+
+  /** A autorizacao (membro ativo? papel permitido?) ja foi decidida pelo
+   * middleware antes do controlador chegar aqui — `meuPapel` vem de
+   * `req.membro`, resolvido uma unica vez por requisicao. */
+  async buscarPorId(
+    id: string,
+    meuPapel: MembroCompartilhado['papel'],
+  ): Promise<ContaCompartilhadaDetalheDTO> {
     const grupo = await this.buscarGrupoOuFalhar(id);
-    return this.paraDetalheDTO(grupo, membro.papel);
+    return this.paraDetalheDTO(grupo, meuPapel);
   }
 
   async atualizar(
     id: string,
-    usuarioId: string,
     dados: AtualizarContaCompartilhadaDTO,
   ): Promise<ContaCompartilhadaDetalheDTO> {
-    const { grupo } = await this.buscarGrupoEMeuMembroOuFalhar(id, usuarioId, true);
-
-    const atualizado = await this.repositorio.atualizar(grupo.id, {
+    const atualizado = await this.repositorio.atualizar(id, {
       ...(dados.nome !== undefined && { nome: dados.nome }),
       ...(dados.descricao !== undefined && { descricao: dados.descricao }),
       ...(dados.cor !== undefined && { cor: dados.cor }),
@@ -141,10 +143,11 @@ export class ContaCompartilhadaServico {
     return this.paraDetalheDTO(atualizado, 'ADMINISTRADOR');
   }
 
-  /** RN-33: exclusao logica, so pelo administrador, exigindo o nome exato
-   * do grupo como confirmacao explicita — historico preservado. */
-  async excluir(id: string, usuarioId: string, confirmacao: string): Promise<void> {
-    const { grupo } = await this.buscarGrupoEMeuMembroOuFalhar(id, usuarioId, true);
+  /** RN-33: exclusao logica, restrita ao administrador pelo middleware de
+   * rota, exigindo o nome exato do grupo como confirmacao explicita —
+   * historico preservado. */
+  async excluir(id: string, confirmacao: string): Promise<void> {
+    const grupo = await this.buscarGrupoOuFalhar(id);
 
     if (confirmacao.trim() !== grupo.nome) {
       throw new ValidacaoErro('Confirmacao nao corresponde ao nome do grupo.', [
@@ -155,12 +158,10 @@ export class ContaCompartilhadaServico {
     await this.repositorio.excluirLogicamente(id);
   }
 
-  /** RF-53/§16 route table: so o administrador troca a imagem do grupo —
-   * mesmo raciocinio de `PerfilServico.atualizarFoto` (nunca confiar no
-   * Content-Type declarado, so no magic number do buffer). */
-  async atualizarImagem(id: string, usuarioId: string, arquivo: Buffer): Promise<string> {
-    await this.buscarGrupoEMeuMembroOuFalhar(id, usuarioId, true);
-
+  /** RF-53/§16 route table: restrito ao administrador pelo middleware de
+   * rota — mesmo raciocinio de `PerfilServico.atualizarFoto` (nunca
+   * confiar no Content-Type declarado, so no magic number do buffer). */
+  async atualizarImagem(id: string, arquivo: Buffer): Promise<string> {
     const tipoDetectado = await fileTypeFromBuffer(arquivo);
     if (!tipoDetectado || !TIPOS_MIME_AVATAR_PERMITIDOS.has(tipoDetectado.mime)) {
       throw new TipoArquivoInvalidoErro('Tipo de arquivo não suportado. Envie JPEG, PNG ou WebP.');
@@ -181,43 +182,15 @@ export class ContaCompartilhadaServico {
     return hojeNoTimezone(perfil?.timezone ?? 'America/Sao_Paulo');
   }
 
-  /** RN-51: quem nao e membro ativo recebe 404, nunca 403 — 403
-   * confirmaria a existencia do grupo para quem nao deveria nem saber. */
-  private async buscarMeuMembroOuFalhar(
-    contaCompartilhadaId: string,
-    usuarioId: string,
-  ): Promise<MembroCompartilhado> {
-    const membro = await this.membroRepositorio.buscarAtivo(contaCompartilhadaId, usuarioId);
-    if (!membro) {
-      throw new NaoEncontradoErro('Conta compartilhada nao encontrada.');
-    }
-    return membro;
-  }
-
+  /** So chega aqui depois do middleware confirmar a existencia do vinculo
+   * ativo — esta busca e so uma leitura defensiva do proprio registro do
+   * grupo (nunca uma decisao de autorizacao). */
   private async buscarGrupoOuFalhar(id: string): Promise<ContaCompartilhada> {
     const grupo = await this.repositorio.buscarPorId(id);
     if (!grupo) {
       throw new NaoEncontradoErro('Conta compartilhada nao encontrada.');
     }
     return grupo;
-  }
-
-  /** Membro + grupo numa unica chamada, com a opcao de exigir papel
-   * ADMINISTRADOR (RF-56/RF-57 chegam nesta mesma checagem em #68/#69,
-   * mas PATCH/DELETE do proprio grupo — #67 — ja precisam dela hoje). */
-  private async buscarGrupoEMeuMembroOuFalhar(
-    id: string,
-    usuarioId: string,
-    exigirAdministrador: boolean,
-  ): Promise<GrupoEMembro> {
-    const meuMembro = await this.buscarMeuMembroOuFalhar(id, usuarioId);
-    const grupo = await this.buscarGrupoOuFalhar(id);
-
-    if (exigirAdministrador && meuMembro.papel !== 'ADMINISTRADOR') {
-      throw new PapelInsuficienteErro('Apenas o administrador pode realizar esta acao.');
-    }
-
-    return { grupo, meuMembro };
   }
 
   private async paraDetalheDTO(

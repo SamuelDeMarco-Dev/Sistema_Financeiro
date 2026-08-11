@@ -21,9 +21,14 @@ export class ContaCompartilhadaControlador {
       .json(respostaSucesso({ contasCompartilhadas }, 'Contas compartilhadas listadas.'));
   });
 
+  // Autorizacao (membro ativo, papel) ja foi decidida pelo middleware
+  // `autorizarCompartilhada` — o controlador so le `req.membro.papel`.
   buscarPorId = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params as IdParam;
-    const contaCompartilhada = await this.servico.buscarPorId(id, req.usuario.id);
+    const { contaCompartilhadaId } = req.params as IdParam;
+    const contaCompartilhada = await this.servico.buscarPorId(
+      contaCompartilhadaId,
+      req.membro.papel,
+    );
 
     res.status(200).json(respostaSucesso({ contaCompartilhada }, 'Conta compartilhada carregada.'));
   });
@@ -41,10 +46,9 @@ export class ContaCompartilhadaControlador {
   });
 
   atualizar = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params as IdParam;
+    const { contaCompartilhadaId } = req.params as IdParam;
     const contaCompartilhada = await this.servico.atualizar(
-      id,
-      req.usuario.id,
+      contaCompartilhadaId,
       req.body as AtualizarContaCompartilhadaDTO,
     );
 
@@ -54,9 +58,9 @@ export class ContaCompartilhadaControlador {
   });
 
   excluir = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params as IdParam;
+    const { contaCompartilhadaId } = req.params as IdParam;
     const { confirmacao } = req.body as ExcluirContaCompartilhadaDTO;
-    await this.servico.excluir(id, req.usuario.id, confirmacao);
+    await this.servico.excluir(contaCompartilhadaId, confirmacao);
 
     res.status(204).send();
   });
@@ -65,8 +69,8 @@ export class ContaCompartilhadaControlador {
     if (!req.file) {
       throw new ValidacaoErro('Envie um arquivo no campo "imagem".');
     }
-    const { id } = req.params as IdParam;
-    const imagemUrl = await this.servico.atualizarImagem(id, req.usuario.id, req.file.buffer);
+    const { contaCompartilhadaId } = req.params as IdParam;
+    const imagemUrl = await this.servico.atualizarImagem(contaCompartilhadaId, req.file.buffer);
 
     res.status(200).json(respostaSucesso({ imagemUrl }, 'Imagem atualizada.'));
   });

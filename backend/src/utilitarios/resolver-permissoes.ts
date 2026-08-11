@@ -68,3 +68,22 @@ export function resolverPermissoes(
     podeExcluirMovimentacaoPropria: configuracaoGrupo.permiteParticipanteEditarProprias,
   };
 }
+
+/** RN-30/RN-31 aplicadas a UMA movimentacao especifica: dispensa quem
+ * chama de decidir "propria vs. de terceiro" na mao — so informa quem e o
+ * autor da movimentacao e quem esta pedindo. Autorizacao de edicao e
+ * exclusao seguem a mesma regra (RN-31 nao distingue as duas acoes), por
+ * isso uma unica funcao cobre ambas (issue #68, consumida pelas rotas de
+ * movimentacao de grupo quando a issue #72 as habilitar). */
+export function autorizarEdicaoOuExclusaoMovimentacao(
+  papel: PapelMembro,
+  configuracaoGrupo: ConfiguracaoGrupo,
+  autorDaMovimentacaoId: string,
+  solicitanteId: string,
+): boolean {
+  const permissoes = resolverPermissoes(papel, configuracaoGrupo);
+  const ehPropria = autorDaMovimentacaoId === solicitanteId;
+  return ehPropria
+    ? permissoes.podeEditarMovimentacaoPropria
+    : permissoes.podeEditarMovimentacaoDeTerceiro;
+}

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { resolverPermissoes } from '@/utilitarios/resolver-permissoes';
+import {
+  autorizarEdicaoOuExclusaoMovimentacao,
+  resolverPermissoes,
+} from '@/utilitarios/resolver-permissoes';
 import type { PermissoesGrupo } from '@/utilitarios/resolver-permissoes';
 import type { PapelMembro } from '@prisma/client';
 
@@ -76,5 +79,76 @@ describe('resolverPermissoes (RN-30, RN-31)', () => {
       const semPermissao = resolverPermissoes(papel, { permiteParticipanteEditarProprias: false });
       expect(comPermissao).toEqual(semPermissao);
     }
+  });
+});
+
+describe('autorizarEdicaoOuExclusaoMovimentacao (RN-30, RN-31 — issue #68)', () => {
+  it('ADMINISTRADOR pode editar/excluir movimentacao de terceiro', () => {
+    const permitido = autorizarEdicaoOuExclusaoMovimentacao(
+      'ADMINISTRADOR',
+      { permiteParticipanteEditarProprias: false },
+      'autor-1',
+      'solicitante-2',
+    );
+    expect(permitido).toBe(true);
+  });
+
+  it('ADMINISTRADOR pode editar/excluir a propria movimentacao', () => {
+    const permitido = autorizarEdicaoOuExclusaoMovimentacao(
+      'ADMINISTRADOR',
+      { permiteParticipanteEditarProprias: false },
+      'autor-1',
+      'autor-1',
+    );
+    expect(permitido).toBe(true);
+  });
+
+  it('OBSERVADOR nunca pode editar/excluir, propria ou de terceiro', () => {
+    expect(
+      autorizarEdicaoOuExclusaoMovimentacao(
+        'OBSERVADOR',
+        { permiteParticipanteEditarProprias: true },
+        'autor-1',
+        'autor-1',
+      ),
+    ).toBe(false);
+    expect(
+      autorizarEdicaoOuExclusaoMovimentacao(
+        'OBSERVADOR',
+        { permiteParticipanteEditarProprias: true },
+        'autor-1',
+        'solicitante-2',
+      ),
+    ).toBe(false);
+  });
+
+  it('PARTICIPANTE nunca pode editar/excluir movimentacao de terceiro, mesmo com permiteParticipanteEditarProprias', () => {
+    const permitido = autorizarEdicaoOuExclusaoMovimentacao(
+      'PARTICIPANTE',
+      { permiteParticipanteEditarProprias: true },
+      'autor-1',
+      'solicitante-2',
+    );
+    expect(permitido).toBe(false);
+  });
+
+  it('PARTICIPANTE pode editar/excluir a propria movimentacao quando permiteParticipanteEditarProprias=true', () => {
+    const permitido = autorizarEdicaoOuExclusaoMovimentacao(
+      'PARTICIPANTE',
+      { permiteParticipanteEditarProprias: true },
+      'autor-1',
+      'autor-1',
+    );
+    expect(permitido).toBe(true);
+  });
+
+  it('PARTICIPANTE nao pode editar/excluir nem a propria movimentacao quando permiteParticipanteEditarProprias=false', () => {
+    const permitido = autorizarEdicaoOuExclusaoMovimentacao(
+      'PARTICIPANTE',
+      { permiteParticipanteEditarProprias: false },
+      'autor-1',
+      'autor-1',
+    );
+    expect(permitido).toBe(false);
   });
 });

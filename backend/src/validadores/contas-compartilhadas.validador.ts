@@ -3,7 +3,7 @@ import { z } from 'zod';
 const corSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor invalida. Use o formato hex #RRGGBB.');
 
 export const idParamSchema = z.object({
-  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  params: z.object({ contaCompartilhadaId: z.string().min(1, 'Id invalido.') }),
 });
 
 export type IdParam = z.infer<typeof idParamSchema>['params'];
@@ -27,7 +27,7 @@ export const criarContaCompartilhadaSchema = z.object({
 export type CriarContaCompartilhadaDTO = z.infer<typeof criarContaCompartilhadaSchema>['body'];
 
 export const atualizarContaCompartilhadaSchema = z.object({
-  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  params: z.object({ contaCompartilhadaId: z.string().min(1, 'Id invalido.') }),
   body: z.object({
     nome: z.string().trim().min(2, 'O nome deve ter no minimo 2 caracteres.').max(120).optional(),
     descricao: z.string().trim().max(500).nullable().optional(),
@@ -41,7 +41,7 @@ export type AtualizarContaCompartilhadaDTO = z.infer<
 >['body'];
 
 export const excluirContaCompartilhadaSchema = z.object({
-  params: z.object({ id: z.string().min(1, 'Id invalido.') }),
+  params: z.object({ contaCompartilhadaId: z.string().min(1, 'Id invalido.') }),
   body: z.object({
     confirmacao: z.string().trim().min(1, 'Informe o nome do grupo para confirmar a exclusao.'),
   }),
