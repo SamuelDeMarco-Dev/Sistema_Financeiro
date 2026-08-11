@@ -39,7 +39,13 @@ export default tseslint.config(
     // `include` do tsconfig.json — sem allowDefaultProject configurado, o
     // parser typescript-eslint (`projectService: true`) rejeita qualquer
     // arquivo que nao pertenca a um projeto TS conhecido.
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'src/generated/**', 'ecosystem.config.cjs'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'src/generated/**',
+      'ecosystem.config.cjs',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

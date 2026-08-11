@@ -71,6 +71,26 @@ enum FrequenciaRecorrencia {
   ANUAL
 }
 
+enum PapelMembro {
+  ADMINISTRADOR
+  PARTICIPANTE
+  OBSERVADOR
+}
+
+enum SituacaoMembro {
+  ATIVO
+  REMOVIDO
+  SAIU
+}
+
+enum SituacaoConvite {
+  PENDENTE
+  ACEITO
+  RECUSADO
+  CANCELADO
+  EXPIRADO
+}
+
 model Usuario {
   id        String @id @default(cuid())
   nome      String @db.VarChar(120)
@@ -101,6 +121,12 @@ model Usuario {
   movimentacoes     Movimentacao[]
   comprasParceladas CompraParcelada[]
   anexos            Anexo[]
+
+  membros           MembroCompartilhado[]
+  gruposCriados     ContaCompartilhada[]  @relation("GrupoCriadoPor")
+  convitesEnviados  Convite[]             @relation("ConviteEnviadoPor")
+  convitesRecebidos Convite[]             @relation("ConviteUsuarioConvidado")
+  membrosConvidados MembroCompartilhado[] @relation("MembroConvidadoPor")
 
   @@index([excluidoEm])
   @@map("usuarios")
@@ -152,14 +178,101 @@ model TokenRenovacao {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  CONTAS COMPARTILHADAS
+// ═══════════════════════════════════════════════════════════
+
+model ContaCompartilhada {
+  id        String  @id @default(cuid())
+  nome      String  @db.VarChar(120)
+  descricao String? @db.VarChar(500)
+  imagemUrl String? @map("imagem_url") @db.VarChar(500)
+  moeda     String  @default("BRL") @db.Char(3)
+  cor       String  @default("#2563EB") @db.VarChar(9)
+
+  /// RN-31: permite ao PARTICIPANTE editar/excluir as proprias movimentacoes.
+  permiteParticipanteEditarProprias Boolean @default(true) @map("permite_participante_editar_proprias")
+
+  criadoPorId  String    @map("criado_por_id")
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  criadoPor Usuario @relation("GrupoCriadoPor", fields: [criadoPorId], references: [id], onDelete: Restrict)
+
+  membros       MembroCompartilhado[]
+  convites      Convite[]
+  contas        Conta[]
+  categorias    Categoria[]
+  movimentacoes Movimentacao[]
+  etiquetas     Etiqueta[]
+
+  @@index([criadoPorId])
+  @@index([excluidoEm])
+  @@map("contas_compartilhadas")
+}
+
+model MembroCompartilhado {
+  id                   String @id @default(cuid())
+  contaCompartilhadaId String @map("conta_compartilhada_id")
+  usuarioId            String @map("usuario_id")
+
+  papel    PapelMembro    @default(PARTICIPANTE)
+  situacao SituacaoMembro @default(ATIVO)
+
+  entrouEm       DateTime  @default(now()) @map("entrou_em") @db.Timestamptz(3)
+  saiuEm         DateTime? @map("saiu_em") @db.Timestamptz(3)
+  convidadoPorId String?   @map("convidado_por_id")
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  contaCompartilhada ContaCompartilhada @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  usuario            Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  convidadoPor       Usuario?           @relation("MembroConvidadoPor", fields: [convidadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([contaCompartilhadaId, usuarioId])
+  @@index([usuarioId, situacao])
+  @@index([contaCompartilhadaId, papel])
+  @@map("membros_compartilhados")
+}
+
+model Convite {
+  id                   String      @id @default(cuid())
+  contaCompartilhadaId String      @map("conta_compartilhada_id")
+  email                String      @db.VarChar(180)
+  papel                PapelMembro @default(PARTICIPANTE)
+
+  token    String          @unique @db.VarChar(128)
+  situacao SituacaoConvite @default(PENDENTE)
+  mensagem String?         @db.VarChar(300)
+
+  enviadoPorId       String  @map("enviado_por_id")
+  usuarioConvidadoId String? @map("usuario_convidado_id")
+
+  expiraEm     DateTime  @map("expira_em") @db.Timestamptz(3)
+  respondidoEm DateTime? @map("respondido_em") @db.Timestamptz(3)
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  contaCompartilhada ContaCompartilhada @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  enviadoPor         Usuario            @relation("ConviteEnviadoPor", fields: [enviadoPorId], references: [id], onDelete: Restrict)
+  usuarioConvidado   Usuario?           @relation("ConviteUsuarioConvidado", fields: [usuarioConvidadoId], references: [id], onDelete: SetNull)
+
+  @@index([email, situacao])
+  @@index([contaCompartilhadaId, situacao])
+  @@index([expiraEm])
+  @@map("convites")
+}
+
+// ═══════════════════════════════════════════════════════════
 //  CONTAS, CATEGORIAS E ETIQUETAS
 // ═══════════════════════════════════════════════════════════
 
 model Conta {
   id String @id @default(cuid())
 
-  /// Escopo XOR: usuarioId OU contaCompartilhadaId. contaCompartilhadaId
-  /// ainda nao tem FK ativa — a coluna nasce aqui, a relacao chega em M6.
+  /// Escopo XOR: usuarioId OU contaCompartilhadaId. Ver CHECK chk_conta_escopo.
   usuarioId            String? @map("usuario_id")
   contaCompartilhadaId String? @map("conta_compartilhada_id")
 
@@ -179,8 +292,9 @@ model Conta {
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
 
-  usuario       Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  movimentacoes Movimentacao[]
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      Movimentacao[]
 
   @@index([usuarioId, excluidoEm, arquivadaEm])
   @@index([contaCompartilhadaId, excluidoEm])
@@ -206,10 +320,11 @@ model Categoria {
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
 
-  usuario       Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  categoriaPai  Categoria?     @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
-  subcategorias Categoria[]    @relation("Subcategoria")
-  movimentacoes Movimentacao[]
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  categoriaPai       Categoria?          @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
+  subcategorias      Categoria[]         @relation("Subcategoria")
+  movimentacoes      Movimentacao[]
 
   @@index([usuarioId, tipo, excluidoEm])
   @@index([contaCompartilhadaId, tipo, excluidoEm])
@@ -228,8 +343,9 @@ model Etiqueta {
   criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  usuario       Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  movimentacoes MovimentacaoEtiqueta[]
+  usuario            Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada?    @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      MovimentacaoEtiqueta[]
 
   @@index([usuarioId])
   @@index([contaCompartilhadaId])
@@ -278,8 +394,7 @@ model Movimentacao {
   /// Autor do lancamento. Sempre preenchido, inclusive em grupo (RF-59, M6).
   usuarioId String @map("usuario_id")
 
-  /// Escopo XOR: contaId (pessoal) OU contaCompartilhadaId (grupo, M6).
-  /// contaCompartilhadaId ainda nao tem FK ativa — ver chk_mov_escopo (#33).
+  /// Escopo XOR: contaId (pessoal) OU contaCompartilhadaId (grupo). Ver CHECK chk_mov_escopo.
   contaId              String? @map("conta_id")
   contaCompartilhadaId String? @map("conta_compartilhada_id")
 
@@ -325,10 +440,11 @@ model Movimentacao {
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
 
-  usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  conta           Conta?           @relation(fields: [contaId], references: [id], onDelete: Restrict)
-  categoria       Categoria?       @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
-  compraParcelada CompraParcelada? @relation("ParcelasDaCompra", fields: [compraParceladaId], references: [id], onDelete: Cascade)
+  usuario            Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  conta              Conta?              @relation(fields: [contaId], references: [id], onDelete: Restrict)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Restrict)
+  categoria          Categoria?          @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  compraParcelada    CompraParcelada?    @relation("ParcelasDaCompra", fields: [compraParceladaId], references: [id], onDelete: Cascade)
 
   modeloRecorrencia Movimentacao?  @relation("OcorrenciasRecorrencia", fields: [recorrenciaId], references: [id], onDelete: Cascade)
   ocorrencias       Movimentacao[] @relation("OcorrenciasRecorrencia")

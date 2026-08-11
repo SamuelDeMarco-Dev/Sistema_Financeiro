@@ -8,8 +8,8 @@ import { seedCategoriasPadrao } from '../../prisma/seed-categorias';
  * compartilhado (ver `garantirCategoriasPadrao`). */
 export async function limparBanco(): Promise<void> {
   await prisma.$transaction([
-    // Movimentacao usa onDelete: Restrict em usuario/conta/categoria — os
-    // vinculos e a propria movimentacao precisam sair antes desses pais.
+    // Movimentacao usa onDelete: Restrict em usuario/conta/categoria/grupo —
+    // os vinculos e a propria movimentacao precisam sair antes desses pais.
     prisma.movimentacaoEtiqueta.deleteMany(),
     prisma.anexo.deleteMany(),
     prisma.movimentacao.deleteMany(),
@@ -23,6 +23,11 @@ export async function limparBanco(): Promise<void> {
     }),
     prisma.categoria.deleteMany({ where: { ehPadraoSistema: false } }),
     prisma.conta.deleteMany(),
+    // Convite/Membro usam onDelete: Restrict em enviadoPor/criadoPor — saem
+    // antes do grupo, que sai antes dos usuarios.
+    prisma.convite.deleteMany(),
+    prisma.membroCompartilhado.deleteMany(),
+    prisma.contaCompartilhada.deleteMany(),
   ]);
   await prisma.usuario.deleteMany();
 }
