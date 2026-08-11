@@ -11,10 +11,7 @@ export class TransferenciaControlador {
   private readonly servico = new TransferenciaServico();
 
   criar = asyncHandler(async (req: Request, res: Response) => {
-    const transferencia = await this.servico.criar(
-      req.usuario.id,
-      req.body as CriarTransferenciaDTO,
-    );
+    const transferencia = await this.servico.criar(req.usuario, req.body as CriarTransferenciaDTO);
 
     res
       .status(201)

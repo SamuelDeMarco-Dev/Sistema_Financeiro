@@ -1,11 +1,29 @@
 import { Prisma } from '@prisma/client';
-import { ContaArquivadaErro, ContasIguaisErro, ErroInterno, NaoEncontradoErro } from '@/erros';
+import {
+  ContaArquivadaErro,
+  ContasIguaisErro,
+  ErroInterno,
+  NaoEncontradoErro,
+  RegraNegocioErro,
+} from '@/erros';
+import { ContaCompartilhadaRepositorio } from '@/repositorios/conta-compartilhada.repositorio';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
+import type { PernaTransferencia } from '@/repositorios/transferencia.repositorio';
 import { TransferenciaRepositorio } from '@/repositorios/transferencia.repositorio';
 import { AnexoServico } from '@/servicos/anexo.servico';
+import { autorizarPapelNoGrupo } from '@/servicos/autorizacao-grupo.servico';
 import { deDataIso, paraDataIso } from '@/utilitarios/data';
+import { registrador } from '@/utilitarios/registrador';
 import type { CriarTransferenciaDTO } from '@/validadores/transferencia.validador';
 import type { Conta, SituacaoMovimentacao } from '@prisma/client';
+
+export interface UsuarioAutenticado {
+  id: string;
+  nome: string;
+}
+
+type Escopo =
+  { tipo: 'PESSOAL'; id: string; nome: string } | { tipo: 'GRUPO'; id: string; nome: string };
 
 export interface TransferenciaDTO {
   transferenciaId: string;
@@ -13,8 +31,16 @@ export interface TransferenciaDTO {
   data: string;
   descricao: string;
   situacao: SituacaoMovimentacao;
-  saida: { movimentacaoId: string; conta: { id: string; nome: string; saldoAtual: string } };
-  entrada: { movimentacaoId: string; conta: { id: string; nome: string; saldoAtual: string } };
+  saida: {
+    movimentacaoId: string;
+    conta: { id: string; nome: string; saldoAtual: string };
+    escopo: Escopo;
+  };
+  entrada: {
+    movimentacaoId: string;
+    conta: { id: string; nome: string; saldoAtual: string };
+    escopo: Escopo;
+  };
 }
 
 export class TransferenciaServico {
@@ -22,30 +48,45 @@ export class TransferenciaServico {
     private readonly repositorio = new TransferenciaRepositorio(),
     private readonly contaRepositorio = new ContaRepositorio(),
     private readonly anexoServico = new AnexoServico(),
+    private readonly contaCompartilhadaRepositorio = new ContaCompartilhadaRepositorio(),
   ) {}
 
-  /** RN-24/RN-26: contas diferentes, ambas do usuario e nenhuma arquivada,
-   * par criado em transacao. RN-27 (conta compartilhada) e moot em M3 —
-   * ContaRepositorio.buscarPorId so conhece contas pessoais, uma conta de
-   * grupo simplesmente nao existiria ainda e responderia 404. */
-  async criar(usuarioId: string, dados: CriarTransferenciaDTO): Promise<TransferenciaDTO> {
+  /** RN-24/RN-26: contas diferentes, nenhuma arquivada, par criado em
+   * transacao. RF-37/RN-27 (issue #73): cada ponta pode ser pessoal OU uma
+   * sub-conta de um grupo do qual o usuario e ADMINISTRADOR/PARTICIPANTE —
+   * `buscarContaAutorizadaOuFalhar` decide isso olhando a PROPRIA conta,
+   * nao um campo de escopo no corpo da requisicao. RN-32: as duas pontas
+   * precisam operar na mesma moeda (nao ha conversao na v1.x). */
+  async criar(
+    usuario: UsuarioAutenticado,
+    dados: CriarTransferenciaDTO,
+  ): Promise<TransferenciaDTO> {
     if (dados.contaOrigemId === dados.contaDestinoId) {
       throw new ContasIguaisErro('A conta de origem deve ser diferente da conta de destino.', [
         { campo: 'contaDestinoId', mensagem: 'Escolha uma conta diferente da origem.' },
       ]);
     }
 
-    const contaOrigem = await this.buscarContaOuFalhar(dados.contaOrigemId, usuarioId);
-    const contaDestino = await this.buscarContaOuFalhar(dados.contaDestinoId, usuarioId);
-    this.garantirNaoArquivada(contaOrigem);
-    this.garantirNaoArquivada(contaDestino);
+    const origem = await this.buscarContaAutorizadaOuFalhar(dados.contaOrigemId, usuario);
+    const destino = await this.buscarContaAutorizadaOuFalhar(dados.contaDestinoId, usuario);
+    this.garantirNaoArquivada(origem.conta);
+    this.garantirNaoArquivada(destino.conta);
 
-    const descricao = dados.descricao ?? `${contaOrigem.nome} → ${contaDestino.nome}`;
+    if (origem.conta.moeda !== destino.conta.moeda) {
+      throw new RegraNegocioErro('Não é possível transferir entre contas de moedas diferentes.', [
+        {
+          campo: 'contaDestinoId',
+          mensagem: `Origem em ${origem.conta.moeda}, destino em ${destino.conta.moeda}.`,
+        },
+      ]);
+    }
+
+    const descricao = dados.descricao ?? `${this.rotulo(origem)} → ${this.rotulo(destino)}`;
 
     const transferenciaId = await this.repositorio.criar({
-      usuarioId,
-      contaOrigemId: contaOrigem.id,
-      contaDestinoId: contaDestino.id,
+      usuarioId: usuario.id,
+      contaOrigemId: origem.conta.id,
+      contaDestinoId: destino.conta.id,
       valor: new Prisma.Decimal(dados.valor),
       data: deDataIso(dados.data),
       descricao,
@@ -53,7 +94,14 @@ export class TransferenciaServico {
       efetivada: dados.efetivada,
     });
 
-    return this.montarDTO(transferenciaId, usuarioId);
+    this.registrarAuditoriaSeEnvolverGrupo(
+      transferenciaId,
+      usuario.id,
+      origem.escopo,
+      destino.escopo,
+    );
+
+    return this.montarDTO(transferenciaId, usuario.id);
   }
 
   async buscarPorId(transferenciaId: string, usuarioId: string): Promise<TransferenciaDTO> {
@@ -84,17 +132,19 @@ export class TransferenciaServico {
       // chegaria aqui por uma corrupcao de dados fora do controle da API.
       throw new ErroInterno('Transferência com par incompleto.');
     }
-    if (saida.contaId === null || entrada.contaId === null || !saida.conta || !entrada.conta) {
-      // RN-09: toda movimentacao (transferencia inclusive) tem contaId —
-      // contaCompartilhadaId so chega em M6. Rede de seguranca, nao deveria
-      // disparar em uso normal da API.
+    if (!saida.conta || !entrada.conta) {
+      // RN-09: toda movimentacao (transferencia inclusive) sempre tem
+      // contaId — rede de seguranca, nao deveria disparar em uso normal.
       throw new ErroInterno('Perna de transferência sem conta associada.');
     }
 
     const [contaOrigem, contaDestino] = await Promise.all([
-      this.buscarContaOuFalhar(saida.contaId, usuarioId),
-      this.buscarContaOuFalhar(entrada.contaId, usuarioId),
+      this.contaRepositorio.buscarPorIdSemEscopo(saida.conta.id),
+      this.contaRepositorio.buscarPorIdSemEscopo(entrada.conta.id),
     ]);
+    if (!contaOrigem || !contaDestino) {
+      throw new ErroInterno('Conta da transferência não encontrada.');
+    }
     const [saldoOrigem, saldoDestino] = await Promise.all([
       this.contaRepositorio.calcularSaldoAtual(contaOrigem),
       this.contaRepositorio.calcularSaldoAtual(contaDestino),
@@ -109,6 +159,7 @@ export class TransferenciaServico {
       saida: {
         movimentacaoId: saida.id,
         conta: { id: saida.conta.id, nome: saida.conta.nome, saldoAtual: saldoOrigem.toFixed(2) },
+        escopo: this.escopoDaPerna(saida),
       },
       entrada: {
         movimentacaoId: entrada.id,
@@ -117,17 +168,88 @@ export class TransferenciaServico {
           nome: entrada.conta.nome,
           saldoAtual: saldoDestino.toFixed(2),
         },
+        escopo: this.escopoDaPerna(entrada),
       },
     };
   }
 
-  /** RN-51: 404 (nunca 403) para conta de outro usuario. */
-  private async buscarContaOuFalhar(contaId: string, usuarioId: string): Promise<Conta> {
-    const conta = await this.contaRepositorio.buscarPorId(contaId, usuarioId);
+  private escopoDaPerna(perna: PernaTransferencia): Escopo {
+    if (!perna.conta) {
+      throw new ErroInterno('Perna de transferência sem conta associada.');
+    }
+    if (perna.conta.contaCompartilhadaId !== null) {
+      return {
+        tipo: 'GRUPO',
+        id: perna.conta.contaCompartilhadaId,
+        nome: perna.conta.contaCompartilhada?.nome ?? '',
+      };
+    }
+    // chk_conta_escopo garante usuarioId/usuario != null aqui.
+    return {
+      tipo: 'PESSOAL',
+      id: perna.conta.usuarioId ?? '',
+      nome: perna.conta.usuario?.nome ?? '',
+    };
+  }
+
+  /** RN-51: 404 (nunca 403) para conta de outro usuario ou de um grupo do
+   * qual o solicitante nao e membro. RF-37/checklist #73: a ponta de grupo
+   * exige papel ADMINISTRADOR ou PARTICIPANTE — observador nunca move
+   * dinheiro do grupo. */
+  private async buscarContaAutorizadaOuFalhar(
+    contaId: string,
+    usuario: UsuarioAutenticado,
+  ): Promise<{ conta: Conta; escopo: Escopo }> {
+    const conta = await this.contaRepositorio.buscarPorIdSemEscopo(contaId);
     if (!conta) {
       throw new NaoEncontradoErro('Conta não encontrada.');
     }
-    return conta;
+
+    if (conta.usuarioId !== null) {
+      if (conta.usuarioId !== usuario.id) {
+        throw new NaoEncontradoErro('Conta não encontrada.');
+      }
+      return { conta, escopo: { tipo: 'PESSOAL', id: usuario.id, nome: usuario.nome } };
+    }
+
+    // chk_conta_escopo garante contaCompartilhadaId != null aqui.
+    if (conta.contaCompartilhadaId === null) {
+      throw new NaoEncontradoErro('Conta não encontrada.');
+    }
+    await autorizarPapelNoGrupo(conta.contaCompartilhadaId, usuario.id, [
+      'ADMINISTRADOR',
+      'PARTICIPANTE',
+    ]);
+    const nomeDoGrupo = await this.nomeDoGrupo(conta.contaCompartilhadaId);
+    return { conta, escopo: { tipo: 'GRUPO', id: conta.contaCompartilhadaId, nome: nomeDoGrupo } };
+  }
+
+  private async nomeDoGrupo(contaCompartilhadaId: string): Promise<string> {
+    const grupo = await this.contaCompartilhadaRepositorio.buscarPorId(contaCompartilhadaId);
+    return grupo?.nome ?? '';
+  }
+
+  private rotulo({ conta, escopo }: { conta: Conta; escopo: Escopo }): string {
+    return escopo.tipo === 'GRUPO' ? `${escopo.nome}/${conta.nome}` : conta.nome;
+  }
+
+  /** RF-82/M11: `LogAuditoria` dedicado ainda nao existe — por ora o
+   * registro fica no log estruturado da aplicacao, mesmo raciocinio do
+   * comentario de RN-15 em `MovimentacaoServico.atualizar`. */
+  private registrarAuditoriaSeEnvolverGrupo(
+    transferenciaId: string,
+    usuarioId: string,
+    escopoOrigem: Escopo,
+    escopoDestino: Escopo,
+  ): void {
+    for (const escopo of [escopoOrigem, escopoDestino]) {
+      if (escopo.tipo === 'GRUPO') {
+        registrador.info(
+          { transferenciaId, usuarioId, contaCompartilhadaId: escopo.id },
+          'RN-27: transferencia envolvendo conta compartilhada.',
+        );
+      }
+    }
   }
 
   private garantirNaoArquivada(conta: Conta): void {
