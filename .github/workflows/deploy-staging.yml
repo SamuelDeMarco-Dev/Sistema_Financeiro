@@ -1,0 +1,207 @@
+name: Deploy Homologação
+
+on:
+  push:
+    branches: [staging]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true # ao contrário de produção: staging pode cancelar um deploy antigo por um novo
+
+env:
+  NODE_VERSAO: '22'
+  REGISTRO: ghcr.io
+  IMAGEM_API: ${{ github.repository }}/pfm-api
+  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
+
+jobs:
+  # ─────────────────────────────────────────────
+  verificar:
+    name: Verificar
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # ─────────────────────────────────────────────
+  construir:
+    name: Construir artefatos
+    needs: verificar
+    runs-on: ubuntu-latest
+    # Sem isto, os secrets por-ambiente (08-CICD.md §2.2) resolveriam
+    # para o valor de "producao" (ou nenhum), nao o de "staging".
+    environment:
+      name: staging
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.valor }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "valor=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRO }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push da imagem da API (runtime)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:staging-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build e push da imagem de migration
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: migrator
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:staging-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSAO }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # VITE_AMBIENTE=staging aciona o BannerHomologacao (RF #62) — a
+      # unica diferenca real do build de producao.
+      - name: Build do frontend
+        env:
+          VITE_API_URL: ${{ secrets.URL_BASE_FRONTEND }}/api/v1
+          VITE_AMBIENTE: staging
+          VITE_NOME_APP: 'Gerenciador de Finanças (Homologação)'
+        run: |
+          npm ci
+          npm run build --workspace=frontend
+          tar -czf frontend-dist.tar.gz -C frontend/dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-staging
+          path: frontend-dist.tar.gz
+          retention-days: 3
+
+  # ─────────────────────────────────────────────
+  implantar:
+    name: Implantar na VPS (homologação)
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: frontend-dist-staging }
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_CHAVE_SSH }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p ${{ secrets.VPS_PORTA_SSH }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Enviar artefatos e scripts
+        run: |
+          scp -i ~/.ssh/id_deploy -P ${{ secrets.VPS_PORTA_SSH }} \
+            frontend-dist.tar.gz \
+            docker-compose.prod.yml \
+            infra/verificar-saude.sh \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }}:/var/pfm/staging/
+
+      - name: Gerar .env no servidor
+        env:
+          TAG: ${{ needs.construir.outputs.tag }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "cat > /var/pfm/staging/.env && chmod 600 /var/pfm/staging/.env" <<'ENVEOF'
+          NODE_ENV=production
+          PORTA=3333
+          URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
+          TAG_IMAGEM=${{ needs.construir.outputs.tag }}
+          GITHUB_REPOSITORIO=${{ github.repository }}
+          NOME_CONTAINER_API=pfm-staging-api
+          NOME_CONTAINER_POSTGRES=pfm-staging-postgres
+          PORTA_API_PUBLICADA=3334
+          PORTA_POSTGRES_PUBLICADA=5433
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          POSTGRES_USUARIO=${{ secrets.POSTGRES_USUARIO }}
+          POSTGRES_SENHA=${{ secrets.POSTGRES_SENHA }}
+          POSTGRES_BANCO=${{ secrets.POSTGRES_BANCO }}
+          JWT_SEGREDO=${{ secrets.JWT_SEGREDO }}
+          JWT_EXPIRACAO=15m
+          REFRESH_TOKEN_EXPIRACAO_DIAS=7
+          REFRESH_TOKEN_EXPIRACAO_DIAS_LEMBRAR=30
+          BCRYPT_CUSTO=12
+          ORIGENS_PERMITIDAS=${{ secrets.URL_BASE_FRONTEND }}
+          URL_BASE_FRONTEND=${{ secrets.URL_BASE_FRONTEND }}
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORTA=${{ secrets.SMTP_PORTA }}
+          SMTP_USUARIO=${{ secrets.SMTP_USUARIO }}
+          SMTP_SENHA=${{ secrets.SMTP_SENHA }}
+          SMTP_SEGURO=true
+          EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
+          DIRETORIO_UPLOADS=/app/backend/uploads
+          TAMANHO_MAXIMO_ANEXO_MB=5
+          TAMANHO_MAXIMO_AVATAR_MB=2
+          RATE_LIMIT_JANELA_MINUTOS=15
+          RATE_LIMIT_MAXIMO=1000
+          NIVEL_LOG=info
+          HABILITAR_TAREFAS_AGENDADAS=false
+          ENVEOF
+
+      # Sem backup pré-migration (dispensável em staging, dados
+      # descartáveis) e sem rollback automático (08-CICD.md §8): o
+      # objetivo do ambiente é expor a versão quebrada para diagnóstico,
+      # não escondê-la atrás de um rollback silencioso.
+      - name: Executar deploy
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            'bash -s' <<'DEPLOYEOF'
+          set -euo pipefail
+          cd /var/pfm/staging
+          chmod +x verificar-saude.sh
+
+          echo "▶ Baixando as novas imagens"
+          docker compose -f docker-compose.prod.yml pull api
+          docker compose -f docker-compose.prod.yml --profile migrate pull migrator
+
+          echo "▶ Aplicando migrations"
+          docker compose -f docker-compose.prod.yml run --rm migrator
+
+          echo "▶ Subindo a nova versão"
+          docker compose -f docker-compose.prod.yml up -d --no-deps api
+
+          echo "▶ Verificando prontidão"
+          URL_SAUDE="http://127.0.0.1:3334/api/v1/saude/prontidao" \
+            CONTAINER_API="pfm-staging-api" \
+            ./verificar-saude.sh || echo "::warning::Homologação não ficou pronta — falha fica exposta de propósito, sem rollback"
+
+          echo "▶ Publicando o frontend"
+          tar -xzf frontend-dist.tar.gz -C /var/www/pfm-staging --overwrite
+          rm -f frontend-dist.tar.gz
+
+          echo "✔ Deploy de homologação concluído"
+          DEPLOYEOF
+
+      - name: Registrar falha
+        if: failure()
+        run: echo "::error::Deploy de homologação falhou."

@@ -8,14 +8,30 @@ const app = criarServidor();
 
 const servidor = app.listen(ambiente.PORTA, () => {
   registrador.info(`API ouvindo em http://localhost:${ambiente.PORTA}`);
+  // Sinaliza prontidao ao PM2 (ecosystem.config.cjs `wait_ready`) — sem
+  // isto, o reload em cluster roteia trafego para instancias que ainda
+  // nao terminaram de subir.
+  process.send?.('ready');
 });
 
 iniciarAgendador();
 
+const PRAZO_ENCERRAMENTO_GRACIOSO_MS = 30_000; // ecosystem.config.cjs kill_timeout e maior (35s)
+
 function encerrarGraciosamente(sinal: NodeJS.Signals): void {
   registrador.info(`${sinal} recebido: encerrando requisicoes em curso...`);
 
+  // `servidor.close` por si so espera indefinidamente ate a ULTIMA conexao
+  // mantida viva (keep-alive) encerrar sozinha — sem prazo, uma unica
+  // conexao pendurada atrasaria o desligamento alem dos 30s que o PM2
+  // reserva (kill_timeout: 35000 > este prazo, de proposito).
+  const prazo = setTimeout(() => {
+    registrador.warn('Prazo de encerramento gracioso excedido — forcando saida.');
+    process.exit(1);
+  }, PRAZO_ENCERRAMENTO_GRACIOSO_MS);
+
   servidor.close((erro) => {
+    clearTimeout(prazo);
     if (erro) {
       process.exitCode = 1;
     }

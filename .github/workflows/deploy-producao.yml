@@ -1,0 +1,237 @@
+name: Deploy Produção
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag_imagem:
+        description: 'Tag da imagem a publicar (vazio = SHA atual)'
+        required: false
+
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false # nunca cancelar um deploy em andamento
+
+env:
+  NODE_VERSAO: '22'
+  REGISTRO: ghcr.io
+  IMAGEM_API: ${{ github.repository }}/pfm-api
+  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
+
+jobs:
+  # ─────────────────────────────────────────────
+  verificar:
+    name: Verificar
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # ─────────────────────────────────────────────
+  construir:
+    name: Construir artefatos
+    needs: verificar
+    runs-on: ubuntu-latest
+    # Sem isto, `secrets.URL_BASE_FRONTEND` (secret por-ambiente, RN
+    # 08-CICD.md §2.2) não resolveria aqui — só jobs com `environment:`
+    # enxergam o valor do ambiente correspondente.
+    environment:
+      name: producao
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.valor }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "valor=${{ inputs.tag_imagem || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRO }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Contexto = raiz do monorepo (workspaces npm, um único
+      # package-lock.json) — backend/Dockerfile depende do lockfile da
+      # raiz. `--target` é obrigatório: sem ele o build pega o último
+      # estágio do Dockerfile (`migrator`), não `runtime`.
+      - name: Build e push da imagem da API (runtime)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build e push da imagem de migration
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: migrator
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSAO }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # Build nativo no runner (nao via Docker): o frontend nao tem
+      # container proprio em producao (ADR-009).
+      - name: Build do frontend
+        env:
+          VITE_API_URL: ${{ secrets.URL_BASE_FRONTEND }}/api/v1
+          VITE_AMBIENTE: production
+          VITE_NOME_APP: 'Gerenciador de Finanças'
+        run: |
+          npm ci
+          npm run build --workspace=frontend
+          tar -czf frontend-dist.tar.gz -C frontend/dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist.tar.gz
+          retention-days: 3
+
+  # ─────────────────────────────────────────────
+  implantar:
+    name: Implantar na VPS
+    needs: construir
+    runs-on: ubuntu-latest
+    # `environment.url` só aceita os contextos env/github/inputs/job/matrix/
+    # needs/runner/steps/strategy/vars — "secrets" não é um deles, por isso
+    # não há `url:` aqui (URL_BASE_FRONTEND é secret, não var).
+    environment:
+      name: producao
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: frontend-dist }
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_CHAVE_SSH }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p ${{ secrets.VPS_PORTA_SSH }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Enviar artefatos e scripts
+        run: |
+          scp -i ~/.ssh/id_deploy -P ${{ secrets.VPS_PORTA_SSH }} \
+            frontend-dist.tar.gz \
+            docker-compose.prod.yml \
+            infra/verificar-saude.sh infra/reverter.sh infra/backup.sh \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }}:/var/pfm/producao/
+
+      - name: Gerar .env no servidor
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "cat > /var/pfm/producao/.env && chmod 600 /var/pfm/producao/.env" <<'ENVEOF'
+          NODE_ENV=production
+          PORTA=3333
+          URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
+          TAG_IMAGEM=${{ needs.construir.outputs.tag }}
+          GITHUB_REPOSITORIO=${{ github.repository }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          POSTGRES_USUARIO=${{ secrets.POSTGRES_USUARIO }}
+          POSTGRES_SENHA=${{ secrets.POSTGRES_SENHA }}
+          POSTGRES_BANCO=${{ secrets.POSTGRES_BANCO }}
+          JWT_SEGREDO=${{ secrets.JWT_SEGREDO }}
+          JWT_EXPIRACAO=15m
+          REFRESH_TOKEN_EXPIRACAO_DIAS=7
+          REFRESH_TOKEN_EXPIRACAO_DIAS_LEMBRAR=30
+          BCRYPT_CUSTO=12
+          ORIGENS_PERMITIDAS=${{ secrets.ORIGENS_PERMITIDAS }}
+          URL_BASE_FRONTEND=${{ secrets.URL_BASE_FRONTEND }}
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORTA=${{ secrets.SMTP_PORTA }}
+          SMTP_USUARIO=${{ secrets.SMTP_USUARIO }}
+          SMTP_SENHA=${{ secrets.SMTP_SENHA }}
+          SMTP_SEGURO=true
+          EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
+          DIRETORIO_UPLOADS=/app/backend/uploads
+          TAMANHO_MAXIMO_ANEXO_MB=5
+          TAMANHO_MAXIMO_AVATAR_MB=2
+          RATE_LIMIT_JANELA_MINUTOS=15
+          RATE_LIMIT_MAXIMO=1000
+          NIVEL_LOG=info
+          HABILITAR_TAREFAS_AGENDADAS=true
+          TOKEN_METRICAS=${{ secrets.TOKEN_METRICAS }}
+          ENVEOF
+
+      - name: Executar deploy
+        env:
+          TAG: ${{ needs.construir.outputs.tag }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "TAG_NOVA='${TAG}' bash -s" <<'DEPLOYEOF'
+          set -euo pipefail
+          cd /var/pfm/producao
+          chmod +x verificar-saude.sh reverter.sh backup.sh
+
+          echo "▶ Registrando a versão atual para rollback"
+          TAG_ANTERIOR=$(grep -oP '(?<=^TAG_IMAGEM=).*' .env.anterior 2>/dev/null || echo "")
+          echo "$TAG_ANTERIOR" > .tag-anterior
+          cp .env .env.anterior 2>/dev/null || true
+
+          echo "▶ Backup pré-migration"
+          ./backup.sh pre-deploy
+
+          echo "▶ Baixando as novas imagens"
+          docker compose -f docker-compose.prod.yml pull api
+          docker compose -f docker-compose.prod.yml --profile migrate pull migrator
+
+          echo "▶ Aplicando migrations"
+          docker compose -f docker-compose.prod.yml run --rm migrator
+
+          echo "▶ Subindo a nova versão"
+          docker compose -f docker-compose.prod.yml up -d --no-deps api
+
+          echo "▶ Verificando prontidão"
+          if ! ./verificar-saude.sh; then
+            echo "::error::Health check falhou — revertendo"
+            ./reverter.sh
+            exit 1
+          fi
+
+          echo "▶ Publicando o frontend"
+          tar -xzf frontend-dist.tar.gz -C /var/www/pfm --overwrite
+          rm -f frontend-dist.tar.gz
+
+          echo "▶ Limpando imagens antigas (mantém as 3 últimas)"
+          docker image prune -af --filter "until=168h" || true
+
+          echo "$(date -Iseconds) SUCESSO ${TAG_NOVA} (anterior: ${TAG_ANTERIOR})" \
+            >> /var/pfm/releases/historico.log
+
+          echo "✔ Deploy concluído"
+          DEPLOYEOF
+
+      - name: Verificação externa pós-deploy
+        run: |
+          sleep 5
+          RESP=$(curl -fsS "${{ secrets.URL_BASE_FRONTEND }}/api/v1/saude/prontidao")
+          echo "$RESP"
+          echo "$RESP" | grep -q '"status":"pronto"' || { echo "::error::Prontidão externa falhou"; exit 1; }
+          curl -fsSI "${{ secrets.URL_BASE_FRONTEND }}" | head -1
+
+      - name: Registrar falha
+        if: failure()
+        run: echo "::error::Deploy de produção falhou. Consulte /var/pfm/releases/historico.log na VPS."

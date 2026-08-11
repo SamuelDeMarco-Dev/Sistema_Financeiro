@@ -30,6 +30,9 @@ export async function enviarEmail(email: EmailParaEnviar): Promise<void> {
       html: email.html,
     });
   } catch (erro) {
-    registrador.error({ erro, para: email.para }, 'Falha ao enviar e-mail.');
+    // Chave `err` (nao `erro`): e a unica que o serializador padrao do
+    // Pino reconhece para extrair stack/message de um Error — qualquer
+    // outro nome vira "{}" no log (RN de observabilidade, issue #64).
+    registrador.error({ err: erro, para: email.para }, 'Falha ao enviar e-mail.');
   }
 }

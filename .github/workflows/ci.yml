@@ -5,6 +5,7 @@ on:
     branches: [main, staging]
   push:
     branches: [staging]
+  workflow_call: {} # reusado por deploy-producao.yml e deploy-staging.yml (job `verificar`)
 
 concurrency:
   group: ci-${{ github.ref }}
