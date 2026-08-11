@@ -16,10 +16,22 @@ const servidor = app.listen(ambiente.PORTA, () => {
 
 iniciarAgendador();
 
+const PRAZO_ENCERRAMENTO_GRACIOSO_MS = 30_000; // ecosystem.config.cjs kill_timeout e maior (35s)
+
 function encerrarGraciosamente(sinal: NodeJS.Signals): void {
   registrador.info(`${sinal} recebido: encerrando requisicoes em curso...`);
 
+  // `servidor.close` por si so espera indefinidamente ate a ULTIMA conexao
+  // mantida viva (keep-alive) encerrar sozinha — sem prazo, uma unica
+  // conexao pendurada atrasaria o desligamento alem dos 30s que o PM2
+  // reserva (kill_timeout: 35000 > este prazo, de proposito).
+  const prazo = setTimeout(() => {
+    registrador.warn('Prazo de encerramento gracioso excedido — forcando saida.');
+    process.exit(1);
+  }, PRAZO_ENCERRAMENTO_GRACIOSO_MS);
+
   servidor.close((erro) => {
+    clearTimeout(prazo);
     if (erro) {
       process.exitCode = 1;
     }

@@ -78,6 +78,8 @@ export function tratadorErros(
 
   // RN-56: a resposta nunca inclui stack trace ou detalhe de infraestrutura,
   // em nenhum ambiente — quem precisa investigar le o log, nao o corpo HTTP.
-  registrador.error({ requestId: req.requestId, erro }, 'Erro nao tratado');
+  // Chave `err` (nao `erro`): e a que o serializador padrao do Pino
+  // reconhece para extrair stack/message — outro nome vira "{}" no log.
+  registrador.error({ requestId: req.requestId, err: erro }, 'Erro nao tratado');
   res.status(500).json(respostaErro('Erro interno do servidor.', undefined, 'ERRO_INTERNO'));
 }

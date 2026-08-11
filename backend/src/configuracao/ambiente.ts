@@ -30,6 +30,8 @@ const esquemaAmbiente = z.object({
     .default('http://localhost:5173')
     .transform((valor) => valor.split(',').map((origem) => origem.trim())),
 
+  TOKEN_METRICAS: z.string().min(32).optional(),
+
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORTA: z.coerce.number().int().positive().default(1025),
   SMTP_USUARIO: z.string().default(''),
@@ -52,7 +54,31 @@ const esquemaAmbiente = z.object({
   NODE_APP_INSTANCE: z.string().default('0'),
 });
 
-const resultado = esquemaAmbiente.safeParse(process.env);
+// Regras que dependem de mais de um campo (por isso fora do `z.object`
+// acima): em producao, CORS aberto para qualquer origem e metricas sem
+// token de protecao sao os dois jeitos mais faceis de expor a API sem
+// querer (issue #64, endurecimento de producao).
+const esquemaAmbienteComRegrasDeProducao = esquemaAmbiente.superRefine((valor, ctx) => {
+  if (valor.NODE_ENV !== 'production') return;
+
+  if (valor.ORIGENS_PERMITIDAS.includes('*')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['ORIGENS_PERMITIDAS'],
+      message: 'ORIGENS_PERMITIDAS nao pode conter "*" em producao.',
+    });
+  }
+
+  if (!valor.TOKEN_METRICAS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['TOKEN_METRICAS'],
+      message: 'TOKEN_METRICAS e obrigatorio em producao (protege a rota /metricas).',
+    });
+  }
+});
+
+const resultado = esquemaAmbienteComRegrasDeProducao.safeParse(process.env);
 
 if (!resultado.success) {
   console.error('Variaveis de ambiente invalidas:');

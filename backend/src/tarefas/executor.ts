@@ -18,7 +18,10 @@ export async function executarTarefa(nome: string, fn: () => Promise<number>): P
     );
     return registrosAfetados;
   } catch (erro) {
-    registrador.error({ tarefa: nome, erro, duracaoMs: Date.now() - inicio }, 'Tarefa falhou.');
+    registrador.error(
+      { tarefa: nome, err: erro, duracaoMs: Date.now() - inicio },
+      'Tarefa falhou.',
+    );
     return 0;
   }
 }

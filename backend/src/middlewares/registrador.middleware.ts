@@ -1,3 +1,4 @@
+import { registrarRequisicao } from '@/observabilidade/metricas';
 import { registrador } from '@/utilitarios/registrador';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -14,6 +15,8 @@ export function registradorRequisicoes(req: Request, res: Response, next: NextFu
 
   res.on('finish', () => {
     const duracaoMs = Number(process.hrtime.bigint() - inicio) / NANOSSEGUNDOS_POR_MILISSEGUNDO;
+
+    registrarRequisicao(duracaoMs, res.statusCode);
 
     registrador.info(
       {

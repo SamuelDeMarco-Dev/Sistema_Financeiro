@@ -43,4 +43,40 @@ describe('configuracao/ambiente (validacao na inicializacao)', () => {
 
     expect(status).toBe(0);
   });
+
+  it('aborta em producao quando ORIGENS_PERMITIDAS contem "*"', () => {
+    const { status, stderr } = rodarComAmbiente({
+      ...AMBIENTE_BASE,
+      JWT_SEGREDO: 'x'.repeat(32),
+      NODE_ENV: 'production',
+      ORIGENS_PERMITIDAS: '*',
+      TOKEN_METRICAS: 'x'.repeat(32),
+    });
+
+    expect(status).toBe(1);
+    expect(stderr).toContain('ORIGENS_PERMITIDAS');
+  });
+
+  it('aborta em producao quando TOKEN_METRICAS esta ausente', () => {
+    const { status, stderr } = rodarComAmbiente({
+      ...AMBIENTE_BASE,
+      JWT_SEGREDO: 'x'.repeat(32),
+      NODE_ENV: 'production',
+    });
+
+    expect(status).toBe(1);
+    expect(stderr).toContain('TOKEN_METRICAS');
+  });
+
+  it('inicia normalmente em producao com origem especifica e token de metricas', () => {
+    const { status } = rodarComAmbiente({
+      ...AMBIENTE_BASE,
+      JWT_SEGREDO: 'x'.repeat(32),
+      NODE_ENV: 'production',
+      ORIGENS_PERMITIDAS: 'https://dominio.com',
+      TOKEN_METRICAS: 'x'.repeat(32),
+    });
+
+    expect(status).toBe(0);
+  });
 });
