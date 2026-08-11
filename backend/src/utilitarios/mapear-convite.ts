@@ -65,6 +65,43 @@ export function mapearConviteDoGrupo(convite: Convite): ConviteDoGrupoDTO {
   };
 }
 
+export interface ConvitePreviaDTO {
+  situacao: SituacaoConvite;
+  papel: PapelMembro;
+  expiraEm: Date;
+  contaCompartilhada: { nome: string };
+  enviadoPor: { nome: string };
+  emailConvidado: string;
+  requerCadastro: boolean;
+}
+
+/** RF-55/issue #71: mascara so o suficiente para o convidado reconhecer o
+ * proprio e-mail sem expor a caixa completa a quem o token vier a
+ * alcancar — "an***@exemplo.com" para "ana@exemplo.com". */
+export function mascararEmail(email: string): string {
+  const [local, dominio] = email.split('@');
+  if (!local || !dominio) return email;
+  const visiveis = local.slice(0, Math.min(2, local.length));
+  return `${visiveis}***@${dominio}`;
+}
+
+/** 04-API.md §17.3: rota publica — retorna o minimo possivel (nunca
+ * saldo, movimentacao, lista de membros ou e-mail completo). */
+export function mapearConvitePrevia(
+  convite: ConviteComGrupo,
+  requerCadastro: boolean,
+): ConvitePreviaDTO {
+  return {
+    situacao: convite.situacao,
+    papel: convite.papel,
+    expiraEm: convite.expiraEm,
+    contaCompartilhada: { nome: convite.contaCompartilhada.nome },
+    enviadoPor: { nome: convite.enviadoPor.nome },
+    emailConvidado: mascararEmail(convite.email),
+    requerCadastro,
+  };
+}
+
 export function mapearConviteRecebido(
   convite: ConviteComGrupo,
   quantidadeMembros: number,

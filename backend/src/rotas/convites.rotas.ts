@@ -1,15 +1,39 @@
 import { Router } from 'express';
-import { LIMITE_CONVITES_POR_HORA, MINUTOS_JANELA_CONVITES } from '@/configuracao/constantes';
+import {
+  LIMITE_CONVITES_POR_HORA,
+  LIMITE_PREVISUALIZACAO_CONVITE_POR_IP,
+  MINUTOS_JANELA_CONVITES,
+  MINUTOS_JANELA_PREVISUALIZACAO_CONVITE,
+} from '@/configuracao/constantes';
 import { ConviteControlador } from '@/controladores/convite.controlador';
 import { autenticar } from '@/middlewares/autenticar.middleware';
 import { autorizarCompartilhada } from '@/middlewares/autorizar-compartilhada.middleware';
 import { limitador } from '@/middlewares/limitador.middleware';
 import { validar } from '@/middlewares/validar.middleware';
 import { idParamSchema } from '@/validadores/contas-compartilhadas.validador';
-import { conviteIdParamSchema, enviarConviteSchema } from '@/validadores/convites.validador';
+import {
+  conviteIdParamSchema,
+  enviarConviteSchema,
+  tokenConviteParamSchema,
+} from '@/validadores/convites.validador';
 
 export const convitesRotas = Router();
 const controlador = new ConviteControlador();
+
+// Publica (04-API.md §17.3) — precisa vir ANTES do `use(autenticar)`
+// abaixo: middleware/rota do Express roda na ordem de registro, entao uma
+// rota definida depois de um `use()` sem path herda esse middleware, mas
+// uma definida antes, nao.
+const limitadorPrevisualizacao = limitador({
+  janelaMinutos: MINUTOS_JANELA_PREVISUALIZACAO_CONVITE,
+  maximo: LIMITE_PREVISUALIZACAO_CONVITE_POR_IP,
+});
+convitesRotas.get(
+  '/convites/token/:token',
+  limitadorPrevisualizacao,
+  validar(tokenConviteParamSchema),
+  controlador.buscarPreviaPorToken,
+);
 
 convitesRotas.use(autenticar);
 

@@ -21,3 +21,9 @@ export const conviteIdParamSchema = z.object({
 });
 
 export type ConviteIdParam = z.infer<typeof conviteIdParamSchema>['params'];
+
+export const tokenConviteParamSchema = z.object({
+  params: z.object({ token: z.string().min(1, 'Token invalido.') }),
+});
+
+export type TokenConviteParam = z.infer<typeof tokenConviteParamSchema>['params'];

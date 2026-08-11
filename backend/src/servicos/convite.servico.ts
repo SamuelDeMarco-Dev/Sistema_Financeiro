@@ -21,11 +21,13 @@ import { modeloConviteEmail } from '@/utilitarios/email/modelos/convite';
 import {
   mapearConviteDoGrupo,
   mapearConviteEnviado,
+  mapearConvitePrevia,
   mapearConviteRecebido,
 } from '@/utilitarios/mapear-convite';
 import type {
   ConviteDoGrupoDTO,
   ConviteEnviadoDTO,
+  ConvitePreviaDTO,
   ConviteRecebidoDTO,
 } from '@/utilitarios/mapear-convite';
 import type { EnviarConviteDTO } from '@/validadores/convites.validador';
@@ -193,6 +195,27 @@ export class ConviteServico {
     await this.repositorio.atualizarSituacao(conviteId, 'CANCELADO');
   }
 
+  /** 04-API.md §17.3/issue #71: rota publica, sem autenticacao. Token
+   * inexistente e token expirado respondem com o MESMO NaoEncontradoErro
+   * (mesma mensagem/codigo) — indistinguiveis para quem so tem o token,
+   * exatamente como pede o criterio de aceite. */
+  async buscarPreviaPorToken(token: string): Promise<ConvitePreviaDTO> {
+    const convite = await this.repositorio.buscarPorToken(token);
+    if (!convite || this.estaExpirado(convite)) {
+      throw new NaoEncontradoErro('Convite nao encontrado.');
+    }
+
+    const usuarioExistente = await this.usuarioRepositorio.buscarPorEmail(convite.email);
+    return mapearConvitePrevia(convite, usuarioExistente === null);
+  }
+
+  private estaExpirado(convite: ConviteComGrupo): boolean {
+    return (
+      convite.situacao === 'EXPIRADO' ||
+      (convite.situacao === 'PENDENTE' && convite.expiraEm.getTime() < Date.now())
+    );
+  }
+
   private async enviarEmailDeConvite(
     contaCompartilhadaId: string,
     nomeRemetente: string,
@@ -226,10 +249,7 @@ export class ConviteServico {
   }
 
   private verificarPodeResponder(convite: ConviteComGrupo): void {
-    const expirado =
-      convite.situacao === 'EXPIRADO' ||
-      (convite.situacao === 'PENDENTE' && convite.expiraEm.getTime() < Date.now());
-    if (expirado) {
+    if (this.estaExpirado(convite)) {
       throw new ConviteExpiradoErro('Este convite expirou.');
     }
     if (convite.situacao !== 'PENDENTE') {

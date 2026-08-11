@@ -51,3 +51,9 @@ export const DIAS_EXPIRACAO_CONVITE = 7;
 /** Rate limit de POST .../convites, por usuario (04-API.md §26). */
 export const LIMITE_CONVITES_POR_HORA = 20;
 export const MINUTOS_JANELA_CONVITES = 60;
+
+/** RF-55 (issue #71): GET /convites/token/:token e publica e o token e o
+ * unico segredo que o protege — limite estrito por IP, sem chave extra
+ * (nao ha usuario autenticado aqui para compor a chave). */
+export const LIMITE_PREVISUALIZACAO_CONVITE_POR_IP = 20;
+export const MINUTOS_JANELA_PREVISUALIZACAO_CONVITE = 15;

@@ -2,7 +2,11 @@ import { asyncHandler } from '@/middlewares/async-handler';
 import { ConviteServico } from '@/servicos/convite.servico';
 import { respostaSucesso } from '@/utilitarios/resposta';
 import type { IdParam } from '@/validadores/contas-compartilhadas.validador';
-import type { ConviteIdParam, EnviarConviteDTO } from '@/validadores/convites.validador';
+import type {
+  ConviteIdParam,
+  EnviarConviteDTO,
+  TokenConviteParam,
+} from '@/validadores/convites.validador';
 import type { Request, Response } from 'express';
 
 export class ConviteControlador {
@@ -55,5 +59,12 @@ export class ConviteControlador {
     await this.servico.cancelar(id, req.usuario);
 
     res.status(204).send();
+  });
+
+  buscarPreviaPorToken = asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.params as TokenConviteParam;
+    const convite = await this.servico.buscarPreviaPorToken(token);
+
+    res.status(200).json(respostaSucesso({ convite }, 'Convite encontrado.'));
   });
 }

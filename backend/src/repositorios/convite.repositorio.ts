@@ -47,6 +47,10 @@ export class ConviteRepositorio {
     return prisma.convite.findUnique({ where: { id }, include: INCLUDE_GRUPO_E_REMETENTE });
   }
 
+  async buscarPorToken(token: string): Promise<ConviteComGrupo | null> {
+    return prisma.convite.findUnique({ where: { token }, include: INCLUDE_GRUPO_E_REMETENTE });
+  }
+
   async listarPorGrupo(contaCompartilhadaId: string): Promise<ConviteComGrupo[]> {
     return prisma.convite.findMany({
       where: { contaCompartilhadaId },
