@@ -103,6 +103,14 @@ export class TipoArquivoInvalidoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'TIPO_ARQUIVO_INVALIDO';
 }
 
+/** 422 — RN-29: administrador precisa transferir a administracao antes de
+ * sair do grupo ou ser removido — toda conta compartilhada exige
+ * exatamente um administrador em todo instante (RN-28). */
+export class AdministradorUnicoErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'ADMINISTRADOR_UNICO';
+}
+
 /** 422 — requisicao bem formada, regra de dominio violada. */
 export class RegraNegocioErro extends ErroAplicacao {
   readonly statusHttp = 422;

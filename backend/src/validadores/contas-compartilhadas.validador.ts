@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const PAPEIS_MEMBRO = ['ADMINISTRADOR', 'PARTICIPANTE', 'OBSERVADOR'] as const;
+
 const corSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor invalida. Use o formato hex #RRGGBB.');
 
 export const idParamSchema = z.object({
@@ -48,3 +50,34 @@ export const excluirContaCompartilhadaSchema = z.object({
 });
 
 export type ExcluirContaCompartilhadaDTO = z.infer<typeof excluirContaCompartilhadaSchema>['body'];
+
+export const membroIdParamSchema = z.object({
+  params: z.object({
+    contaCompartilhadaId: z.string().min(1, 'Id invalido.'),
+    membroId: z.string().min(1, 'Id de membro invalido.'),
+  }),
+});
+
+export type MembroIdParam = z.infer<typeof membroIdParamSchema>['params'];
+
+// ADMINISTRADOR entra no schema para o servico poder recusa-lo com 422
+// REGRA_NEGOCIO apontando a rota correta (04-API.md §16.5) — um 400 de
+// validacao aqui esconderia essa orientacao.
+export const alterarPapelMembroSchema = z.object({
+  params: z.object({
+    contaCompartilhadaId: z.string().min(1, 'Id invalido.'),
+    membroId: z.string().min(1, 'Id de membro invalido.'),
+  }),
+  body: z.object({ papel: z.enum(PAPEIS_MEMBRO) }),
+});
+
+export type AlterarPapelMembroDTO = z.infer<typeof alterarPapelMembroSchema>['body'];
+
+export const transferirAdministracaoSchema = z.object({
+  params: z.object({ contaCompartilhadaId: z.string().min(1, 'Id invalido.') }),
+  body: z.object({
+    novoAdministradorMembroId: z.string().min(1, 'Informe o novo administrador.'),
+  }),
+});
+
+export type TransferirAdministracaoDTO = z.infer<typeof transferirAdministracaoSchema>['body'];

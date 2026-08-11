@@ -5,10 +5,13 @@ import { autorizarCompartilhada } from '@/middlewares/autorizar-compartilhada.mi
 import { uploadAvatar } from '@/middlewares/upload.middleware';
 import { validar } from '@/middlewares/validar.middleware';
 import {
+  alterarPapelMembroSchema,
   atualizarContaCompartilhadaSchema,
   criarContaCompartilhadaSchema,
   excluirContaCompartilhadaSchema,
   idParamSchema,
+  membroIdParamSchema,
+  transferirAdministracaoSchema,
 } from '@/validadores/contas-compartilhadas.validador';
 
 export const contasCompartilhadasRotas = Router();
@@ -50,4 +53,35 @@ contasCompartilhadasRotas.post(
   autorizarCompartilhada('ADMINISTRADOR'),
   uploadAvatar.single('imagem'),
   controlador.atualizarImagem,
+);
+
+contasCompartilhadasRotas.get(
+  '/contas-compartilhadas/:contaCompartilhadaId/membros',
+  validar(idParamSchema),
+  autorizarCompartilhada(),
+  controlador.listarMembros,
+);
+contasCompartilhadasRotas.patch(
+  '/contas-compartilhadas/:contaCompartilhadaId/membros/:membroId',
+  validar(alterarPapelMembroSchema),
+  autorizarCompartilhada('ADMINISTRADOR'),
+  controlador.alterarPapelMembro,
+);
+contasCompartilhadasRotas.delete(
+  '/contas-compartilhadas/:contaCompartilhadaId/membros/:membroId',
+  validar(membroIdParamSchema),
+  autorizarCompartilhada('ADMINISTRADOR'),
+  controlador.removerMembro,
+);
+contasCompartilhadasRotas.post(
+  '/contas-compartilhadas/:contaCompartilhadaId/transferir-administracao',
+  validar(transferirAdministracaoSchema),
+  autorizarCompartilhada('ADMINISTRADOR'),
+  controlador.transferirAdministracao,
+);
+contasCompartilhadasRotas.post(
+  '/contas-compartilhadas/:contaCompartilhadaId/sair',
+  validar(idParamSchema),
+  autorizarCompartilhada(),
+  controlador.sair,
 );

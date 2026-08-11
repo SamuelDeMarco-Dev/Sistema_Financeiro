@@ -42,6 +42,11 @@ export interface ContaDoGrupoDTO {
   icone: string;
 }
 
+export interface TransferenciaAdministracaoDTO {
+  administradorAnterior: { membroId: string; papel: PapelMembro };
+  novoAdministrador: { membroId: string; papel: PapelMembro };
+}
+
 export interface ContaCompartilhadaDetalheDTO {
   id: string;
   nome: string;
@@ -85,6 +90,23 @@ export function mapearContaCompartilhadaLista(
   };
 }
 
+/** Reutilizado tanto pelo detalhe do grupo (§16.3) quanto por
+ * `GET .../membros` (§16.5 e adjacentes, issue #69) — uma unica forma de
+ * achatar `usuario` para a resposta HTTP. */
+export function mapearMembroDoGrupo(membro: MembroComUsuario): MembroDoGrupoDTO {
+  return {
+    id: membro.id,
+    papel: membro.papel,
+    situacao: membro.situacao,
+    entrouEm: membro.entrouEm,
+    usuario: membro.usuario,
+  };
+}
+
+export function mapearMembrosDoGrupo(membros: MembroComUsuario[]): MembroDoGrupoDTO[] {
+  return membros.map(mapearMembroDoGrupo);
+}
+
 /** 04-API.md §16.3: `minhasPermissoes` e a matriz RN-30/RN-31 ja resolvida
  * — o frontend consome a decisao, nao a reimplementa (issue #67). */
 export function mapearContaCompartilhadaDetalhe(
@@ -106,13 +128,7 @@ export function mapearContaCompartilhadaDetalhe(
     meuPapel,
     minhasPermissoes,
     saldoTotal,
-    membros: membros.map((membro) => ({
-      id: membro.id,
-      papel: membro.papel,
-      situacao: membro.situacao,
-      entrouEm: membro.entrouEm,
-      usuario: membro.usuario,
-    })),
+    membros: mapearMembrosDoGrupo(membros),
     contas,
     criadoEm: grupo.criadoEm,
   };

@@ -5,7 +5,13 @@ import sharp from 'sharp';
 import { executarTransacao } from '@/banco/transacao';
 import { ambiente } from '@/configuracao/ambiente';
 import { TIPOS_MIME_AVATAR_PERMITIDOS } from '@/configuracao/constantes';
-import { NaoEncontradoErro, TipoArquivoInvalidoErro, ValidacaoErro } from '@/erros';
+import {
+  AdministradorUnicoErro,
+  NaoEncontradoErro,
+  RegraNegocioErro,
+  TipoArquivoInvalidoErro,
+  ValidacaoErro,
+} from '@/erros';
 import { ContaCompartilhadaRepositorio } from '@/repositorios/conta-compartilhada.repositorio';
 import { MembroCompartilhadoRepositorio } from '@/repositorios/membro-compartilhado.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
@@ -14,10 +20,14 @@ import { hojeNoTimezone } from '@/utilitarios/data';
 import {
   mapearContaCompartilhadaDetalhe,
   mapearContaCompartilhadaLista,
+  mapearMembroDoGrupo,
+  mapearMembrosDoGrupo,
 } from '@/utilitarios/mapear-conta-compartilhada';
 import type {
   ContaCompartilhadaDetalheDTO,
   ContaCompartilhadaListaItemDTO,
+  MembroDoGrupoDTO,
+  TransferenciaAdministracaoDTO,
 } from '@/utilitarios/mapear-conta-compartilhada';
 import { primeiroEUltimoDiaDoMes } from '@/utilitarios/periodo';
 import { resolverPermissoes } from '@/utilitarios/resolver-permissoes';
@@ -25,7 +35,7 @@ import type {
   AtualizarContaCompartilhadaDTO,
   CriarContaCompartilhadaDTO,
 } from '@/validadores/contas-compartilhadas.validador';
-import type { ContaCompartilhada, MembroCompartilhado } from '@prisma/client';
+import type { ContaCompartilhada, MembroCompartilhado, PapelMembro } from '@prisma/client';
 
 const QUALIDADE_WEBP = 85;
 
@@ -175,6 +185,99 @@ export class ContaCompartilhadaServico {
     const imagemUrl = `${ambiente.URL_BASE_API}/uploads/grupos/${id}.webp`;
     await this.repositorio.atualizar(id, { imagemUrl });
     return imagemUrl;
+  }
+
+  async listarMembros(contaCompartilhadaId: string): Promise<MembroDoGrupoDTO[]> {
+    const membros = await this.membroRepositorio.listarAtivosComUsuario(contaCompartilhadaId);
+    return mapearMembrosDoGrupo(membros);
+  }
+
+  /** RF-56: proibe alterar o proprio papel (evita o admin se rebaixar por
+   * engano e ficar sem acesso as acoes que exercia) e proibe promover a
+   * ADMINISTRADOR por aqui — RN-28 so admite essa troca atomica via
+   * `transferirAdministracao`, que sempre mantem exatamente um. */
+  async alterarPapelMembro(
+    contaCompartilhadaId: string,
+    membroId: string,
+    meuMembroId: string,
+    novoPapel: PapelMembro,
+  ): Promise<MembroDoGrupoDTO> {
+    if (membroId === meuMembroId) {
+      throw new RegraNegocioErro('Nao e possivel alterar o proprio papel.');
+    }
+    if (novoPapel === 'ADMINISTRADOR') {
+      throw new RegraNegocioErro(
+        'Para tornar outro membro administrador, use POST /transferir-administracao.',
+      );
+    }
+
+    const membro = await this.buscarMembroAtivoOuFalhar(contaCompartilhadaId, membroId);
+    await this.membroRepositorio.atualizarPapel(membro.id, novoPapel);
+    const atualizado = await this.membroRepositorio.buscarComUsuarioPorId(membro.id);
+    if (!atualizado) {
+      throw new NaoEncontradoErro('Membro nao encontrado neste grupo.');
+    }
+    return mapearMembroDoGrupo(atualizado);
+  }
+
+  /** RN-29/RN-34: o administrador nunca e removido por aqui (precisa
+   * transferir antes) — as movimentacoes do membro removido permanecem no
+   * grupo, atribuidas ao usuario original; so o vinculo muda de situacao. */
+  async removerMembro(contaCompartilhadaId: string, membroId: string): Promise<void> {
+    const membro = await this.buscarMembroAtivoOuFalhar(contaCompartilhadaId, membroId);
+    if (membro.papel === 'ADMINISTRADOR') {
+      throw new AdministradorUnicoErro(
+        'Transfira a administracao para outro membro antes de remover o administrador atual.',
+      );
+    }
+
+    await this.membroRepositorio.marcarRemovido(membro.id);
+  }
+
+  /** RN-28: unica forma de trocar o administrador — as duas escritas
+   * (demover o atual, promover o novo) sao atomicas, garantindo que o
+   * grupo jamais fique com dois administradores nem com zero. */
+  async transferirAdministracao(
+    contaCompartilhadaId: string,
+    meuMembroId: string,
+    novoAdministradorMembroId: string,
+  ): Promise<TransferenciaAdministracaoDTO> {
+    const novoAdministrador = await this.buscarMembroAtivoOuFalhar(
+      contaCompartilhadaId,
+      novoAdministradorMembroId,
+    );
+
+    const { antigo, novo } = await executarTransacao((tx) =>
+      this.membroRepositorio.transferirAdministracao(meuMembroId, novoAdministrador.id, tx),
+    );
+
+    return {
+      administradorAnterior: { membroId: antigo.id, papel: antigo.papel },
+      novoAdministrador: { membroId: novo.id, papel: novo.papel },
+    };
+  }
+
+  /** RN-29: o administrador nao pode sair sem transferir a administracao
+   * antes — sem essa checagem, o grupo ficaria sem nenhum administrador. */
+  async sair(meuMembro: MembroCompartilhado): Promise<void> {
+    if (meuMembro.papel === 'ADMINISTRADOR') {
+      throw new AdministradorUnicoErro(
+        'Transfira a administracao para outro membro antes de sair do grupo.',
+      );
+    }
+
+    await this.membroRepositorio.marcarSaiu(meuMembro.id);
+  }
+
+  private async buscarMembroAtivoOuFalhar(
+    contaCompartilhadaId: string,
+    membroId: string,
+  ): Promise<MembroCompartilhado> {
+    const membro = await this.membroRepositorio.buscarAtivoPorId(contaCompartilhadaId, membroId);
+    if (!membro) {
+      throw new NaoEncontradoErro('Membro nao encontrado neste grupo.');
+    }
+    return membro;
   }
 
   private async hojeDoUsuario(usuarioId: string): Promise<Date> {

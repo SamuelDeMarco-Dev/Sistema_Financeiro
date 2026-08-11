@@ -3,10 +3,13 @@ import { asyncHandler } from '@/middlewares/async-handler';
 import { ContaCompartilhadaServico } from '@/servicos/conta-compartilhada.servico';
 import { respostaSucesso } from '@/utilitarios/resposta';
 import type {
+  AlterarPapelMembroDTO,
   AtualizarContaCompartilhadaDTO,
   CriarContaCompartilhadaDTO,
   ExcluirContaCompartilhadaDTO,
   IdParam,
+  MembroIdParam,
+  TransferirAdministracaoDTO,
 } from '@/validadores/contas-compartilhadas.validador';
 import type { Request, Response } from 'express';
 
@@ -73,5 +76,50 @@ export class ContaCompartilhadaControlador {
     const imagemUrl = await this.servico.atualizarImagem(contaCompartilhadaId, req.file.buffer);
 
     res.status(200).json(respostaSucesso({ imagemUrl }, 'Imagem atualizada.'));
+  });
+
+  listarMembros = asyncHandler(async (req: Request, res: Response) => {
+    const { contaCompartilhadaId } = req.params as IdParam;
+    const membros = await this.servico.listarMembros(contaCompartilhadaId);
+
+    res.status(200).json(respostaSucesso({ membros }, 'Membros listados.'));
+  });
+
+  alterarPapelMembro = asyncHandler(async (req: Request, res: Response) => {
+    const { contaCompartilhadaId, membroId } = req.params as MembroIdParam;
+    const { papel } = req.body as AlterarPapelMembroDTO;
+    const membro = await this.servico.alterarPapelMembro(
+      contaCompartilhadaId,
+      membroId,
+      req.membro.id,
+      papel,
+    );
+
+    res.status(200).json(respostaSucesso({ membro }, 'Papel do membro atualizado.'));
+  });
+
+  removerMembro = asyncHandler(async (req: Request, res: Response) => {
+    const { contaCompartilhadaId, membroId } = req.params as MembroIdParam;
+    await this.servico.removerMembro(contaCompartilhadaId, membroId);
+
+    res.status(204).send();
+  });
+
+  transferirAdministracao = asyncHandler(async (req: Request, res: Response) => {
+    const { contaCompartilhadaId } = req.params as IdParam;
+    const { novoAdministradorMembroId } = req.body as TransferirAdministracaoDTO;
+    const resultado = await this.servico.transferirAdministracao(
+      contaCompartilhadaId,
+      req.membro.id,
+      novoAdministradorMembroId,
+    );
+
+    res.status(200).json(respostaSucesso(resultado, 'Administração transferida com sucesso.'));
+  });
+
+  sair = asyncHandler(async (req: Request, res: Response) => {
+    await this.servico.sair(req.membro);
+
+    res.status(204).send();
   });
 }
