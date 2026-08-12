@@ -1,3 +1,4 @@
+import type { PapelMembro } from '@/funcionalidades/compartilhadas/tipos/conta-compartilhada';
 import type { Movimentacao } from '@/funcionalidades/movimentacoes/tipos/movimentacao';
 
 export interface PeriodoDashboard {
@@ -41,6 +42,17 @@ export interface ContaResumoDashboard {
   icone: string;
 }
 
+/** 04-API.md §22: forma reduzida do item de §16.1 — o dashboard nao traz
+ * `resultado` no resumo do mes nem a configuracao do grupo. */
+export interface ContaCompartilhadaResumoDashboard {
+  id: string;
+  nome: string;
+  meuPapel: PapelMembro;
+  saldoTotal: string;
+  quantidadeMembros: number;
+  resumoMesAtual: { receitas: string; despesas: string };
+}
+
 export type SeveridadeAlerta = 'INFORMACAO' | 'ATENCAO' | 'CRITICO';
 
 export interface Alerta {
@@ -58,7 +70,7 @@ export interface Dashboard {
   receitasPorCategoria: PorCategoriaItem[];
   ultimasMovimentacoes: Movimentacao[];
   contas: ContaResumoDashboard[];
-  contasCompartilhadas: unknown[];
+  contasCompartilhadas: ContaCompartilhadaResumoDashboard[];
   metas: unknown[];
   orcamentos: unknown[];
   alertas: Alerta[];

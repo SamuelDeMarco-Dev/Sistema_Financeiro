@@ -4,7 +4,11 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@/banco/cliente';
 import { criarServidor } from '@/servidor';
 import { limparBanco } from '../configuracao/banco-teste';
-import { fabricarMovimentacao, prepararUsuarioComConta } from '../fabricas';
+import {
+  fabricarGrupoComMembros,
+  fabricarMovimentacao,
+  prepararUsuarioComConta,
+} from '../fabricas';
 
 const app = criarServidor();
 
@@ -17,7 +21,14 @@ interface RespostaDashboard {
     receitasPorCategoria: unknown[];
     ultimasMovimentacoes: { id: string; dataCompetencia: string }[];
     contas: { id: string; saldoAtual: string }[];
-    contasCompartilhadas: unknown[];
+    contasCompartilhadas: {
+      id: string;
+      nome: string;
+      meuPapel: string;
+      saldoTotal: string;
+      quantidadeMembros: number;
+      resumoMesAtual: { receitas: string; despesas: string };
+    }[];
     metas: unknown[];
     orcamentos: unknown[];
     alertas: { tipo: string; titulo: string }[];
@@ -185,6 +196,63 @@ describe('GET /dashboard (issue #50)', () => {
 
       expect(dados.alertas).toEqual([]);
     });
+  });
+
+  // 04-API.md §22 (issue #74): a chave saiu de placeholder e agora traz a
+  // forma reduzida de §16.1 — sem `resultado`, que o dashboard nao usa.
+  it('traz os grupos do usuario com papel, saldo, membros e resumo do mes', async () => {
+    const { grupo, administrador } = await fabricarGrupoComMembros(['PARTICIPANTE']);
+    const hoje = new Date();
+    const primeiroDiaDoMes = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1));
+    await prisma.movimentacao.createMany({
+      data: [
+        {
+          usuarioId: administrador.usuario.id,
+          contaCompartilhadaId: grupo.id,
+          tipo: 'RECEITA',
+          descricao: 'Aporte do mes',
+          valor: new Prisma.Decimal('300.00'),
+          valorPago: new Prisma.Decimal('300.00'),
+          situacao: 'PAGA',
+          dataCompetencia: primeiroDiaDoMes,
+          dataEfetivacao: primeiroDiaDoMes,
+        },
+        {
+          usuarioId: administrador.usuario.id,
+          contaCompartilhadaId: grupo.id,
+          tipo: 'DESPESA',
+          descricao: 'Mercado do mes',
+          valor: new Prisma.Decimal('120.00'),
+          valorPago: new Prisma.Decimal('120.00'),
+          situacao: 'PAGA',
+          dataCompetencia: primeiroDiaDoMes,
+          dataEfetivacao: primeiroDiaDoMes,
+        },
+      ],
+    });
+
+    const dados = await buscarDashboard(administrador.accessToken);
+
+    expect(dados.contasCompartilhadas).toEqual([
+      {
+        id: grupo.id,
+        nome: grupo.nome,
+        meuPapel: 'ADMINISTRADOR',
+        saldoTotal: '180.00',
+        quantidadeMembros: 2,
+        resumoMesAtual: { receitas: '300.00', despesas: '120.00' },
+      },
+    ]);
+  });
+
+  it('nao expoe grupo de que o usuario nao participa', async () => {
+    const { grupo } = await fabricarGrupoComMembros([]);
+    const { accessToken } = await prepararUsuarioComConta();
+
+    const dados = await buscarDashboard(accessToken);
+
+    expect(dados.contasCompartilhadas).toEqual([]);
+    expect(JSON.stringify(dados)).not.toContain(grupo.id);
   });
 
   it('responde em menos de 300ms com 5000 movimentacoes', async () => {

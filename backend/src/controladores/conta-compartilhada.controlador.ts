@@ -17,7 +17,7 @@ export class ContaCompartilhadaControlador {
   private readonly servico = new ContaCompartilhadaServico();
 
   listar = asyncHandler(async (req: Request, res: Response) => {
-    const contasCompartilhadas = await this.servico.listar(req.usuario);
+    const contasCompartilhadas = await this.servico.listar(req.usuario.id);
 
     res
       .status(200)

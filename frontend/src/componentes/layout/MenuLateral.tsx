@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/utilitarios/cn';
+import { DistintivoConvites } from './DistintivoConvites';
 import { ITENS_NAVEGACAO } from './itens-navegacao';
 import type { ReactElement } from 'react';
 
@@ -25,7 +26,10 @@ export function MenuLateral(): ReactElement {
                 )
               }
             >
-              {item.rotulo}
+              <span className="flex items-center justify-between gap-2">
+                {item.rotulo}
+                {item.mostrarConvitesPendentes ? <DistintivoConvites /> : null}
+              </span>
             </NavLink>
           </li>
         ))}

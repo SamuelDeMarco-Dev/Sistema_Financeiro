@@ -122,6 +122,34 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Bem-vindo ao seu Gerenciador de Finanças')).toBeTruthy();
   });
 
+  // Regressao: `semDadosNenhuns` olhava so contas e movimentacoes pessoais,
+  // entao quem participa de um grupo mas nao tem nada proprio caia no estado
+  // vazio — escondendo grupos que existem de verdade (issue #74).
+  it('usuario que so participa de grupos ve os grupos, nao o estado vazio', async () => {
+    vi.mocked(dashboardServico.obterDashboard).mockResolvedValue(
+      fabricarDashboard({
+        contas: [],
+        ultimasMovimentacoes: [],
+        contasCompartilhadas: [
+          {
+            id: 'grupo-1',
+            nome: 'Casa',
+            meuPapel: 'PARTICIPANTE',
+            saldoTotal: '1284.60',
+            quantidadeMembros: 3,
+            resumoMesAtual: { receitas: '3200.00', despesas: '1915.40' },
+          },
+        ],
+      }),
+    );
+
+    render(<Dashboard />, { wrapper: Wrapper });
+
+    expect(await screen.findByLabelText('Contas compartilhadas')).toBeTruthy();
+    expect(screen.getByText('Casa')).toBeTruthy();
+    expect(screen.queryByText('Bem-vindo ao seu Gerenciador de Finanças')).toBeNull();
+  });
+
   it('com dados, mostra indicadores, fluxo de caixa, categorias, movimentações e contas', async () => {
     vi.mocked(dashboardServico.obterDashboard).mockResolvedValue(
       fabricarDashboard({

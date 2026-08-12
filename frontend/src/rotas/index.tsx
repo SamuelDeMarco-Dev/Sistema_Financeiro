@@ -42,6 +42,9 @@ const Movimentacoes = lazy(() =>
 const Relatorios = lazy(() =>
   import('@/paginas/Relatorios').then((modulo) => ({ default: modulo.Relatorios })),
 );
+const Compartilhadas = lazy(() =>
+  import('@/paginas/Compartilhadas').then((modulo) => ({ default: modulo.Compartilhadas })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -160,6 +163,14 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Relatorios />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas',
+            element: (
+              <ComSuspense>
+                <Compartilhadas />
               </ComSuspense>
             ),
           },

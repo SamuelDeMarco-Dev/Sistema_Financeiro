@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,6 +10,11 @@ vi.mock('@/contextos/ContextoAutenticacao', async (importarOriginal) => {
   return { ...real, useSessao: vi.fn() };
 });
 
+// O distintivo de convites na navegacao (issue #74) consulta a API.
+vi.mock('@/funcionalidades/compartilhadas/servicos/convite.servico', () => ({
+  listarConvitesRecebidos: vi.fn().mockResolvedValue([]),
+}));
+
 describe('LayoutAutenticado', () => {
   it('renderiza cabecalho, navegacao e o conteudo da rota filha (Outlet)', () => {
     vi.mocked(ContextoAutenticacao.useSessao).mockReturnValue({
@@ -19,15 +25,18 @@ describe('LayoutAutenticado', () => {
       sair: vi.fn(),
       atualizarUsuario: vi.fn(),
     });
+    const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
-      <MemoryRouter initialEntries={['/configuracoes']}>
-        <Routes>
-          <Route element={<LayoutAutenticado />}>
-            <Route path="/configuracoes" element={<div>Conteudo da pagina</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={cliente}>
+        <MemoryRouter initialEntries={['/configuracoes']}>
+          <Routes>
+            <Route element={<LayoutAutenticado />}>
+              <Route path="/configuracoes" element={<div>Conteudo da pagina</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByText('Gerenciador de Finanças')).toBeTruthy();

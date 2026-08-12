@@ -2,9 +2,11 @@ import { Prisma } from '@prisma/client';
 import type { ContaComSaldo } from '@/repositorios/conta.repositorio';
 import type { LinhaFluxoCaixa, LinhaPorCategoria } from '@/repositorios/dashboard.repositorio';
 import { paraDataIso, paraMesIso } from '@/utilitarios/data';
+import type { ContaCompartilhadaListaItemDTO } from '@/utilitarios/mapear-conta-compartilhada';
 import { distribuirPercentuais } from '@/utilitarios/percentual';
 import type { Periodo } from '@/utilitarios/periodo';
 import { rotuloMesAbreviado, rotuloMesCompleto } from '@/utilitarios/rotulos-data';
+import type { PapelMembro } from '@prisma/client';
 
 export const SEM_CATEGORIA_ID = 'sem-categoria';
 
@@ -95,6 +97,34 @@ export function mapearContasComSaldo(contas: ContaComSaldo[]): ContaResumoDashbo
     saldoAtual: conta.saldoAtual,
     cor: conta.cor,
     icone: conta.icone,
+  }));
+}
+
+/** 04-API.md §22: o dashboard traz uma forma reduzida do item de §16.1 —
+ * sem `resultado` no resumo e sem os campos de configuracao do grupo, que
+ * so interessam a tela de compartilhadas. */
+export interface ContaCompartilhadaResumoDashboardDTO {
+  id: string;
+  nome: string;
+  meuPapel: PapelMembro;
+  saldoTotal: Prisma.Decimal;
+  quantidadeMembros: number;
+  resumoMesAtual: { receitas: Prisma.Decimal; despesas: Prisma.Decimal };
+}
+
+export function mapearContasCompartilhadasResumo(
+  grupos: ContaCompartilhadaListaItemDTO[],
+): ContaCompartilhadaResumoDashboardDTO[] {
+  return grupos.map((grupo) => ({
+    id: grupo.id,
+    nome: grupo.nome,
+    meuPapel: grupo.meuPapel,
+    saldoTotal: grupo.saldoTotal,
+    quantidadeMembros: grupo.quantidadeMembros,
+    resumoMesAtual: {
+      receitas: grupo.resumoMesAtual.receitas,
+      despesas: grupo.resumoMesAtual.despesas,
+    },
   }));
 }
 

@@ -53,9 +53,9 @@ export class ContaCompartilhadaServico {
     private readonly perfilRepositorio = new PerfilRepositorio(),
   ) {}
 
-  async listar(usuario: UsuarioAutenticado): Promise<ContaCompartilhadaListaItemDTO[]> {
-    const vinculos = await this.membroRepositorio.listarGruposAtivosPorUsuario(usuario.id);
-    const hoje = await this.hojeDoUsuario(usuario.id);
+  async listar(usuarioId: string): Promise<ContaCompartilhadaListaItemDTO[]> {
+    const vinculos = await this.membroRepositorio.listarGruposAtivosPorUsuario(usuarioId);
+    const hoje = await this.hojeDoUsuario(usuarioId);
     const periodo = primeiroEUltimoDiaDoMes(hoje);
 
     const itens = await Promise.all(
