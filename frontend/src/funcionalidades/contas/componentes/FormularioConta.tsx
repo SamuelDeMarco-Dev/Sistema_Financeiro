@@ -22,6 +22,9 @@ interface FormularioContaProps {
   aberto: boolean;
   aoFechar: () => void;
   conta?: Conta | undefined;
+  /** 04-API.md §10.2: cria a conta dentro do grupo, e nao no escopo pessoal.
+   * Exige ADMINISTRADOR — quem oferece o formulario le `minhasPermissoes`. */
+  contaCompartilhadaId?: string | undefined;
 }
 
 function valoresIniciais(conta: Conta | undefined): ContaFormulario {
@@ -39,8 +42,14 @@ function valoresIniciais(conta: Conta | undefined): ContaFormulario {
 /** Radix Dialog so renderiza o conteudo quando `open`, entao cada abertura
  * monta o formulario do zero — sem precisar de useEffect + reset() para
  * alternar entre criar e editar. */
-export function FormularioConta({ aberto, aoFechar, conta }: FormularioContaProps): ReactElement {
+export function FormularioConta({
+  aberto,
+  aoFechar,
+  conta,
+  contaCompartilhadaId,
+}: FormularioContaProps): ReactElement {
   const ehEdicao = conta !== undefined;
+  const ehEscopoGrupo = contaCompartilhadaId !== undefined;
   const {
     register,
     handleSubmit,
@@ -72,9 +81,14 @@ export function FormularioConta({ aberto, aoFechar, conta }: FormularioContaProp
     };
 
     if (ehEdicao) {
+      // O escopo nao muda depois de criada: mover conta entre pessoal e grupo
+      // reinterpretaria os lancamentos ja gravados nela.
       atualizar.mutate({ id: conta.id, dados }, { onSuccess: aoFechar, onSettled: aoTerminar });
     } else {
-      criar.mutate(dados, { onSuccess: aoFechar, onSettled: aoTerminar });
+      criar.mutate(
+        { ...dados, ...(ehEscopoGrupo && { contaCompartilhadaId }) },
+        { onSuccess: aoFechar, onSettled: aoTerminar },
+      );
     }
   }
 
@@ -86,7 +100,15 @@ export function FormularioConta({ aberto, aoFechar, conta }: FormularioContaProp
       }}
     >
       <DialogConteudo aria-describedby={undefined}>
-        <DialogTitulo>{ehEdicao ? 'Editar conta' : 'Nova conta'}</DialogTitulo>
+        <DialogTitulo>
+          {ehEdicao ? 'Editar conta' : ehEscopoGrupo ? 'Nova conta do grupo' : 'Nova conta'}
+        </DialogTitulo>
+
+        {ehEscopoGrupo ? (
+          <p className="mt-1 text-sm text-textoSuave">
+            A conta pertence ao grupo: o saldo dela entra no saldo do grupo, não no seu.
+          </p>
+        ) : null}
 
         <form
           noValidate
