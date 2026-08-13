@@ -45,6 +45,11 @@ const Relatorios = lazy(() =>
 const Compartilhadas = lazy(() =>
   import('@/paginas/Compartilhadas').then((modulo) => ({ default: modulo.Compartilhadas })),
 );
+const DetalheCompartilhada = lazy(() =>
+  import('@/paginas/DetalheCompartilhada').then((modulo) => ({
+    default: modulo.DetalheCompartilhada,
+  })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -171,6 +176,14 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Compartilhadas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas/:id',
+            element: (
+              <ComSuspense>
+                <DetalheCompartilhada />
               </ComSuspense>
             ),
           },

@@ -1,8 +1,10 @@
 import { formatarDataBr } from '@/utilitarios/data';
 import { formatarMoeda } from '@/utilitarios/formatadores';
 import { AcoesMovimentacao } from './AcoesMovimentacao';
+import { AutorMovimentacao } from './AutorMovimentacao';
 import { IndicadoresMovimentacao } from './IndicadoresMovimentacao';
 import { SeloSituacao } from './SeloSituacao';
+import type { AcoesPermitidas } from './AcoesMovimentacao';
 import type { Movimentacao } from '../tipos/movimentacao';
 import type { ReactElement } from 'react';
 
@@ -10,6 +12,10 @@ interface ListaCartoesMovimentacoesProps {
   movimentacoes: Movimentacao[];
   onEditar: (movimentacao: Movimentacao) => void;
   onExcluir: (movimentacao: Movimentacao) => void;
+  /** Autor do lançamento — só no escopo de grupo (RF-59). */
+  mostrarAutor?: boolean;
+  /** Ações permitidas por linha. Ausente ⇒ todas (escopo pessoal). */
+  permitidasPorLinha?: (movimentacao: Movimentacao) => AcoesPermitidas;
 }
 
 /** Visível abaixo de `md` (768px) — a partir daí, `TabelaMovimentacoes`
@@ -19,6 +25,8 @@ export function ListaCartoesMovimentacoes({
   movimentacoes,
   onEditar,
   onExcluir,
+  mostrarAutor = false,
+  permitidasPorLinha,
 }: ListaCartoesMovimentacoesProps): ReactElement {
   return (
     <ul className="flex flex-col gap-3 md:hidden">
@@ -45,6 +53,7 @@ export function ListaCartoesMovimentacoes({
                 movimentacao={movimentacao}
                 onEditar={onEditar}
                 onExcluir={onExcluir}
+                {...(permitidasPorLinha && { permitidas: permitidasPorLinha(movimentacao) })}
               />
             </div>
 
@@ -57,6 +66,11 @@ export function ListaCartoesMovimentacoes({
             </div>
 
             <p className="text-xs text-textoSuave">{movimentacao.conta?.nome ?? 'Sem conta'}</p>
+            {mostrarAutor ? (
+              <div className="text-xs">
+                <AutorMovimentacao autor={movimentacao.autor} />
+              </div>
+            ) : null}
             <IndicadoresMovimentacao movimentacao={movimentacao} />
           </li>
         );

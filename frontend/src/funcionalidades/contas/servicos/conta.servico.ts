@@ -7,6 +7,8 @@ export interface FiltrosListarContas {
   incluirArquivadas?: boolean;
   ordenarPor?: 'ordem' | 'nome' | 'saldoAtual';
   ordem?: 'asc' | 'desc';
+  /** 04-API.md §10.1: escopo de grupo. Ausente ⇒ escopo pessoal. */
+  contaCompartilhadaId?: string;
 }
 
 export interface RespostaListarContas {
@@ -27,6 +29,8 @@ export interface CriarContaPayload {
   cor: string;
   icone: string;
   incluirNoSaldoTotal: boolean;
+  /** 04-API.md §10.2: cria conta de grupo; exige papel ADMINISTRADOR. */
+  contaCompartilhadaId?: string | undefined;
 }
 
 export type AtualizarContaPayload = Partial<CriarContaPayload>;

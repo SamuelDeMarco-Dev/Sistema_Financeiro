@@ -42,7 +42,16 @@ interface FormularioMovimentacaoProps {
   aoFechar: () => void;
   movimentacao?: Movimentacao | undefined;
   escopoEdicao?: EscopoRecorrencia | undefined;
+  /** Quando informado, o formulário opera no escopo do grupo: contas,
+   * categorias e etiquetas vêm do grupo, e o lançamento nasce nele. */
+  contaCompartilhadaId?: string | undefined;
 }
+
+/** RN-09 permite a movimentação de grupo se ligar por uma sub-conta OU
+ * direto ao grupo, nunca as duas. Este sentinela representa a segunda
+ * opção no seletor — `contaId` do formulário nunca vai vazio (o schema
+ * exige), e no envio ele é traduzido para `contaCompartilhadaId`. */
+export const CONTA_DIRETA_NO_GRUPO = '__direto_no_grupo__';
 
 const ROTULO_TIPO_LIMITE: Record<TipoLimiteRecorrencia, string> = {
   SEM_FIM: 'Sem fim',
@@ -50,7 +59,10 @@ const ROTULO_TIPO_LIMITE: Record<TipoLimiteRecorrencia, string> = {
   NUMERO_OCORRENCIAS: 'Número de ocorrências',
 };
 
-function valoresIniciais(movimentacao: Movimentacao | undefined): MovimentacaoFormulario {
+function valoresIniciais(
+  movimentacao: Movimentacao | undefined,
+  ehEscopoGrupo: boolean,
+): MovimentacaoFormulario {
   return {
     tipo: movimentacao?.tipo === 'RECEITA' ? 'RECEITA' : 'DESPESA',
     descricao: movimentacao?.descricao ?? '',
@@ -61,7 +73,9 @@ function valoresIniciais(movimentacao: Movimentacao | undefined): MovimentacaoFo
     situacao: movimentacao?.situacao ?? 'PENDENTE',
     dataEfetivacao: movimentacao?.dataEfetivacao ?? null,
     valorPago: movimentacao?.situacao === 'PAGA_PARCIALMENTE' ? movimentacao.valorPago : undefined,
-    contaId: movimentacao?.conta?.id ?? '',
+    // No grupo, o padrao e' a ligacao direta: o grupo pode nao ter
+    // nenhuma sub-conta, e a movimentacao precisa poder existir assim.
+    contaId: movimentacao?.conta?.id ?? (ehEscopoGrupo ? CONTA_DIRETA_NO_GRUPO : ''),
     categoriaId: movimentacao?.categoria?.id ?? '',
     etiquetaIds: movimentacao?.etiquetas.map((etiqueta) => etiqueta.id) ?? [],
     recorrenciaAtiva: false,
@@ -83,8 +97,10 @@ export function FormularioMovimentacao({
   aoFechar,
   movimentacao,
   escopoEdicao,
+  contaCompartilhadaId,
 }: FormularioMovimentacaoProps): ReactElement {
   const ehEdicao = movimentacao !== undefined;
+  const ehEscopoGrupo = contaCompartilhadaId !== undefined;
   const {
     register,
     handleSubmit,
@@ -94,7 +110,7 @@ export function FormularioMovimentacao({
     formState: { errors },
   } = useForm<MovimentacaoFormulario>({
     resolver: zodResolver(movimentacaoSchema),
-    defaultValues: valoresIniciais(movimentacao),
+    defaultValues: valoresIniciais(movimentacao, contaCompartilhadaId !== undefined),
   });
 
   const tipoSelecionado = useWatch({ control, name: 'tipo' });
@@ -114,9 +130,17 @@ export function FormularioMovimentacao({
   const fimEmSelecionado = useWatch({ control, name: 'fimEm' });
 
   const { data: perfil } = usePerfil();
-  const { data: dadosContas } = useContas();
-  const { data: categorias } = useCategorias();
-  const { data: etiquetas } = useEtiquetas();
+  // No escopo de grupo, conta/categoria/etiqueta vem do grupo — misturar
+  // com as pessoais faria o backend recusar (RN-30) e ofereceria escolhas
+  // invalidas ao usuario.
+  const escopoConsulta = contaCompartilhadaId !== undefined ? { contaCompartilhadaId } : {};
+  const { data: dadosContas } = useContas(
+    contaCompartilhadaId !== undefined
+      ? { contaCompartilhadaId, incluirArquivadas: false }
+      : undefined,
+  );
+  const { data: categorias } = useCategorias(escopoConsulta);
+  const { data: etiquetas } = useEtiquetas(escopoConsulta);
 
   const criar = useCriarMovimentacao();
   const atualizar = useAtualizarMovimentacao();
@@ -175,11 +199,18 @@ export function FormularioMovimentacao({
       return;
     }
 
+    // RN-09: exatamente um dos dois. No escopo pessoal e' sempre a conta;
+    // no de grupo, ou a sub-conta escolhida, ou a ligacao direta.
+    const ligacaoEscopo =
+      contaCompartilhadaId !== undefined && dados.contaId === CONTA_DIRETA_NO_GRUPO
+        ? { contaCompartilhadaId }
+        : { contaId: dados.contaId };
+
     criar.mutate(
       {
         ...payloadComum,
         tipo: dados.tipo,
-        contaId: dados.contaId,
+        ...ligacaoEscopo,
         situacao: dados.situacao,
         dataEfetivacao: dados.dataEfetivacao ?? undefined,
         valorPago: dados.valorPago,
@@ -266,15 +297,26 @@ export function FormularioMovimentacao({
             />
           </div>
 
-          <SelecionadorConta
-            rotulo="Conta"
-            contas={dadosContas?.contas ?? []}
-            valor={contaSelecionada}
-            aoAlterar={(contaId) => {
-              setValue('contaId', contaId, { shouldValidate: true });
-            }}
-            erro={errors.contaId?.message}
-          />
+          {ehEscopoGrupo ? (
+            <Selecao rotulo="Conta" erro={errors.contaId?.message} {...register('contaId')}>
+              <option value={CONTA_DIRETA_NO_GRUPO}>Direto no grupo (sem conta)</option>
+              {(dadosContas?.contas ?? []).map((conta) => (
+                <option key={conta.id} value={conta.id}>
+                  {conta.nome}
+                </option>
+              ))}
+            </Selecao>
+          ) : (
+            <SelecionadorConta
+              rotulo="Conta"
+              contas={dadosContas?.contas ?? []}
+              valor={contaSelecionada}
+              aoAlterar={(contaId) => {
+                setValue('contaId', contaId, { shouldValidate: true });
+              }}
+              erro={errors.contaId?.message}
+            />
+          )}
 
           <SelecionadorCategoria
             rotulo="Categoria"

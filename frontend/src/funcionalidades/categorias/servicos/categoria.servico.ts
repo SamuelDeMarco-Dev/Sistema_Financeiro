@@ -4,6 +4,8 @@ import type { Categoria, TipoCategoria } from '../tipos/categoria';
 export interface FiltrosListarCategorias {
   tipo?: TipoCategoria;
   apenasRaiz?: boolean;
+  /** 04-API.md §11.1: escopo de grupo. Ausente ⇒ escopo pessoal. */
+  contaCompartilhadaId?: string;
 }
 
 export interface CriarCategoriaPayload {
@@ -12,6 +14,7 @@ export interface CriarCategoriaPayload {
   cor: string;
   icone: string;
   categoriaPaiId: string | null;
+  contaCompartilhadaId?: string | undefined;
 }
 
 export type AtualizarCategoriaPayload = Partial<

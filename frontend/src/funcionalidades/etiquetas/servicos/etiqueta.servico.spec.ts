@@ -29,8 +29,18 @@ describe('etiqueta.servico', () => {
 
     const resultado = await listarEtiquetas();
 
-    expect(api.get).toHaveBeenCalledWith('/etiquetas');
+    expect(api.get).toHaveBeenCalledWith('/etiquetas', { params: {} });
     expect(resultado).toEqual([etiqueta]);
+  });
+
+  it('listarEtiquetas() repassa o escopo de grupo como query', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: { etiquetas: [] } } });
+
+    await listarEtiquetas({ contaCompartilhadaId: 'grupo-1' });
+
+    expect(api.get).toHaveBeenCalledWith('/etiquetas', {
+      params: { contaCompartilhadaId: 'grupo-1' },
+    });
   });
 
   it('criarEtiqueta() posta o payload', async () => {
