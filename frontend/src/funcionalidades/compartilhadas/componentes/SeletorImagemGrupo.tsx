@@ -11,6 +11,10 @@ interface SeletorImagemGrupoProps {
   /** Recorte ja confirmado, ou `null` enquanto nao houver imagem. */
   imagem: Blob | null;
   aoAlterar: (imagem: Blob | null) => void;
+  /** Imagem ja salva no grupo (edicao). Enquanto nao houver um recorte
+   * novo, e' ela que aparece na pre-visualizacao — sem isto, editar o nome
+   * do grupo daria a impressao de que a imagem tinha sido perdida. */
+  imagemAtualUrl?: string | null | undefined;
 }
 
 const TAMANHO_MAXIMO_MB = 2;
@@ -24,6 +28,7 @@ export function SeletorImagemGrupo({
   cor,
   imagem,
   aoAlterar,
+  imagemAtualUrl,
 }: SeletorImagemGrupoProps): ReactElement {
   const inputArquivoRef = useRef<HTMLInputElement>(null);
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
@@ -71,7 +76,7 @@ export function SeletorImagemGrupo({
       <div className="flex items-center gap-3">
         <ImagemGrupo
           nome={nome || '?'}
-          imagemUrl={urlPrevia}
+          imagemUrl={urlPrevia ?? imagemAtualUrl ?? null}
           cor={cor}
           className="h-16 w-16 text-xl"
         />
@@ -93,7 +98,10 @@ export function SeletorImagemGrupo({
               aoAlterar(null);
             }}
           >
-            Remover
+            {/* Na edicao o botao descarta o recorte novo e volta a imagem
+                salva — nao apaga a imagem do grupo, que nao tem rota de
+                remocao (04-API.md §16). */}
+            {imagemAtualUrl ? 'Descartar escolha' : 'Remover'}
           </Botao>
         ) : null}
       </div>

@@ -2,6 +2,14 @@ export const PAPEIS_MEMBRO = ['ADMINISTRADOR', 'PARTICIPANTE', 'OBSERVADOR'] as 
 
 export type PapelMembro = (typeof PAPEIS_MEMBRO)[number];
 
+/** RN-28: o grupo tem exatamente um administrador, e ele só troca por
+ * `POST /transferir-administracao`, que é atômico. Por isso ADMINISTRADOR
+ * não entra nem no convite (04-API.md §17.1) nem na alteração de papel
+ * (§16.5) — as duas rotas recusariam o valor. */
+export const PAPEIS_CONVIDAVEIS = ['PARTICIPANTE', 'OBSERVADOR'] as const;
+
+export type PapelConvidavel = (typeof PAPEIS_CONVIDAVEIS)[number];
+
 export const ROTULO_PAPEL: Record<PapelMembro, string> = {
   ADMINISTRADOR: 'Administrador',
   PARTICIPANTE: 'Participante',

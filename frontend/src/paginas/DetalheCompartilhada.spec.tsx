@@ -17,6 +17,9 @@ import { DetalheCompartilhada } from './DetalheCompartilhada';
 import type { ReactElement, ReactNode } from 'react';
 
 vi.mock('@/funcionalidades/compartilhadas/servicos/conta-compartilhada.servico');
+// A aba Membros lista os convites pendentes do grupo quando quem olha
+// administra (issue #76) — sem este mock a consulta iria para a rede.
+vi.mock('@/funcionalidades/compartilhadas/servicos/convite.servico');
 vi.mock('@/funcionalidades/movimentacoes/servicos/movimentacao.servico');
 vi.mock('@/funcionalidades/categorias/servicos/categoria.servico');
 vi.mock('@/contextos/ContextoAutenticacao', async (importarOriginal) => {

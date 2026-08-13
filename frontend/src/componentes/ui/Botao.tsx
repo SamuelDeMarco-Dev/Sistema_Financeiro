@@ -4,12 +4,16 @@ import type { ButtonHTMLAttributes, ReactElement } from 'react';
 
 interface BotaoProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   carregando?: boolean;
-  variante?: 'primaria' | 'secundaria';
+  variante?: 'primaria' | 'secundaria' | 'perigo';
 }
 
 const VARIANTES: Record<NonNullable<BotaoProps['variante']>, string> = {
   primaria: 'bg-primaria text-fundo hover:bg-primaria/90',
   secundaria: 'border border-borda bg-superficie text-texto hover:bg-borda',
+  // Acao destrutiva (remover membro, excluir grupo): a cor precisa
+  // distinguir o botao do "primaria" ao lado dele, para o clique de reflexo
+  // no botao mais destacado nao ser justamente o irreversivel.
+  perigo: 'bg-perigo text-fundo hover:bg-perigo/90',
 };
 
 export const Botao = forwardRef<HTMLButtonElement, BotaoProps>(function Botao(

@@ -6,6 +6,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 export const chavesConvites = {
   todas: ['convites'] as const,
   recebidos: ['convites', 'recebidos'] as const,
+  doGrupo: (contaCompartilhadaId: string) => ['convites', 'grupo', contaCompartilhadaId] as const,
+  previa: (token: string) => ['convites', 'previa', token] as const,
 };
 
 export function useConvitesRecebidos(): UseQueryResult<ConviteRecebido[]> {
