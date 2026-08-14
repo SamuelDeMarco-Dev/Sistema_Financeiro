@@ -225,6 +225,43 @@ describe('POST /api/v1/autenticacao/entrar', () => {
     expect(resposta.body).toMatchObject({ codigo: 'LIMITE_EXCEDIDO' });
     expect(resposta.headers['retry-after']).toBeTruthy();
   });
+
+  // RN-54 fala em tentativas **falhas**. Entrar em varios aparelhos na mesma
+  // janela e' uso legitimo e nao pode consumir o limite — o limitador conta
+  // so as respostas de erro (`apenasFalhas`).
+  it('logins bem-sucedidos nao consomem o limite (RN-54 conta apenas as falhas)', async () => {
+    const { email, senha } = await criarUsuarioVerificado({
+      email: 'varios-aparelhos@exemplo.com',
+    });
+
+    for (let i = 0; i < 8; i += 1) {
+      const resposta = await request(app)
+        .post('/api/v1/autenticacao/entrar')
+        .send({ email, senha });
+
+      expect(resposta.status).toBe(200);
+    }
+  });
+
+  it('o limite ainda vale quando as falhas se misturam a logins validos', async () => {
+    const { email, senha } = await criarUsuarioVerificado({ email: 'mistura@exemplo.com' });
+
+    // Alterna sucesso e falha: so as 5 falhas contam, e a 6a leva 429 antes
+    // de o servico sequer avaliar a senha.
+    for (let i = 0; i < 5; i += 1) {
+      await request(app).post('/api/v1/autenticacao/entrar').send({ email, senha });
+      await request(app)
+        .post('/api/v1/autenticacao/entrar')
+        .send({ email, senha: 'SenhaErrada@2026' });
+    }
+
+    const resposta = await request(app)
+      .post('/api/v1/autenticacao/entrar')
+      .send({ email, senha: 'SenhaErrada@2026' });
+
+    expect(resposta.status).toBe(429);
+    expect(resposta.body).toMatchObject({ codigo: 'LIMITE_EXCEDIDO' });
+  });
 });
 
 describe('POST /api/v1/autenticacao/renovar', () => {
