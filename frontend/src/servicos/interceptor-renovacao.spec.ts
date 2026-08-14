@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { armazenamentoToken } from './armazenamento-token';
 import { inscreverSessaoExpirada } from './evento-sessao-expirada';
 import { criarInterceptorRenovacao } from './interceptor-renovacao';
+import { redefinirRenovacaoEmVoo } from './renovar-sessao';
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 vi.mock('axios', async (importarOriginal) => {
@@ -33,6 +34,7 @@ describe('criarInterceptorRenovacao', () => {
   beforeEach(() => {
     vi.mocked(axios.post).mockReset();
     armazenamentoToken.definir(null);
+    redefinirRenovacaoEmVoo();
   });
 
   it('cinco requisicoes 401 simultaneas disparam apenas UMA chamada a /autenticacao/renovar', async () => {
