@@ -833,8 +833,9 @@ concurrency:
 env:
   NODE_VERSAO: '22'
   REGISTRO: ghcr.io
-  IMAGEM_API: ${{ github.repository }}/pfm-api
-  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
+  # O nome da imagem sai de `github.repository` em minúsculas — ver o passo
+  # `imagem` no job `construir`. Não dá para minuscular aqui: `env` de
+  # workflow não executa expansão de shell.
 
 jobs:
   # ─────────────────────────────────────────────
@@ -888,11 +889,19 @@ jobs:
       packages: write
     outputs:
       tag: ${{ steps.tag.outputs.valor }}
+      imagem: ${{ steps.imagem.outputs.base }}
     steps:
       - uses: actions/checkout@v4
 
       - id: tag
         run: echo "valor=${{ inputs.tag_imagem || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      # `github.repository` preserva as maiúsculas do dono e do repositório,
+      # e o Docker recusa maiúscula em nome de imagem: "repository name must
+      # be lowercase". Sem isto o build falha ao aplicar a tag, antes de
+      # publicar coisa alguma.
+      - id: imagem
+        run: echo "base=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -912,8 +921,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:latest
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -925,8 +934,8 @@ jobs:
           target: migrator
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:latest
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api-migrator:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api-migrator:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -993,7 +1002,7 @@ jobs:
           PORTA=3333
           URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
           TAG_IMAGEM=${{ needs.construir.outputs.tag }}
-          GITHUB_REPOSITORIO=${{ github.repository }}
+          GITHUB_REPOSITORIO=${{ needs.construir.outputs.imagem }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           POSTGRES_USUARIO=${{ secrets.POSTGRES_USUARIO }}
           POSTGRES_SENHA=${{ secrets.POSTGRES_SENHA }}
