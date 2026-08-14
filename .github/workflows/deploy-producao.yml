@@ -27,9 +27,39 @@ jobs:
     secrets: inherit
 
   # ─────────────────────────────────────────────
+  # Enquanto a VPS nao existe, publicar e implantar nao sao possiveis — e a
+  # falha nao diz nada de util: e' so a ausencia de um servidor. Este job
+  # traduz essa ausencia em "pular", nao em "falhar", para que um merge em
+  # `main` continue verde ate haver onde publicar.
+  #
+  # Precisa ser um job: o contexto `secrets` nao existe em `if:` de job, so
+  # dentro de um passo. `VPS_HOST` e' a sentinela porque sem ela nao ha
+  # sequer para onde abrir conexao.
+  ambiente:
+    name: Ambiente configurado?
+    runs-on: ubuntu-latest
+    environment:
+      name: producao
+    outputs:
+      configurado: ${{ steps.checar.outputs.valor }}
+    steps:
+      - id: checar
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -n "$VPS_HOST" ]; then
+            echo 'valor=true' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS configurada — build e implantação seguem.'
+          else
+            echo 'valor=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS_HOST ausente — build e implantação puladas. Ver 08-CICD.md §12.'
+          fi
+
+  # ─────────────────────────────────────────────
   construir:
     name: Construir artefatos
-    needs: verificar
+    needs: [verificar, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # Sem isto, `secrets.URL_BASE_FRONTEND` (secret por-ambiente, RN
     # 08-CICD.md §2.2) não resolveria aqui — só jobs com `environment:`
@@ -111,7 +141,8 @@ jobs:
   # ─────────────────────────────────────────────
   implantar:
     name: Implantar na VPS
-    needs: construir
+    needs: [construir, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # `environment.url` só aceita os contextos env/github/inputs/job/matrix/
     # needs/runner/steps/strategy/vars — "secrets" não é um deles, por isso

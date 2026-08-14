@@ -22,9 +22,35 @@ jobs:
     secrets: inherit
 
   # ─────────────────────────────────────────────
+  # Mesma guarda do deploy de producao: sem VPS, "pular" e' a resposta
+  # honesta — "falhar" so poluiria o historico com uma falha que nao
+  # aponta defeito algum. Precisa ser um job porque o contexto `secrets`
+  # nao existe em `if:` de job.
+  ambiente:
+    name: Ambiente configurado?
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    outputs:
+      configurado: ${{ steps.checar.outputs.valor }}
+    steps:
+      - id: checar
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -n "$VPS_HOST" ]; then
+            echo 'valor=true' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS configurada — build e implantação seguem.'
+          else
+            echo 'valor=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS_HOST ausente — build e implantação puladas. Ver 08-CICD.md §12.'
+          fi
+
+  # ─────────────────────────────────────────────
   construir:
     name: Construir artefatos
-    needs: verificar
+    needs: [verificar, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # Sem isto, os secrets por-ambiente (08-CICD.md §2.2) resolveriam
     # para o valor de "producao" (ou nenhum), nao o de "staging".
@@ -101,7 +127,8 @@ jobs:
   # ─────────────────────────────────────────────
   implantar:
     name: Implantar na VPS (homologação)
-    needs: construir
+    needs: [construir, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     environment:
       name: staging

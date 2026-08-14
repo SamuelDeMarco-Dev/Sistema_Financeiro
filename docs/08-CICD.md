@@ -844,9 +844,39 @@ jobs:
     secrets: inherit
 
   # ─────────────────────────────────────────────
+  # Enquanto a VPS não existe, publicar e implantar não são possíveis — e a
+  # falha não diz nada de útil: é só a ausência de um servidor. Este job
+  # traduz essa ausência em "pular", não em "falhar", para que um merge em
+  # `main` continue verde até haver onde publicar.
+  #
+  # Precisa ser um job: o contexto `secrets` não existe em `if:` de job, só
+  # dentro de um passo. `VPS_HOST` é a sentinela porque sem ela não há
+  # sequer para onde abrir conexão.
+  ambiente:
+    name: Ambiente configurado?
+    runs-on: ubuntu-latest
+    environment:
+      name: producao
+    outputs:
+      configurado: ${{ steps.checar.outputs.valor }}
+    steps:
+      - id: checar
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -n "$VPS_HOST" ]; then
+            echo 'valor=true' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS configurada — build e implantação seguem.'
+          else
+            echo 'valor=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS_HOST ausente — build e implantação puladas. Ver §12.'
+          fi
+
+  # ─────────────────────────────────────────────
   construir:
     name: Construir artefatos
-    needs: verificar
+    needs: [verificar, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # Sem isto, secrets.URL_BASE_FRONTEND (secret por-ambiente, §2.2) não
     # resolveria aqui — só jobs com `environment:` enxergam o valor do
@@ -927,7 +957,8 @@ jobs:
   # ─────────────────────────────────────────────
   implantar:
     name: Implantar na VPS
-    needs: construir
+    needs: [construir, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # `environment.url` só aceita os contextos env/github/inputs/job/matrix/
     # needs/runner/steps/strategy/vars — "secrets" não é um deles.
@@ -1066,7 +1097,7 @@ Detalhes que evitam problemas reais:
 
 ## 8. Workflow de homologação
 
-`.github/workflows/deploy-staging.yml` reproduz a estrutura de produção, com o mesmo `docker-compose.prod.yml` (§3.3) apontado por um `.env` diferente:
+`.github/workflows/deploy-staging.yml` reproduz a estrutura de produção — incluindo o job `ambiente`, que pula build e implantação enquanto `VPS_HOST` não existir — com o mesmo `docker-compose.prod.yml` (§3.3) apontado por um `.env` diferente:
 
 | Aspecto                 | Produção            | Homologação                       |
 | ----------------------- | ------------------- | --------------------------------- |
