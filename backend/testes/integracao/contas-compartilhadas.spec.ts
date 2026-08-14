@@ -1,9 +1,9 @@
 import sharp from 'sharp';
 import request from 'supertest';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@/banco/cliente';
 import { criarServidor } from '@/servidor';
-import { limparBanco } from '../configuracao/banco-teste';
+import { garantirCategoriasPadrao, limparBanco } from '../configuracao/banco-teste';
 import { fabricarUsuario } from '../fabricas';
 
 const app = criarServidor();
@@ -42,6 +42,14 @@ async function gerarPng(): Promise<Buffer> {
 }
 
 describe('/api/v1/contas-compartilhadas', () => {
+  // `criarCategoriasPadrao` copia do catalogo do sistema, que e' dado de
+  // referencia e nao pertence a nenhum teste — num banco recem-criado (CI)
+  // ele so existe se a suite o semear. Sem isto, o teste passava aqui e
+  // falhava la, dependendo da ordem das suites.
+  beforeAll(async () => {
+    await garantirCategoriasPadrao();
+  });
+
   beforeEach(async () => {
     await limparBanco();
   });
