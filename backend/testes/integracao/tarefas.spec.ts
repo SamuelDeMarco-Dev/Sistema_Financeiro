@@ -264,5 +264,40 @@ describe('Tarefas agendadas (issue #41)', () => {
       const segundaExecucao = await limparTokens();
       expect(segundaExecucao).toBe(0);
     });
+
+    it('RN-35: marca convites de conta compartilhada vencidos como EXPIRADO, mas nao os ainda validos', async () => {
+      const { usuario } = await prepararUsuarioComConta();
+      const grupo = await prisma.contaCompartilhada.create({
+        data: { nome: 'Grupo de teste', criadoPorId: usuario.id },
+      });
+
+      const vencido = await prisma.convite.create({
+        data: {
+          contaCompartilhadaId: grupo.id,
+          email: 'vencido@exemplo.com',
+          enviadoPorId: usuario.id,
+          token: randomUUID(),
+          expiraEm: diasA(-1),
+        },
+      });
+      const valido = await prisma.convite.create({
+        data: {
+          contaCompartilhadaId: grupo.id,
+          email: 'valido@exemplo.com',
+          enviadoPorId: usuario.id,
+          token: randomUUID(),
+          expiraEm: diasA(6),
+        },
+      });
+
+      await limparTokens();
+
+      expect((await prisma.convite.findUniqueOrThrow({ where: { id: vencido.id } })).situacao).toBe(
+        'EXPIRADO',
+      );
+      expect((await prisma.convite.findUniqueOrThrow({ where: { id: valido.id } })).situacao).toBe(
+        'PENDENTE',
+      );
+    });
   });
 });

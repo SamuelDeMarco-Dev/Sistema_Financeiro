@@ -46,10 +46,9 @@ describe('validadores/contas', () => {
       expect(() => criarContaSchema.parse(corpoValido({ cor: 'azul' }))).toThrow();
     });
 
-    it('rejeita contaCompartilhadaId nao nulo (grupo chega em M6)', () => {
-      expect(() =>
-        criarContaSchema.parse(corpoValido({ contaCompartilhadaId: 'grupo-1' })),
-      ).toThrow();
+    it('aceita contaCompartilhadaId nao nulo (issue #72: cria conta de grupo)', () => {
+      const resultado = criarContaSchema.parse(corpoValido({ contaCompartilhadaId: 'grupo-1' }));
+      expect(resultado.body.contaCompartilhadaId).toBe('grupo-1');
     });
 
     it('aceita contaCompartilhadaId ausente ou nulo', () => {

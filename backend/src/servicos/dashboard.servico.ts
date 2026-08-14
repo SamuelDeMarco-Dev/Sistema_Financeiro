@@ -1,9 +1,11 @@
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { DashboardRepositorio } from '@/repositorios/dashboard.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
+import { ContaCompartilhadaServico } from '@/servicos/conta-compartilhada.servico';
 import { MovimentacaoServico } from '@/servicos/movimentacao.servico';
 import { deDataIso, hojeNoTimezone } from '@/utilitarios/data';
 import {
+  mapearContasCompartilhadasResumo,
   mapearContasComSaldo,
   mapearFluxoCaixa,
   mapearPeriodo,
@@ -11,6 +13,7 @@ import {
 } from '@/utilitarios/mapear-dashboard';
 import type {
   AlertaDTO,
+  ContaCompartilhadaResumoDashboardDTO,
   ContaResumoDashboardDTO,
   FluxoCaixaPontoDTO,
   IndicadoresDTO,
@@ -41,7 +44,7 @@ export interface DashboardDTO {
   receitasPorCategoria: PorCategoriaItemDTO[];
   ultimasMovimentacoes: MovimentacaoDTO[];
   contas: ContaResumoDashboardDTO[];
-  contasCompartilhadas: never[];
+  contasCompartilhadas: ContaCompartilhadaResumoDashboardDTO[];
   metas: never[];
   orcamentos: never[];
   alertas: AlertaDTO[];
@@ -60,6 +63,7 @@ export class DashboardServico {
     private readonly contaRepositorio = new ContaRepositorio(),
     private readonly perfilRepositorio = new PerfilRepositorio(),
     private readonly movimentacaoServico = new MovimentacaoServico(),
+    private readonly contaCompartilhadaServico = new ContaCompartilhadaServico(),
   ) {}
 
   async obterIndicadores(
@@ -150,10 +154,9 @@ export class DashboardServico {
   /** RF-40 a RF-47, RF-43: tudo o que a tela inicial precisa numa unica
    * viagem — todas as consultas rodam em `Promise.all` (nunca em serie)
    * para o tempo total ficar perto do bloco mais lento, nao da soma de
-   * todos. `contasCompartilhadas`/`metas`/`orcamentos`/`cartoes` sao
-   * arrays vazios ate as Milestones correspondentes (M6/M7/M9/M8) — a
-   * chave existe desde ja para o frontend nao precisar de un branch por
-   * milestone. */
+   * todos. `metas`/`orcamentos`/`cartoes` seguem arrays vazios ate as
+   * Milestones correspondentes (M7/M9/M8) — a chave existe desde ja para o
+   * frontend nao precisar de un branch por milestone. */
   async obterDashboard(usuarioId: string, query: ObterIndicadoresQuery): Promise<DashboardDTO> {
     const inicio = process.hrtime.bigint();
     const periodo = await this.resolverPeriodo(usuarioId, query);
@@ -169,6 +172,7 @@ export class DashboardServico {
       ultimasMovimentacoes,
       contas,
       vencimentosProximos,
+      contasCompartilhadas,
     ] = await Promise.all([
       this.calcularIndicadores(usuarioId, periodo),
       this.repositorio.obterFluxoCaixa(usuarioId, fluxoCaixaPeriodo),
@@ -177,6 +181,7 @@ export class DashboardServico {
       this.buscarUltimasMovimentacoes(usuarioId),
       this.contaRepositorio.listarComSaldoPorUsuario(usuarioId),
       this.repositorio.contarVencimentosProximos(usuarioId, hoje, limiteAlerta),
+      this.contaCompartilhadaServico.listar(usuarioId),
     ]);
 
     const duracaoMs = Number(process.hrtime.bigint() - inicio) / 1_000_000;
@@ -193,7 +198,7 @@ export class DashboardServico {
       receitasPorCategoria: mapearPorCategoria(receitasLinhas),
       ultimasMovimentacoes,
       contas: mapearContasComSaldo(contas),
-      contasCompartilhadas: [],
+      contasCompartilhadas: mapearContasCompartilhadasResumo(contasCompartilhadas),
       metas: [],
       orcamentos: [],
       alertas: this.gerarAlertas(vencimentosProximos),

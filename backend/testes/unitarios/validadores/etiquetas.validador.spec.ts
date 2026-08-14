@@ -30,10 +30,11 @@ describe('validadores/etiquetas', () => {
       expect(() => criarEtiquetaSchema.parse({ body: { nome: 'viagem', cor: 'azul' } })).toThrow();
     });
 
-    it('rejeita contaCompartilhadaId nao nulo (grupo chega em M6)', () => {
-      expect(() =>
-        criarEtiquetaSchema.parse({ body: { nome: 'viagem', contaCompartilhadaId: 'grupo-1' } }),
-      ).toThrow();
+    it('aceita contaCompartilhadaId nao nulo (issue #72: cria etiqueta de grupo)', () => {
+      const resultado = criarEtiquetaSchema.parse({
+        body: { nome: 'viagem', contaCompartilhadaId: 'grupo-1' },
+      });
+      expect(resultado.body.contaCompartilhadaId).toBe('grupo-1');
     });
   });
 

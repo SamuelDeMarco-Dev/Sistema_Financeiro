@@ -40,6 +40,32 @@ export class CategoriaRepositorio {
     return prisma.categoria.findFirst({ where: { id, usuarioId, excluidoEm: null } });
   }
 
+  /** Sem filtro de propriedade — usado quando a autorizacao (pessoal vs.
+   * grupo) e decidida pelo chamador (issue #72), nao pelo repositorio. */
+  async buscarPorIdSemEscopo(id: string): Promise<Categoria | null> {
+    return prisma.categoria.findFirst({ where: { id, excluidoEm: null } });
+  }
+
+  async listarRaizesComSubcategoriasDeGrupo(
+    contaCompartilhadaId: string,
+    filtros: FiltrosListarCategorias,
+  ): Promise<CategoriaComSubcategorias[]> {
+    return prisma.categoria.findMany({
+      where: {
+        contaCompartilhadaId,
+        excluidoEm: null,
+        categoriaPaiId: null,
+        ...(filtros.tipo ? { tipo: filtros.tipo } : {}),
+      },
+      include: { subcategorias: { where: { excluidoEm: null }, orderBy: { ordem: 'asc' } } },
+      orderBy: { ordem: 'asc' },
+    });
+  }
+
+  async criarDeGrupo(contaCompartilhadaId: string, dados: DadosCriarCategoria): Promise<Categoria> {
+    return prisma.categoria.create({ data: { contaCompartilhadaId, ...dados } });
+  }
+
   async contarSubcategorias(categoriaPaiId: string): Promise<number> {
     return prisma.categoria.count({ where: { categoriaPaiId, excluidoEm: null } });
   }
@@ -65,6 +91,18 @@ export class CategoriaRepositorio {
   async buscarPorIdOuPadrao(id: string, usuarioId: string): Promise<Categoria | null> {
     return prisma.categoria.findFirst({
       where: { id, excluidoEm: null, OR: [{ usuarioId }, { ehPadraoSistema: true }] },
+    });
+  }
+
+  /** RN-11 no escopo de grupo: a categoria de uma movimentacao de grupo
+   * pode ser do PROPRIO grupo ou uma categoria padrao do sistema — nunca
+   * uma categoria pessoal nem a de outro grupo. */
+  async buscarPorIdOuPadraoDeGrupo(
+    id: string,
+    contaCompartilhadaId: string,
+  ): Promise<Categoria | null> {
+    return prisma.categoria.findFirst({
+      where: { id, excluidoEm: null, OR: [{ contaCompartilhadaId }, { ehPadraoSistema: true }] },
     });
   }
 
@@ -95,6 +133,49 @@ export class CategoriaRepositorio {
         await tx.categoria.createMany({
           data: raiz.subcategorias.map((sub) => ({
             usuarioId,
+            nome: sub.nome,
+            tipo: sub.tipo,
+            cor: sub.cor,
+            icone: sub.icone,
+            ordem: sub.ordem,
+            categoriaPaiId: novaRaiz.id,
+          })),
+        });
+      }
+    }
+  }
+
+  /** RF-53 (issue #67): mesma copia de `copiarPadraoParaUsuario`, mas para
+   * o escopo do grupo — cada grupo tem sua propria copia editavel,
+   * independente da lista global (chk_categoria_escopo exige
+   * conta_compartilhada_id XOR usuario_id, nunca a referencia direta a
+   * uma categoria com ehPadraoSistema=true fora do proprio catalogo). */
+  async copiarPadraoParaGrupo(
+    contaCompartilhadaId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const raizes = await tx.categoria.findMany({
+      where: { ehPadraoSistema: true, categoriaPaiId: null },
+      include: { subcategorias: { where: { ehPadraoSistema: true }, orderBy: { ordem: 'asc' } } },
+      orderBy: { ordem: 'asc' },
+    });
+
+    for (const raiz of raizes) {
+      const novaRaiz = await tx.categoria.create({
+        data: {
+          contaCompartilhadaId,
+          nome: raiz.nome,
+          tipo: raiz.tipo,
+          cor: raiz.cor,
+          icone: raiz.icone,
+          ordem: raiz.ordem,
+        },
+      });
+
+      if (raiz.subcategorias.length > 0) {
+        await tx.categoria.createMany({
+          data: raiz.subcategorias.map((sub) => ({
+            contaCompartilhadaId,
             nome: sub.nome,
             tipo: sub.tipo,
             cor: sub.cor,

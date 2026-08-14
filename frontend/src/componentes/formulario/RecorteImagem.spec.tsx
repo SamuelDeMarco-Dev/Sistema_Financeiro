@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RecorteAvatar } from './RecorteAvatar';
+import { RecorteImagem } from './RecorteImagem';
 
 function fabricarArquivo(): File {
   return new File(['conteudo-fake'], 'foto.png', { type: 'image/png' });
 }
 
-describe('RecorteAvatar', () => {
+describe('RecorteImagem', () => {
   beforeEach(() => {
     // jsdom nao implementa URL.createObjectURL/canvas 2d de verdade — sem
     // isto o componente lanca "not implemented" ao montar/confirmar.
@@ -26,7 +26,7 @@ describe('RecorteAvatar', () => {
 
   function renderizarECarregarImagem(): void {
     render(
-      <RecorteAvatar arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={vi.fn()} />,
+      <RecorteImagem arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={vi.fn()} />,
     );
     const imagem = document.querySelector('img');
     if (!imagem) throw new Error('imagem nao encontrada');
@@ -38,7 +38,7 @@ describe('RecorteAvatar', () => {
   it('chama onCancelar ao clicar em Cancelar', () => {
     const onCancelar = vi.fn();
     render(
-      <RecorteAvatar arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={onCancelar} />,
+      <RecorteImagem arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={onCancelar} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -46,18 +46,21 @@ describe('RecorteAvatar', () => {
     expect(onCancelar).toHaveBeenCalledTimes(1);
   });
 
-  it('desabilita "Usar esta foto" ate a imagem carregar', () => {
+  it('desabilita "Usar esta imagem" ate a imagem carregar', () => {
     render(
-      <RecorteAvatar arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={vi.fn()} />,
+      <RecorteImagem arquivo={fabricarArquivo()} onConfirmar={vi.fn()} onCancelar={vi.fn()} />,
     );
 
-    expect(screen.getByRole('button', { name: 'Usar esta foto' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Usar esta imagem' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
-  it('habilita "Usar esta foto" apos a imagem carregar e chama onConfirmar com um Blob ao confirmar', () => {
+  it('habilita "Usar esta imagem" apos a imagem carregar e chama onConfirmar com um Blob ao confirmar', () => {
     const onConfirmar = vi.fn();
     render(
-      <RecorteAvatar arquivo={fabricarArquivo()} onConfirmar={onConfirmar} onCancelar={vi.fn()} />,
+      <RecorteImagem arquivo={fabricarArquivo()} onConfirmar={onConfirmar} onCancelar={vi.fn()} />,
     );
     const imagem = document.querySelector('img');
     if (!imagem) throw new Error('imagem nao encontrada');
@@ -65,7 +68,7 @@ describe('RecorteAvatar', () => {
     Object.defineProperty(imagem, 'naturalHeight', { value: 200, configurable: true });
     fireEvent.load(imagem);
 
-    const botaoConfirmar = screen.getByRole('button', { name: 'Usar esta foto' });
+    const botaoConfirmar = screen.getByRole('button', { name: 'Usar esta imagem' });
     expect(botaoConfirmar).toHaveProperty('disabled', false);
 
     fireEvent.click(botaoConfirmar);

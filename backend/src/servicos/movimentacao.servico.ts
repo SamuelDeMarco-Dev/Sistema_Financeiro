@@ -4,26 +4,31 @@ import {
   ContaArquivadaErro,
   ErroInterno,
   NaoEncontradoErro,
+  PapelInsuficienteErro,
   RegraNegocioErro,
   ValidacaoErro,
 } from '@/erros';
 import { CategoriaRepositorio } from '@/repositorios/categoria.repositorio';
+import { ContaCompartilhadaRepositorio } from '@/repositorios/conta-compartilhada.repositorio';
 import { ContaRepositorio } from '@/repositorios/conta.repositorio';
 import { EtiquetaRepositorio } from '@/repositorios/etiqueta.repositorio';
 import { MovimentacaoRepositorio } from '@/repositorios/movimentacao.repositorio';
 import type {
+  EscopoMovimentacoes,
   FiltrosListarMovimentacoes,
   MovimentacaoCompleta,
   PaginacaoMovimentacoes,
 } from '@/repositorios/movimentacao.repositorio';
 import { PerfilRepositorio } from '@/repositorios/perfil.repositorio';
 import { AnexoServico } from '@/servicos/anexo.servico';
+import { autorizarPapelNoGrupo } from '@/servicos/autorizacao-grupo.servico';
 import { TransferenciaServico } from '@/servicos/transferencia.servico';
 import { validarCompatibilidadeCategoria } from '@/utilitarios/categoria';
 import { deDataIso, hojeNoTimezone, paraDataIso } from '@/utilitarios/data';
 import { mapearMovimentacao } from '@/utilitarios/mapear-movimentacao';
 import type { MovimentacaoDTO } from '@/utilitarios/mapear-movimentacao';
 import { registrador } from '@/utilitarios/registrador';
+import { autorizarEdicaoOuExclusaoMovimentacao } from '@/utilitarios/resolver-permissoes';
 import type {
   AtualizarMovimentacaoDTO,
   CriarMovimentacaoDTO,
@@ -32,7 +37,20 @@ import type {
   ListarMovimentacoesQuery,
   PagarMovimentacaoDTO,
 } from '@/validadores/movimentacoes.validador';
-import type { Categoria, Conta, FrequenciaRecorrencia, SituacaoMovimentacao } from '@prisma/client';
+import type {
+  Categoria,
+  Conta,
+  FrequenciaRecorrencia,
+  MembroCompartilhado,
+  SituacaoMovimentacao,
+} from '@prisma/client';
+
+/** RN-09/issue #72: onde uma movimentacao de grupo se conecta ao grupo —
+ * direto (`Movimentacao.contaCompartilhadaId`) ou via uma sub-conta do
+ * grupo (`conta.contaCompartilhadaId`). `null` = movimentacao pessoal. */
+function resolverContaCompartilhadaId(movimentacao: MovimentacaoCompleta): string | null {
+  return movimentacao.contaCompartilhadaId ?? movimentacao.conta?.contaCompartilhadaId ?? null;
+}
 
 export interface MetaRecorrencia {
   modeloId: string;
@@ -66,6 +84,7 @@ export class MovimentacaoServico {
     private readonly perfilRepositorio = new PerfilRepositorio(),
     private readonly transferenciaServico = new TransferenciaServico(),
     private readonly anexoServico = new AnexoServico(),
+    private readonly contaCompartilhadaRepositorio = new ContaCompartilhadaRepositorio(),
   ) {}
 
   async listar(
@@ -89,6 +108,13 @@ export class MovimentacaoServico {
       despesasPendentes: string;
     };
   }> {
+    const escopo: EscopoMovimentacoes = query.contaCompartilhadaId
+      ? { tipo: 'GRUPO', contaCompartilhadaId: query.contaCompartilhadaId }
+      : { tipo: 'PESSOAL', usuarioId };
+    if (escopo.tipo === 'GRUPO') {
+      await autorizarPapelNoGrupo(escopo.contaCompartilhadaId, usuarioId, []);
+    }
+
     const filtros: FiltrosListarMovimentacoes = {
       dataInicio: query.dataInicio ? deDataIso(query.dataInicio) : undefined,
       dataFim: query.dataFim ? deDataIso(query.dataFim) : undefined,
@@ -112,7 +138,7 @@ export class MovimentacaoServico {
       ordem: query.ordem,
     };
 
-    const where = await this.repositorio.montarWhere(usuarioId, filtros);
+    const where = await this.repositorio.montarWhere(escopo, filtros);
     const { itens, total, totalizadores } = await this.repositorio.listarComTotalizadores(
       where,
       paginacao,
@@ -145,24 +171,57 @@ export class MovimentacaoServico {
     };
   }
 
+  /** RN-09/issue #72: `dados.contaCompartilhadaId` liga a movimentacao
+   * DIRETO ao grupo (sem Conta) — requer ADMINISTRADOR ou PARTICIPANTE.
+   * `dados.contaId` cobre tanto conta pessoal quanto sub-conta de grupo; a
+   * distincao (e a autorizacao correspondente) e resolvida olhando a
+   * PROPRIA conta, nao o corpo da requisicao. Os dois nunca coexistem
+   * (RN-09, checado no schema). `grupoParaEscopo` so serve para resolver
+   * categoria/etiqueta no escopo certo — nunca e o valor gravado em
+   * `Movimentacao.contaCompartilhadaId` quando o caminho e via sub-conta
+   * (essa coluna so e preenchida na ligacao DIRETA, sob pena de violar
+   * `chk_mov_escopo` e contar a movimentacao duas vezes no saldo do grupo). */
   async criar(
     usuarioId: string,
     dados: CriarMovimentacaoDTO,
   ): Promise<{ movimentacao: MovimentacaoDTO; recorrencia: MetaRecorrencia | null }> {
-    const conta = await this.buscarContaOuFalhar(dados.contaId, usuarioId);
-    if (conta.arquivadaEm !== null) {
-      throw new ContaArquivadaErro(
-        'Esta conta esta arquivada e nao pode receber novos lancamentos.',
-        [
-          {
-            campo: 'contaId',
-            mensagem: 'Desarquive a conta antes de lancar uma movimentacao nela.',
-          },
-        ],
-      );
+    let contaId: string | undefined;
+    let contaCompartilhadaId: string | undefined;
+    let grupoParaEscopo: string | null = null;
+
+    if (dados.contaCompartilhadaId) {
+      await autorizarPapelNoGrupo(dados.contaCompartilhadaId, usuarioId, [
+        'ADMINISTRADOR',
+        'PARTICIPANTE',
+      ]);
+      contaCompartilhadaId = dados.contaCompartilhadaId;
+      grupoParaEscopo = dados.contaCompartilhadaId;
+    } else {
+      if (dados.contaId === undefined) {
+        // RN-09/schema garante contaId XOR contaCompartilhadaId antes daqui.
+        throw new ErroInterno('contaId ausente apos validacao de escopo.');
+      }
+      const resolvido = await this.buscarContaOuFalhar(dados.contaId, usuarioId);
+      if (resolvido.conta.arquivadaEm !== null) {
+        throw new ContaArquivadaErro(
+          'Esta conta esta arquivada e nao pode receber novos lancamentos.',
+          [
+            {
+              campo: 'contaId',
+              mensagem: 'Desarquive a conta antes de lancar uma movimentacao nela.',
+            },
+          ],
+        );
+      }
+      contaId = resolvido.conta.id;
+      grupoParaEscopo = resolvido.grupoDaConta;
     }
 
-    const categoria = await this.buscarCategoriaOuFalhar(dados.categoriaId, usuarioId);
+    const categoria = await this.buscarCategoriaOuFalhar(
+      dados.categoriaId,
+      usuarioId,
+      grupoParaEscopo,
+    );
     if (!validarCompatibilidadeCategoria(categoria, dados.tipo)) {
       throw new CategoriaIncompativelErro(
         'A categoria selecionada não é compatível com o tipo da movimentação.',
@@ -175,7 +234,11 @@ export class MovimentacaoServico {
       );
     }
 
-    const etiquetaIds = await this.validarEtiquetasOuFalhar(dados.etiquetaIds ?? [], usuarioId);
+    const etiquetaIds = await this.validarEtiquetasOuFalhar(
+      dados.etiquetaIds ?? [],
+      usuarioId,
+      grupoParaEscopo,
+    );
 
     const { valorPago, dataEfetivacao } = this.resolverPagamento(dados);
 
@@ -197,7 +260,8 @@ export class MovimentacaoServico {
 
       const resultado = await this.repositorio.criarComRecorrencia({
         usuarioId,
-        contaId: conta.id,
+        contaId,
+        contaCompartilhadaId,
         categoriaId: categoria.id,
         tipo: dados.tipo,
         descricao: dados.descricao,
@@ -227,7 +291,8 @@ export class MovimentacaoServico {
 
     const movimentacao = await this.repositorio.criar({
       usuarioId,
-      contaId: conta.id,
+      contaId,
+      contaCompartilhadaId,
       categoriaId: categoria.id,
       tipo: dados.tipo,
       descricao: dados.descricao,
@@ -245,7 +310,7 @@ export class MovimentacaoServico {
   }
 
   async buscarPorId(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
-    const movimentacao = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
     if (movimentacao.transferenciaId === null) {
       return mapearMovimentacao(movimentacao);
     }
@@ -264,7 +329,9 @@ export class MovimentacaoServico {
     usuarioId: string,
     dados: AtualizarMovimentacaoDTO,
   ): Promise<MovimentacaoDTO> {
-    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao: atual, membro } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    await this.garantirPodeEditarOuExcluir(atual, membro, usuarioId);
+    const contaCompartilhadaId = resolverContaCompartilhadaId(atual);
 
     // RN-19: obrigatorio em qualquer movimentacao que pertenca a uma
     // recorrencia — seja uma ocorrencia (recorrenciaId) ou o proprio
@@ -309,7 +376,11 @@ export class MovimentacaoServico {
           { campo: 'categoriaId', mensagem: 'Categoria obrigatoria.' },
         ]);
       }
-      const categoria = await this.buscarCategoriaOuFalhar(categoriaIdFinal, usuarioId);
+      const categoria = await this.buscarCategoriaOuFalhar(
+        categoriaIdFinal,
+        usuarioId,
+        contaCompartilhadaId,
+      );
       // tipoFinal so pode ser RECEITA/DESPESA aqui — o guard acima ja
       // rejeitou a unica forma de chegar em TRANSFERENCIA (atual.tipo
       // ser transferencia com tipo/categoria sendo alterados).
@@ -329,7 +400,7 @@ export class MovimentacaoServico {
 
     const etiquetaIds =
       dados.etiquetaIds !== undefined
-        ? await this.validarEtiquetasOuFalhar(dados.etiquetaIds, usuarioId)
+        ? await this.validarEtiquetasOuFalhar(dados.etiquetaIds, usuarioId, contaCompartilhadaId)
         : undefined;
 
     // RN-15: alterar o valor de uma movimentacao ja efetivada exige
@@ -411,7 +482,8 @@ export class MovimentacaoServico {
    * (nao ha "so esta ocorrencia" quando o alvo e o proprio modelo) —
    * `escopoExclusao` so e obrigatorio/relevante ao excluir uma ocorrencia. */
   async excluir(id: string, usuarioId: string, escopoExclusao?: EscopoRecorrencia): Promise<void> {
-    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao: atual, membro } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    await this.garantirPodeEditarOuExcluir(atual, membro, usuarioId);
 
     // RN-39: excluir um lado de transferencia por aqui e so uma
     // conveniencia — o efeito real e o de DELETE /transferencias/:id
@@ -459,14 +531,27 @@ export class MovimentacaoServico {
     usuarioId: string,
     dados: DuplicarMovimentacaoDTO,
   ): Promise<MovimentacaoDTO> {
-    const original = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao: original, membro } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
     if (original.tipo === 'TRANSFERENCIA') {
       throw new RegraNegocioErro('Transferências não podem ser duplicadas por aqui.', [
         { campo: 'id', mensagem: 'Crie uma nova transferência em /transferencias.' },
       ]);
     }
-    if (!original.conta || !original.categoria) {
-      throw new ErroInterno('Movimentação original sem conta ou categoria associada.');
+    if (!original.categoria) {
+      throw new ErroInterno('Movimentação original sem categoria associada.');
+    }
+    if (!original.conta && original.contaCompartilhadaId === null) {
+      throw new ErroInterno('Movimentação original sem conta ou grupo associado.');
+    }
+
+    // A copia nasce com o proprio solicitante como autor — no escopo de
+    // grupo, isso exige a mesma permissao de CRIACAO de uma movimentacao
+    // nova (RN-09), independente de poder editar/excluir a original.
+    if (
+      original.contaCompartilhadaId !== null &&
+      (membro === null || membro.papel === 'OBSERVADOR')
+    ) {
+      throw new PapelInsuficienteErro('Seu papel no grupo não permite criar movimentações.');
     }
 
     const situacaoFinal = dados.situacao ?? original.situacao;
@@ -477,7 +562,8 @@ export class MovimentacaoServico {
 
     const nova = await this.repositorio.criar({
       usuarioId,
-      contaId: original.conta.id,
+      contaId: original.conta?.id,
+      contaCompartilhadaId: original.contaCompartilhadaId ?? undefined,
       categoriaId: original.categoria.id,
       tipo: original.tipo,
       descricao: original.descricao,
@@ -503,8 +589,9 @@ export class MovimentacaoServico {
     usuarioId: string,
     dados: PagarMovimentacaoDTO,
   ): Promise<MovimentacaoDTO> {
-    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao: atual, membro } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
     this.garantirNaoTransferencia(atual, 'pagas');
+    await this.garantirPodeEditarOuExcluir(atual, membro, usuarioId);
 
     if (atual.situacao === 'PAGA' || atual.situacao === 'CANCELADA') {
       throw new RegraNegocioErro('Esta movimentação não pode ser paga.', [
@@ -546,8 +633,9 @@ export class MovimentacaoServico {
   /** RF-31: so reverte o que foi de fato pago — PENDENTE/ATRASADA/CANCELADA
    * nao tem pagamento para estornar. */
   async estornar(id: string, usuarioId: string): Promise<MovimentacaoDTO> {
-    const atual = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const { movimentacao: atual, membro } = await this.buscarMovimentacaoOuFalhar(id, usuarioId);
     this.garantirNaoTransferencia(atual, 'estornadas');
+    await this.garantirPodeEditarOuExcluir(atual, membro, usuarioId);
 
     if (atual.situacao !== 'PAGA' && atual.situacao !== 'PAGA_PARCIALMENTE') {
       throw new RegraNegocioErro('Esta movimentação não está paga — não há o que estornar.', [
@@ -566,7 +654,8 @@ export class MovimentacaoServico {
 
   /** 04-API.md §12.8: `id` pode ser o modelo ou qualquer ocorrencia dele. */
   async buscarOcorrencias(id: string, usuarioId: string): Promise<OcorrenciasRecorrenciaDTO> {
-    const resultado = await this.repositorio.buscarModeloEOcorrencias(id, usuarioId);
+    await this.buscarMovimentacaoOuFalhar(id, usuarioId);
+    const resultado = await this.repositorio.buscarModeloEOcorrencias(id);
     if (!resultado) {
       throw new NaoEncontradoErro('Movimentação recorrente não encontrada.');
     }
@@ -628,34 +717,118 @@ export class MovimentacaoServico {
     return { valorPago: new Prisma.Decimal(0), dataEfetivacao: null };
   }
 
+  /** RN-51: 404 (nunca 403) tanto para movimentacao de outro usuario
+   * quanto para movimentacao de um grupo do qual o solicitante nao e
+   * membro ativo — em nenhum dos dois casos o solicitante deveria nem
+   * saber que ela existe. Leitura e permitida a qualquer membro ativo
+   * (RN-30); a autorizacao mais restrita de editar/excluir e decidida
+   * separadamente por `garantirPodeEditarOuExcluir`, so quando aplicavel.
+   * `membro` volta `null` para movimentacao pessoal. */
   private async buscarMovimentacaoOuFalhar(
     id: string,
     usuarioId: string,
-  ): Promise<MovimentacaoCompleta> {
-    const movimentacao = await this.repositorio.buscarPorId(id, usuarioId);
+  ): Promise<{ movimentacao: MovimentacaoCompleta; membro: MembroCompartilhado | null }> {
+    const movimentacao = await this.repositorio.buscarPorIdSemEscopo(id);
     if (!movimentacao) {
       throw new NaoEncontradoErro('Movimentação não encontrada.');
     }
-    return movimentacao;
+
+    const contaCompartilhadaId = resolverContaCompartilhadaId(movimentacao);
+    if (contaCompartilhadaId === null) {
+      if (movimentacao.usuarioId !== usuarioId) {
+        throw new NaoEncontradoErro('Movimentação não encontrada.');
+      }
+      return { movimentacao, membro: null };
+    }
+
+    const membro = await autorizarPapelNoGrupo(contaCompartilhadaId, usuarioId, []);
+    return { movimentacao, membro };
   }
 
-  /** RN-51: 404 (nunca 403) para conta de outro usuario — o solicitante
-   * nao deveria nem saber que ela existe. */
-  private async buscarContaOuFalhar(contaId: string, usuarioId: string): Promise<Conta> {
-    const conta = await this.contaRepositorio.buscarPorId(contaId, usuarioId);
+  /** RN-30/RN-31: so relevante para movimentacao de grupo (`membro` !==
+   * null) — em movimentacao pessoal, `buscarMovimentacaoOuFalhar` ja
+   * garantiu que o solicitante e o proprio autor. */
+  private async garantirPodeEditarOuExcluir(
+    movimentacao: MovimentacaoCompleta,
+    membro: MembroCompartilhado | null,
+    usuarioId: string,
+  ): Promise<void> {
+    if (membro === null) return;
+
+    const contaCompartilhadaId = resolverContaCompartilhadaId(movimentacao);
+    if (contaCompartilhadaId === null) {
+      // Nunca deveria acontecer (membro so vem preenchido quando ha
+      // grupo) — rede de seguranca contra uma regressao futura.
+      throw new ErroInterno('Movimentação de grupo sem contaCompartilhadaId resolvido.');
+    }
+
+    const grupo = await this.contaCompartilhadaRepositorio.buscarPorId(contaCompartilhadaId);
+    if (!grupo) {
+      throw new ErroInterno('Grupo da movimentação não encontrado.');
+    }
+
+    const podeAgir = autorizarEdicaoOuExclusaoMovimentacao(
+      membro.papel,
+      { permiteParticipanteEditarProprias: grupo.permiteParticipanteEditarProprias },
+      movimentacao.usuarioId,
+      usuarioId,
+    );
+    if (!podeAgir) {
+      throw new PapelInsuficienteErro(
+        'Seu papel no grupo não permite editar ou excluir esta movimentação.',
+      );
+    }
+  }
+
+  /** RN-51: 404 (nunca 403) para conta de outro usuario ou de um grupo do
+   * qual o solicitante nao e membro. `grupoDaConta` (null em conta
+   * pessoal) so serve para resolver categoria/etiqueta no escopo certo —
+   * nunca e gravado em `Movimentacao.contaCompartilhadaId` (issue #72:
+   * decisao arquitetural — ligacao via sub-conta usa `contaId`, nunca os
+   * dois ao mesmo tempo, sob pena de violar `chk_mov_escopo` e contar a
+   * movimentacao duas vezes no saldo do grupo). */
+  private async buscarContaOuFalhar(
+    contaId: string,
+    usuarioId: string,
+  ): Promise<{ conta: Conta; grupoDaConta: string | null }> {
+    const conta = await this.contaRepositorio.buscarPorIdSemEscopo(contaId);
     if (!conta) {
       throw new NaoEncontradoErro('Conta não encontrada.');
     }
-    return conta;
+
+    if (conta.usuarioId !== null) {
+      if (conta.usuarioId !== usuarioId) {
+        throw new NaoEncontradoErro('Conta não encontrada.');
+      }
+      return { conta, grupoDaConta: null };
+    }
+
+    // chk_conta_escopo garante contaCompartilhadaId != null aqui.
+    if (conta.contaCompartilhadaId === null) {
+      throw new NaoEncontradoErro('Conta não encontrada.');
+    }
+    await autorizarPapelNoGrupo(conta.contaCompartilhadaId, usuarioId, [
+      'ADMINISTRADOR',
+      'PARTICIPANTE',
+    ]);
+    return { conta, grupoDaConta: conta.contaCompartilhadaId };
   }
 
-  /** RN-11: aceita categoria do proprio usuario OU categoria padrao do
-   * sistema — nunca categoria de outro usuario nem de outro escopo. */
+  /** RN-11: aceita categoria do proprio usuario/grupo OU categoria padrao
+   * do sistema — nunca categoria de outro usuario, de outro grupo, nem
+   * (em movimentacao de grupo) uma categoria pessoal. */
   private async buscarCategoriaOuFalhar(
     categoriaId: string,
     usuarioId: string,
+    contaCompartilhadaId: string | null,
   ): Promise<Categoria> {
-    const categoria = await this.categoriaRepositorio.buscarPorIdOuPadrao(categoriaId, usuarioId);
+    const categoria =
+      contaCompartilhadaId !== null
+        ? await this.categoriaRepositorio.buscarPorIdOuPadraoDeGrupo(
+            categoriaId,
+            contaCompartilhadaId,
+          )
+        : await this.categoriaRepositorio.buscarPorIdOuPadrao(categoriaId, usuarioId);
     if (!categoria) {
       throw new NaoEncontradoErro('Categoria não encontrada.');
     }
@@ -665,10 +838,14 @@ export class MovimentacaoServico {
   private async validarEtiquetasOuFalhar(
     etiquetaIds: string[],
     usuarioId: string,
+    contaCompartilhadaId: string | null,
   ): Promise<string[]> {
     if (etiquetaIds.length === 0) return [];
 
-    const etiquetas = await this.etiquetaRepositorio.listarPorIds(etiquetaIds, usuarioId);
+    const etiquetas =
+      contaCompartilhadaId !== null
+        ? await this.etiquetaRepositorio.listarPorIdsDeGrupo(etiquetaIds, contaCompartilhadaId)
+        : await this.etiquetaRepositorio.listarPorIds(etiquetaIds, usuarioId);
     if (etiquetas.length !== etiquetaIds.length) {
       throw new ValidacaoErro('Uma ou mais etiquetas não foram encontradas.', [
         {

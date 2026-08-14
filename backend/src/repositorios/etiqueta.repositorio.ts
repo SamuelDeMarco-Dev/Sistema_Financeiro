@@ -15,8 +15,22 @@ export class EtiquetaRepositorio {
     return prisma.etiqueta.findFirst({ where: { id, usuarioId } });
   }
 
+  /** Sem filtro de propriedade — usado quando a autorizacao (pessoal vs.
+   * grupo) e decidida pelo chamador (issue #72), nao pelo repositorio. */
+  async buscarPorIdSemEscopo(id: string): Promise<Etiqueta | null> {
+    return prisma.etiqueta.findFirst({ where: { id } });
+  }
+
+  async listarPorGrupo(contaCompartilhadaId: string): Promise<Etiqueta[]> {
+    return prisma.etiqueta.findMany({ where: { contaCompartilhadaId }, orderBy: { nome: 'asc' } });
+  }
+
   async criar(usuarioId: string, dados: DadosEtiqueta): Promise<Etiqueta> {
     return prisma.etiqueta.create({ data: { usuarioId, ...dados } });
+  }
+
+  async criarDeGrupo(contaCompartilhadaId: string, dados: DadosEtiqueta): Promise<Etiqueta> {
+    return prisma.etiqueta.create({ data: { contaCompartilhadaId, ...dados } });
   }
 
   async atualizar(id: string, dados: Prisma.EtiquetaUpdateInput): Promise<Etiqueta> {
@@ -40,5 +54,11 @@ export class EtiquetaRepositorio {
    * ao vincular etiquetas a uma movimentacao (issue #34). */
   async listarPorIds(ids: string[], usuarioId: string): Promise<Etiqueta[]> {
     return prisma.etiqueta.findMany({ where: { id: { in: ids }, usuarioId } });
+  }
+
+  /** Mesmo raciocinio de `listarPorIds`, para movimentacao de grupo
+   * (issue #72) — as etiquetas precisam pertencer ao MESMO grupo. */
+  async listarPorIdsDeGrupo(ids: string[], contaCompartilhadaId: string): Promise<Etiqueta[]> {
+    return prisma.etiqueta.findMany({ where: { id: { in: ids }, contaCompartilhadaId } });
   }
 }

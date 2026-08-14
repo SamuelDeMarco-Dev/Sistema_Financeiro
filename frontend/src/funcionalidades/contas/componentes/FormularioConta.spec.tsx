@@ -98,4 +98,39 @@ describe('FormularioConta', () => {
 
     expect(await screen.findByText('Já existe uma conta com esse nome.')).toBeTruthy();
   });
+  it('escopo de grupo: manda o contaCompartilhadaId junto (04-API.md §10.2)', async () => {
+    vi.mocked(contaServico.criarConta).mockResolvedValue(fabricarConta());
+    render(<FormularioConta aberto aoFechar={vi.fn()} contaCompartilhadaId="grupo-1" />, {
+      wrapper: Wrapper,
+    });
+
+    expect(screen.getByRole('heading', { name: 'Nova conta do grupo' })).toBeTruthy();
+    expect(screen.getByText(/saldo dela entra no saldo do grupo/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Caixa da Casa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+    await waitFor(() => {
+      expect(contaServico.criarConta).toHaveBeenCalled();
+    });
+    expect(vi.mocked(contaServico.criarConta).mock.calls[0]?.[0]).toMatchObject({
+      nome: 'Caixa da Casa',
+      contaCompartilhadaId: 'grupo-1',
+    });
+  });
+
+  it('escopo pessoal nao inventa contaCompartilhadaId', async () => {
+    vi.mocked(contaServico.criarConta).mockResolvedValue(fabricarConta());
+    render(<FormularioConta aberto aoFechar={vi.fn()} />, { wrapper: Wrapper });
+
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Carteira' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+    await waitFor(() => {
+      expect(contaServico.criarConta).toHaveBeenCalled();
+    });
+    expect(vi.mocked(contaServico.criarConta).mock.calls[0]?.[0]).not.toHaveProperty(
+      'contaCompartilhadaId',
+    );
+  });
 });

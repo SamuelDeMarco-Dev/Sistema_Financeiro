@@ -19,15 +19,9 @@ const valorDecimalSchema = z
 
 const corSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor invalida. Use o formato hex #RRGGBB.');
 
-// M2: contas de grupo chegam em M6 — o campo e aceito no corpo (contrato
-// futuro de 04-API.md §9.3) mas rejeitado explicitamente enquanto nao
-// houver como cria-las de verdade.
-const contaCompartilhadaIdSchema = z
-  .unknown()
-  .optional()
-  .refine((valor) => valor === undefined || valor === null, {
-    message: 'Contas de grupo ainda nao sao suportadas nesta versao.',
-  });
+// 04-API.md §9.3 (issue #72): se informado, cria/lista conta de grupo —
+// requer papel ADMINISTRADOR na criacao, qualquer membro ativo na leitura.
+const contaCompartilhadaIdSchema = z.string().min(1).nullish();
 
 function paraArray<T extends string>(valor: T | T[] | undefined): T[] | undefined {
   if (valor === undefined) return undefined;

@@ -1,8 +1,10 @@
 import { formatarDataBr } from '@/utilitarios/data';
 import { formatarMoeda } from '@/utilitarios/formatadores';
 import { AcoesMovimentacao } from './AcoesMovimentacao';
+import { AutorMovimentacao } from './AutorMovimentacao';
 import { IndicadoresMovimentacao } from './IndicadoresMovimentacao';
 import { SeloSituacao } from './SeloSituacao';
+import type { AcoesPermitidas } from './AcoesMovimentacao';
 import type { Movimentacao } from '../tipos/movimentacao';
 import type { ReactElement } from 'react';
 
@@ -10,6 +12,11 @@ interface TabelaMovimentacoesProps {
   movimentacoes: Movimentacao[];
   onEditar: (movimentacao: Movimentacao) => void;
   onExcluir: (movimentacao: Movimentacao) => void;
+  /** Coluna de autor — só faz sentido no escopo de grupo (RF-59); no
+   * escopo pessoal o autor é sempre o próprio usuário. */
+  mostrarAutor?: boolean;
+  /** Ações permitidas por linha. Ausente ⇒ todas (escopo pessoal). */
+  permitidasPorLinha?: (movimentacao: Movimentacao) => AcoesPermitidas;
 }
 
 /** Visível a partir de `md` (768px) — abaixo disso, `ListaCartoesMovimentacoes`
@@ -18,6 +25,8 @@ export function TabelaMovimentacoes({
   movimentacoes,
   onEditar,
   onExcluir,
+  mostrarAutor = false,
+  permitidasPorLinha,
 }: TabelaMovimentacoesProps): ReactElement {
   return (
     <table className="hidden w-full border-collapse text-sm md:table">
@@ -35,6 +44,11 @@ export function TabelaMovimentacoes({
           <th scope="col" className="py-2 pr-3 font-medium">
             Categoria
           </th>
+          {mostrarAutor ? (
+            <th scope="col" className="py-2 pr-3 font-medium">
+              Autor
+            </th>
+          ) : null}
           <th scope="col" className="py-2 pr-3 text-right font-medium">
             Valor
           </th>
@@ -64,6 +78,11 @@ export function TabelaMovimentacoes({
               </td>
               <td className="py-3 pr-3 text-textoSuave">{movimentacao.conta?.nome ?? '—'}</td>
               <td className="py-3 pr-3 text-textoSuave">{movimentacao.categoria?.nome ?? '—'}</td>
+              {mostrarAutor ? (
+                <td className="min-w-0 py-3 pr-3">
+                  <AutorMovimentacao autor={movimentacao.autor} />
+                </td>
+              ) : null}
               <td
                 className={`whitespace-nowrap py-3 pr-3 text-right font-mono tabular-nums ${corValor}`}
               >
@@ -78,6 +97,7 @@ export function TabelaMovimentacoes({
                   movimentacao={movimentacao}
                   onEditar={onEditar}
                   onExcluir={onExcluir}
+                  {...(permitidasPorLinha && { permitidas: permitidasPorLinha(movimentacao) })}
                 />
               </td>
             </tr>

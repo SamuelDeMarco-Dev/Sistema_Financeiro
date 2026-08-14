@@ -5,10 +5,26 @@ import { usePagarMovimentacao } from '../hooks/usePagarMovimentacao';
 import type { Movimentacao } from '../tipos/movimentacao';
 import type { ReactElement } from 'react';
 
+/** Quais ações de escrita a linha admite. No escopo pessoal são todas
+ * (o dono pode tudo); no escopo de grupo vem de `minhasPermissoes`
+ * aplicada ao autor da linha (RN-30/RN-31). */
+export interface AcoesPermitidas {
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  podeDuplicar: boolean;
+}
+
+const TODAS_PERMITIDAS: AcoesPermitidas = {
+  podeEditar: true,
+  podeExcluir: true,
+  podeDuplicar: true,
+};
+
 interface AcoesMovimentacaoProps {
   movimentacao: Movimentacao;
   onEditar: (movimentacao: Movimentacao) => void;
   onExcluir: (movimentacao: Movimentacao) => void;
+  permitidas?: AcoesPermitidas;
 }
 
 const SITUACOES_PAGAVEIS = new Set(['PENDENTE', 'ATRASADA', 'PAGA_PARCIALMENTE']);
@@ -26,18 +42,31 @@ export function AcoesMovimentacao({
   movimentacao,
   onEditar,
   onExcluir,
-}: AcoesMovimentacaoProps): ReactElement {
+  permitidas = TODAS_PERMITIDAS,
+}: AcoesMovimentacaoProps): ReactElement | null {
   const duplicar = useDuplicarMovimentacao();
   const pagar = usePagarMovimentacao();
   const estornar = useEstornarMovimentacao();
 
   const ehTransferencia = movimentacao.tipo === 'TRANSFERENCIA';
-  const podePagar = !ehTransferencia && SITUACOES_PAGAVEIS.has(movimentacao.situacao);
-  const podeEstornar = !ehTransferencia && SITUACOES_ESTORNAVEIS.has(movimentacao.situacao);
+  // Pagar e estornar alteram a movimentacao, entao seguem a mesma
+  // permissao de editar — nao ha uma coluna propria para elas na matriz.
+  const podePagar =
+    permitidas.podeEditar && !ehTransferencia && SITUACOES_PAGAVEIS.has(movimentacao.situacao);
+  const podeEstornar =
+    permitidas.podeEditar && !ehTransferencia && SITUACOES_ESTORNAVEIS.has(movimentacao.situacao);
+  const podeEditar = permitidas.podeEditar && !ehTransferencia;
+  const podeDuplicar = permitidas.podeDuplicar && !ehTransferencia;
+
+  // Sem nenhuma acao, nao ha menu: o OBSERVADOR nao deve ver um botao que
+  // abre um menu vazio (criterio de aceite da issue #75).
+  if (!podeEditar && !podeDuplicar && !podePagar && !podeEstornar && !permitidas.podeExcluir) {
+    return null;
+  }
 
   return (
     <MenuAcoes rotuloGatilho={`Ações para ${movimentacao.descricao}`}>
-      {!ehTransferencia ? (
+      {podeEditar ? (
         <ItemMenuAcoes
           onSelect={() => {
             onEditar(movimentacao);
@@ -46,7 +75,7 @@ export function AcoesMovimentacao({
           Editar
         </ItemMenuAcoes>
       ) : null}
-      {!ehTransferencia ? (
+      {podeDuplicar ? (
         <ItemMenuAcoes
           onSelect={() => {
             duplicar.mutate(movimentacao.id);
@@ -73,14 +102,16 @@ export function AcoesMovimentacao({
           Estornar
         </ItemMenuAcoes>
       ) : null}
-      <ItemMenuAcoes
-        perigo
-        onSelect={() => {
-          onExcluir(movimentacao);
-        }}
-      >
-        Excluir
-      </ItemMenuAcoes>
+      {permitidas.podeExcluir ? (
+        <ItemMenuAcoes
+          perigo
+          onSelect={() => {
+            onExcluir(movimentacao);
+          }}
+        >
+          Excluir
+        </ItemMenuAcoes>
+      ) : null}
     </MenuAcoes>
   );
 }

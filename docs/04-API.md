@@ -1441,16 +1441,16 @@ Excluir um lado de transferência remove **ambos** os lados (RN-39) — a opera�
 }
 ```
 
-| Campo            | Tipo           | Obrig. | Regras                                             |
-| ---------------- | -------------- | :----: | -------------------------------------------------- |
-| `contaOrigemId`  | string         |   ✅   | Conta própria ou de grupo do qual é membro (RN-27) |
-| `contaDestinoId` | string         |   ✅   | Diferente da origem (RN-24)                        |
-| `valor`          | string decimal |   ✅   | `> 0`                                              |
-| `data`           | date           |   ✅   |                                                    |
-| `descricao`      | string         |   —    | Padrão: `"<origem> → <destino>"`                   |
-| `efetivada`      | bool           |   —    | Padrão `true`. `false` cria o par como `PENDENTE`  |
+| Campo            | Tipo           | Obrig. | Regras                                                                                                   |
+| ---------------- | -------------- | :----: | -------------------------------------------------------------------------------------------------------- |
+| `contaOrigemId`  | string         |   ✅   | Conta própria ou sub-conta de grupo do qual é ADMINISTRADOR/PARTICIPANTE (RN-27)                         |
+| `contaDestinoId` | string         |   ✅   | Diferente da origem (RN-24), mesma regra de escopo da origem                                             |
+| `valor`          | string decimal |   ✅   | `> 0`                                                                                                    |
+| `data`           | date           |   ✅   |                                                                                                          |
+| `descricao`      | string         |   —    | Padrão: `"<origem> → <destino>"` (grupo aparece como `"<grupo>/<conta>"`, ex. `"Carteira → Casa/Caixa"`) |
+| `efetivada`      | bool           |   —    | Padrão `true`. `false` cria o par como `PENDENTE`                                                        |
 
-**`201 Created`**
+**`201 Created`** — issue #73: `escopo` de cada lado segue o mesmo formato de `04-API.md §9.1` (Conta).
 
 ```json
 {
@@ -1465,11 +1465,13 @@ Excluir um lado de transferência remove **ambos** os lados (RN-39) — a opera�
       "situacao": "PAGA",
       "saida": {
         "movimentacaoId": "clx_mov_103",
-        "conta": { "id": "clx_conta_1", "nome": "Banco Principal", "saldoAtual": "3982.35" }
+        "conta": { "id": "clx_conta_1", "nome": "Banco Principal", "saldoAtual": "3982.35" },
+        "escopo": { "tipo": "PESSOAL", "id": "clx8a9b0c0001", "nome": "Samuel De Marco" }
       },
       "entrada": {
         "movimentacaoId": "clx_mov_104",
-        "conta": { "id": "clx_conta_2", "nome": "Carteira", "saldoAtual": "350.00" }
+        "conta": { "id": "clx_conta_2", "nome": "Carteira", "saldoAtual": "350.00" },
+        "escopo": { "tipo": "PESSOAL", "id": "clx8a9b0c0001", "nome": "Samuel De Marco" }
       }
     }
   }
@@ -1478,7 +1480,7 @@ Excluir um lado de transferência remove **ambos** os lados (RN-39) — a opera�
 
 Retornar os saldos atualizados das duas contas poupa duas requisições ao cliente e elimina a janela em que a interface exibiria saldo velho.
 
-**Erros** — `422 CONTAS_IGUAIS` · `404 NAO_ENCONTRADO` · `422 CONTA_ARQUIVADA` · `403 PROIBIDO`.
+**Erros** — `422 CONTAS_IGUAIS` · `404 NAO_ENCONTRADO` (conta de outro usuário ou de grupo do qual não é membro, RN-51) · `422 CONTA_ARQUIVADA` · `403 PAPEL_INSUFICIENTE` (papel `OBSERVADOR` na ponta de grupo, RN-27) · `422 REGRA_NEGOCIO` (moedas divergentes, RN-32).
 
 ### 13.2 `GET /transferencias/:transferenciaId` 🔒
 
@@ -1780,7 +1782,10 @@ Detalhe com membros e contas do grupo:
         "podeGerenciarMembros": true,
         "podeGerenciarCategorias": true,
         "podeCriarMovimentacao": true,
+        "podeEditarMovimentacaoPropria": true,
         "podeEditarMovimentacaoDeTerceiro": true,
+        "podeExcluirMovimentacaoPropria": true,
+        "podeExcluirMovimentacaoDeTerceiro": true,
         "podeVerAuditoria": true
       },
       "saldoTotal": "1284.60",
@@ -1825,7 +1830,7 @@ Detalhe com membros e contas do grupo:
 }
 ```
 
-`minhasPermissoes` é a matriz RN-30 já resolvida para o solicitante. O frontend consome esse objeto em vez de reimplementar a matriz — uma única fonte de verdade para as permissões, ainda que a decisão real permaneça no servidor.
+`minhasPermissoes` é a matriz RN-30/RN-31 já resolvida para o solicitante (`podeEditarMovimentacaoPropria`/`podeExcluirMovimentacaoPropria` refletem `permiteParticipanteEditarProprias` para o `PARTICIPANTE`; para os demais papéis, o valor é fixo). O frontend consome esse objeto em vez de reimplementar a matriz — uma única fonte de verdade para as permissões, ainda que a decisão real permaneça no servidor.
 
 ### 16.4 `PATCH /contas-compartilhadas/:id` 👑
 

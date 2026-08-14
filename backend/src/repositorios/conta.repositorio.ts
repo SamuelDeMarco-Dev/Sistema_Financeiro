@@ -22,6 +22,13 @@ export interface DadosCriarConta {
   incluirNoSaldoTotal: boolean;
 }
 
+export interface DadosCriarContaDeGrupo extends DadosCriarConta {
+  /** RN-32: toda conta de grupo opera na moeda do grupo — nunca escolhida
+   * pelo cliente (mesmo raciocinio de moeda em contas pessoais, que
+   * tambem nao e um campo do corpo da requisicao). */
+  moeda: string;
+}
+
 export interface FiltrosListarContas {
   tipos?: TipoConta[] | undefined;
   incluirArquivadas: boolean;
@@ -75,8 +82,32 @@ export class ContaRepositorio {
     return prisma.conta.findFirst({ where: { id, usuarioId, excluidoEm: null } });
   }
 
+  /** Sem filtro de propriedade — usado quando a autorizacao (pessoal vs.
+   * grupo) e decidida pelo chamador (issue #72), nao pelo repositorio. */
+  async buscarPorIdSemEscopo(id: string): Promise<Conta | null> {
+    return prisma.conta.findFirst({ where: { id, excluidoEm: null } });
+  }
+
   async criar(usuarioId: string, dados: DadosCriarConta): Promise<Conta> {
     return prisma.conta.create({ data: { usuarioId, ...dados } });
+  }
+
+  async criarDeGrupo(contaCompartilhadaId: string, dados: DadosCriarContaDeGrupo): Promise<Conta> {
+    return prisma.conta.create({ data: { contaCompartilhadaId, ...dados } });
+  }
+
+  async listarPorGrupo(
+    contaCompartilhadaId: string,
+    filtros: FiltrosListarContas,
+  ): Promise<Conta[]> {
+    return prisma.conta.findMany({
+      where: {
+        contaCompartilhadaId,
+        excluidoEm: null,
+        ...(filtros.tipos && filtros.tipos.length > 0 ? { tipo: { in: filtros.tipos } } : {}),
+        ...(filtros.incluirArquivadas ? {} : { arquivadaEm: null }),
+      },
+    });
   }
 
   async atualizar(id: string, dados: Prisma.ContaUpdateInput): Promise<Conta> {

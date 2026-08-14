@@ -750,7 +750,7 @@ export function autorizarCompartilhada(...papeis: PapelMembro[]) {
       throw new NaoEncontradoErro('Conta compartilhada não encontrada.');
     }
     if (!papeis.includes(membro.papel)) {
-      throw new ProibidoErro('Seu papel no grupo não permite esta ação.');
+      throw new PapelInsuficienteErro('Seu papel no grupo não permite esta ação.');
     }
     req.membro = membro;
     next();

@@ -95,5 +95,16 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
+  // E2E (Playwright) roda em Node, fora do navegador: `process.env` e' a
+  // forma correta de ler o ambiente ali — a proibicao existe para o codigo
+  // do app, onde `process` nao existe.
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: {
+      'no-restricted-properties': 'off',
+      'no-console': 'off',
+    },
+  },
   eslintConfigPrettier,
 );

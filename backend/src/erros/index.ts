@@ -26,6 +26,15 @@ export class ProibidoErro extends ErroAplicacao {
   readonly codigo: CodigoErro = 'PROIBIDO';
 }
 
+/** 403 — RN-30: membro ativo do grupo, mas o papel nao autoriza a acao
+ * (ex.: PARTICIPANTE/OBSERVADOR tentando uma acao so de ADMINISTRADOR).
+ * Distinto de ProibidoErro para o frontend poder oferecer "peca ao
+ * administrador" em vez de um erro generico. */
+export class PapelInsuficienteErro extends ErroAplicacao {
+  readonly statusHttp = 403;
+  readonly codigo: CodigoErro = 'PAPEL_INSUFICIENTE';
+}
+
 /** 404 — recurso inexistente ou fora do escopo do usuario. */
 export class NaoEncontradoErro extends ErroAplicacao {
   readonly statusHttp = 404;
@@ -49,6 +58,25 @@ export class RecursoEmUsoErro extends ErroAplicacao {
 export class EmailJaCadastradoErro extends ErroAplicacao {
   readonly statusHttp = 409;
   readonly codigo: CodigoErro = 'EMAIL_JA_CADASTRADO';
+}
+
+/** 409 — RN-36: ja existe um convite PENDENTE para este e-mail neste grupo. */
+export class ConviteDuplicadoErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'CONVITE_DUPLICADO';
+}
+
+/** 409 — RN-38: o e-mail convidado ja e membro ativo do grupo. */
+export class JaEMembroErro extends ErroAplicacao {
+  readonly statusHttp = 409;
+  readonly codigo: CodigoErro = 'JA_E_MEMBRO';
+}
+
+/** 422 — RN-35: convite expirou (validade de 7 dias) e nao pode mais ser
+ * aceito nem recusado. */
+export class ConviteExpiradoErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'CONVITE_EXPIRADO';
 }
 
 /** 401 — e-mail inexistente ou senha errada. Mesma mensagem para os dois
@@ -92,6 +120,14 @@ export class ArquivoMuitoGrandeErro extends ErroAplicacao {
 export class TipoArquivoInvalidoErro extends ErroAplicacao {
   readonly statusHttp = 415;
   readonly codigo: CodigoErro = 'TIPO_ARQUIVO_INVALIDO';
+}
+
+/** 422 — RN-29: administrador precisa transferir a administracao antes de
+ * sair do grupo ou ser removido — toda conta compartilhada exige
+ * exatamente um administrador em todo instante (RN-28). */
+export class AdministradorUnicoErro extends ErroAplicacao {
+  readonly statusHttp = 422;
+  readonly codigo: CodigoErro = 'ADMINISTRADOR_UNICO';
 }
 
 /** 422 — requisicao bem formada, regra de dominio violada. */

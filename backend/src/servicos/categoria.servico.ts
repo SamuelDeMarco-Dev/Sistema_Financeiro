@@ -1,6 +1,7 @@
 import { NaoEncontradoErro, RecursoEmUsoErro, RegraNegocioErro } from '@/erros';
 import { CategoriaRepositorio } from '@/repositorios/categoria.repositorio';
 import type { CategoriaComSubcategorias } from '@/repositorios/categoria.repositorio';
+import { autorizarPapelNoGrupo } from '@/servicos/autorizacao-grupo.servico';
 import { mapearCategoria } from '@/utilitarios/mapear-categoria';
 import type { CategoriaDTO } from '@/utilitarios/mapear-categoria';
 import type {
@@ -8,7 +9,7 @@ import type {
   CriarCategoriaDTO,
   ListarCategoriasQuery,
 } from '@/validadores/categorias.validador';
-import type { Categoria, Prisma } from '@prisma/client';
+import type { Categoria, PapelMembro, Prisma } from '@prisma/client';
 
 export class CategoriaServico {
   constructor(private readonly repositorio = new CategoriaRepositorio()) {}
@@ -17,12 +18,35 @@ export class CategoriaServico {
     await this.repositorio.copiarPadraoParaUsuario(usuarioId, tx);
   }
 
+  async copiarPadraoParaGrupo(
+    contaCompartilhadaId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.repositorio.copiarPadraoParaGrupo(contaCompartilhadaId, tx);
+  }
+
+  /** RF-58: `filtros.contaCompartilhadaId` alterna a listagem inteira para
+   * o escopo do grupo — qualquer membro ativo pode ver (RN-30). Nunca
+   * mistura categorias pessoais e de grupo na mesma resposta. */
   async listarArvore(
     usuarioId: string,
-    filtros: Pick<ListarCategoriasQuery, 'tipo' | 'apenasRaiz'>,
+    filtros: Pick<ListarCategoriasQuery, 'tipo' | 'apenasRaiz' | 'contaCompartilhadaId'>,
   ): Promise<CategoriaDTO[]> {
-    const raizes = await this.repositorio.listarRaizesComSubcategorias(usuarioId, filtros);
+    const { contaCompartilhadaId } = filtros;
+    const raizes = contaCompartilhadaId
+      ? await this.listarRaizesDeGrupo(contaCompartilhadaId, usuarioId, filtros)
+      : await this.repositorio.listarRaizesComSubcategorias(usuarioId, filtros);
+
     return Promise.all(raizes.map((raiz) => this.paraArvoreDTO(raiz, filtros.apenasRaiz)));
+  }
+
+  private async listarRaizesDeGrupo(
+    contaCompartilhadaId: string,
+    usuarioId: string,
+    filtros: Pick<ListarCategoriasQuery, 'tipo' | 'apenasRaiz'>,
+  ): Promise<CategoriaComSubcategorias[]> {
+    await autorizarPapelNoGrupo(contaCompartilhadaId, usuarioId, []);
+    return this.repositorio.listarRaizesComSubcategoriasDeGrupo(contaCompartilhadaId, filtros);
   }
 
   async buscarPorId(id: string, usuarioId: string): Promise<CategoriaDTO> {
@@ -30,8 +54,14 @@ export class CategoriaServico {
     return this.paraDTO(categoria);
   }
 
-  /** RF-21, RN-10: profundidade maxima 1 e mesmo tipo do pai. */
+  /** RF-21, RN-10: profundidade maxima 1 e mesmo tipo do pai. RF-58:
+   * `dados.contaCompartilhadaId` cria a categoria NO GRUPO — restrito a
+   * ADMINISTRADOR (RN-30: "gerenciar categorias do grupo"). */
   async criar(usuarioId: string, dados: CriarCategoriaDTO): Promise<CategoriaDTO> {
+    if (dados.contaCompartilhadaId) {
+      return this.criarDeGrupo(dados.contaCompartilhadaId, usuarioId, dados);
+    }
+
     if (dados.categoriaPaiId) {
       const pai = await this.buscarCategoriaOuFalhar(dados.categoriaPaiId, usuarioId);
       if (pai.categoriaPaiId !== null) {
@@ -62,7 +92,9 @@ export class CategoriaServico {
     usuarioId: string,
     dados: AtualizarCategoriaDTO,
   ): Promise<CategoriaDTO> {
-    const categoria = await this.buscarCategoriaOuFalhar(id, usuarioId);
+    const categoria = await this.buscarCategoriaAutorizadaOuFalhar(id, usuarioId, [
+      'ADMINISTRADOR',
+    ]);
 
     if (dados.tipo !== undefined && dados.tipo !== categoria.tipo) {
       const quantidade = await this.repositorio.contarMovimentacoes(id);
@@ -86,7 +118,7 @@ export class CategoriaServico {
   /** RF-22: categoria com subcategorias nunca e excluida; categoria em uso
    * exige `recategorizarPara` — sem ele, 409 RECURSO_EM_USO. */
   async excluir(id: string, usuarioId: string, recategorizarPara?: string): Promise<void> {
-    await this.buscarCategoriaOuFalhar(id, usuarioId);
+    await this.buscarCategoriaAutorizadaOuFalhar(id, usuarioId, ['ADMINISTRADOR']);
 
     const quantidadeSubcategorias = await this.repositorio.contarSubcategorias(id);
     if (quantidadeSubcategorias > 0) {
@@ -113,6 +145,66 @@ export class CategoriaServico {
     }
 
     await this.repositorio.excluirLogicamente(id);
+  }
+
+  private async criarDeGrupo(
+    contaCompartilhadaId: string,
+    usuarioId: string,
+    dados: CriarCategoriaDTO,
+  ): Promise<CategoriaDTO> {
+    await autorizarPapelNoGrupo(contaCompartilhadaId, usuarioId, ['ADMINISTRADOR']);
+
+    if (dados.categoriaPaiId) {
+      const pai = await this.repositorio.buscarPorIdSemEscopo(dados.categoriaPaiId);
+      if (pai?.contaCompartilhadaId !== contaCompartilhadaId) {
+        throw new NaoEncontradoErro('Categoria pai nao encontrada.');
+      }
+      if (pai.categoriaPaiId !== null) {
+        throw new RegraNegocioErro(
+          'Subcategoria de subcategoria nao e permitida (profundidade maxima 1).',
+        );
+      }
+      if (pai.tipo !== dados.tipo) {
+        throw new RegraNegocioErro('A subcategoria deve ter o mesmo tipo da categoria pai.');
+      }
+    }
+
+    const categoria = await this.repositorio.criarDeGrupo(contaCompartilhadaId, {
+      nome: dados.nome,
+      tipo: dados.tipo,
+      cor: dados.cor,
+      icone: dados.icone,
+      categoriaPaiId: dados.categoriaPaiId ?? null,
+    });
+
+    return this.paraDTO(categoria);
+  }
+
+  /** RN-51: 404 tanto para categoria de outro usuario quanto para categoria
+   * de um grupo do qual o solicitante nao e membro. */
+  private async buscarCategoriaAutorizadaOuFalhar(
+    id: string,
+    usuarioId: string,
+    papeisPermitidos: PapelMembro[],
+  ): Promise<Categoria> {
+    const categoria = await this.repositorio.buscarPorIdSemEscopo(id);
+    if (!categoria) {
+      throw new NaoEncontradoErro('Categoria nao encontrada.');
+    }
+
+    if (categoria.usuarioId !== null) {
+      if (categoria.usuarioId !== usuarioId) {
+        throw new NaoEncontradoErro('Categoria nao encontrada.');
+      }
+      return categoria;
+    }
+    if (categoria.contaCompartilhadaId === null) {
+      // Categoria padrao do sistema: nunca editavel/excluivel por aqui.
+      throw new NaoEncontradoErro('Categoria nao encontrada.');
+    }
+
+    await autorizarPapelNoGrupo(categoria.contaCompartilhadaId, usuarioId, papeisPermitidos);
+    return categoria;
   }
 
   private async buscarCategoriaOuFalhar(id: string, usuarioId: string): Promise<Categoria> {

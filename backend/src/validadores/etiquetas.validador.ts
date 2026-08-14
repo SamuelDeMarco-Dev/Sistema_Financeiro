@@ -13,14 +13,10 @@ const nomeEtiquetaSchema = z
   .max(40, 'O nome deve ter no maximo 40 caracteres.')
   .transform((valor) => valor.toLowerCase());
 
-// M2: etiquetas de grupo chegam em M6 — aceito no corpo (contrato futuro
-// de 04-API.md §11.2) mas rejeitado explicitamente por enquanto.
-const contaCompartilhadaIdSchema = z
-  .unknown()
-  .optional()
-  .refine((valor) => valor === undefined || valor === null, {
-    message: 'Etiquetas de grupo ainda nao sao suportadas nesta versao.',
-  });
+// 04-API.md §11.2 (issue #72): se informado, cria/lista etiqueta de
+// grupo — requer papel ADMINISTRADOR ou PARTICIPANTE (mesmo requisito de
+// criar movimentacao, RN-30), qualquer membro ativo na leitura.
+const contaCompartilhadaIdSchema = z.string().min(1).nullish();
 
 export const criarEtiquetaSchema = z.object({
   body: z.object({
@@ -31,6 +27,14 @@ export const criarEtiquetaSchema = z.object({
 });
 
 export type CriarEtiquetaDTO = z.infer<typeof criarEtiquetaSchema>['body'];
+
+export const listarEtiquetasSchema = z.object({
+  query: z.object({
+    contaCompartilhadaId: contaCompartilhadaIdSchema,
+  }),
+});
+
+export type ListarEtiquetasQuery = z.infer<typeof listarEtiquetasSchema>['query'];
 
 export const atualizarEtiquetaSchema = z.object({
   params: z.object({ id: z.string().min(1, 'Id invalido.') }),

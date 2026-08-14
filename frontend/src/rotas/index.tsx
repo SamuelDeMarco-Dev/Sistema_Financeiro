@@ -42,6 +42,17 @@ const Movimentacoes = lazy(() =>
 const Relatorios = lazy(() =>
   import('@/paginas/Relatorios').then((modulo) => ({ default: modulo.Relatorios })),
 );
+const Compartilhadas = lazy(() =>
+  import('@/paginas/Compartilhadas').then((modulo) => ({ default: modulo.Compartilhadas })),
+);
+const DetalheCompartilhada = lazy(() =>
+  import('@/paginas/DetalheCompartilhada').then((modulo) => ({
+    default: modulo.DetalheCompartilhada,
+  })),
+);
+const ConvitePublico = lazy(() =>
+  import('@/paginas/ConvitePublico').then((modulo) => ({ default: modulo.ConvitePublico })),
+);
 const NaoEncontrada = lazy(() =>
   import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
 );
@@ -73,6 +84,17 @@ export const rotas = createBrowserRouter([
         element: (
           <ComSuspense>
             <RedefinirSenha />
+          </ComSuspense>
+        ),
+      },
+      {
+        // O link do convite chega por e-mail e pode ser aberto por quem nao
+        // tem conta (RN-37) ou por quem ja esta logado — como /verificar-email,
+        // precisa funcionar nos dois casos, entao fica fora de RotaPublica.
+        path: 'convites/:token',
+        element: (
+          <ComSuspense>
+            <ConvitePublico />
           </ComSuspense>
         ),
       },
@@ -160,6 +182,22 @@ export const rotas = createBrowserRouter([
             element: (
               <ComSuspense>
                 <Relatorios />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas',
+            element: (
+              <ComSuspense>
+                <Compartilhadas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas/:id',
+            element: (
+              <ComSuspense>
+                <DetalheCompartilhada />
               </ComSuspense>
             ),
           },

@@ -11,7 +11,16 @@ const SELECT_PERNA = {
   situacao: true,
   sentido: true,
   dataCompetencia: true,
-  conta: { select: { id: true, nome: true } },
+  conta: {
+    select: {
+      id: true,
+      nome: true,
+      usuarioId: true,
+      contaCompartilhadaId: true,
+      usuario: { select: { nome: true } },
+      contaCompartilhada: { select: { nome: true } },
+    },
+  },
 } satisfies Prisma.MovimentacaoSelect;
 
 export type PernaTransferencia = Prisma.MovimentacaoGetPayload<{ select: typeof SELECT_PERNA }>;

@@ -6,6 +6,7 @@ import { AcaoRapidaMobile } from '@/funcionalidades/dashboard/componentes/AcaoRa
 import { EsqueletoSecao } from '@/funcionalidades/dashboard/componentes/EsqueletoSecao';
 import { SecaoAlertas } from '@/funcionalidades/dashboard/componentes/SecaoAlertas';
 import { SecaoContas } from '@/funcionalidades/dashboard/componentes/SecaoContas';
+import { SecaoContasCompartilhadas } from '@/funcionalidades/dashboard/componentes/SecaoContasCompartilhadas';
 import { SecaoIndicadores } from '@/funcionalidades/dashboard/componentes/SecaoIndicadores';
 import { SecaoUltimasMovimentacoes } from '@/funcionalidades/dashboard/componentes/SecaoUltimasMovimentacoes';
 import { SelecionadorPeriodo } from '@/funcionalidades/dashboard/componentes/SelecionadorPeriodo';
@@ -45,7 +46,12 @@ export function Dashboard(): ReactElement {
 
   const [formularioAberto, setFormularioAberto] = useState(false);
 
-  const semDadosNenhuns = data?.contas.length === 0 && data.ultimasMovimentacoes.length === 0;
+  // Participar de um grupo ja e' ter dados: sem contar `contasCompartilhadas`
+  // aqui, quem so tem grupos veria "cadastre uma conta" e nenhum sinal deles.
+  const semDadosNenhuns =
+    data?.contas.length === 0 &&
+    data.ultimasMovimentacoes.length === 0 &&
+    data.contasCompartilhadas.length === 0;
 
   return (
     <div className="mx-auto flex min-w-0 max-w-[1440px] flex-col gap-6">
@@ -104,6 +110,8 @@ export function Dashboard(): ReactElement {
               <SecaoUltimasMovimentacoes movimentacoes={data.ultimasMovimentacoes} />
               <SecaoContas contas={data.contas} />
             </div>
+
+            <SecaoContasCompartilhadas grupos={data.contasCompartilhadas} />
           </>
         )
       ) : null}

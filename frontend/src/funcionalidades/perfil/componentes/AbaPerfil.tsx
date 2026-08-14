@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { notificar } from '@/componentes/feedback';
+import { RecorteImagem } from '@/componentes/formulario/RecorteImagem';
 import { Botao } from '@/componentes/ui/Botao';
 import { Campo } from '@/componentes/ui/Campo';
 import { useAtualizarFoto } from '@/funcionalidades/perfil/hooks/useAtualizarFoto';
@@ -11,7 +12,6 @@ import { perfilNomeSchema } from '@/funcionalidades/perfil/schemas/perfil.schema
 import type { PerfilNomeFormulario } from '@/funcionalidades/perfil/schemas/perfil.schema';
 import type { PerfilCompleto } from '@/funcionalidades/perfil/tipos/perfil';
 import { traduzirErroApi } from '@/utilitarios/traduzir-erro-api';
-import { RecorteAvatar } from './RecorteAvatar';
 import type { ChangeEvent, ReactElement } from 'react';
 
 interface AbaPerfilProps {
@@ -85,12 +85,13 @@ export function AbaPerfil({ perfil }: AbaPerfilProps): ReactElement {
 
   if (arquivoSelecionado) {
     return (
-      <RecorteAvatar
+      <RecorteImagem
         arquivo={arquivoSelecionado}
         onConfirmar={aoConfirmarRecorte}
         onCancelar={() => {
           setArquivoSelecionado(null);
         }}
+        rotuloConfirmar="Usar esta foto"
       />
     );
   }

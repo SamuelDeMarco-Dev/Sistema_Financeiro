@@ -23,6 +23,9 @@ export interface FiltrosListarMovimentacoes {
   limite?: number;
   ordenarPor?: 'dataCompetencia' | 'dataVencimento' | 'valor' | 'descricao' | 'criadoEm';
   ordem?: 'asc' | 'desc';
+  /** 04-API.md §12.1: escopo de grupo. Ausente ⇒ escopo pessoal — a
+   * listagem pessoal nunca traz movimentação de grupo, e vice-versa. */
+  contaCompartilhadaId?: string;
 }
 
 export interface RespostaListarMovimentacoes {
@@ -53,7 +56,10 @@ export interface CriarMovimentacaoPayload {
   situacao?: SituacaoMovimentacao | undefined;
   dataEfetivacao?: string | undefined;
   valorPago?: string | undefined;
-  contaId: string;
+  /** RN-09: XOR com `contaCompartilhadaId` — a movimentação de grupo
+   * liga-se por uma sub-conta ou direto ao grupo, nunca pelos dois. */
+  contaId?: string | undefined;
+  contaCompartilhadaId?: string | undefined;
   categoriaId: string;
   etiquetaIds?: string[] | undefined;
   recorrencia?: RecorrenciaPayload | undefined;

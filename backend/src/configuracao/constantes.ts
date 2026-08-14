@@ -44,3 +44,16 @@ export const EXTENSOES_POR_MIME_ANEXO: ReadonlyMap<string, string> = new Map([
 ]);
 export const LIMITE_UPLOADS_ANEXO_POR_HORA = 50;
 export const MINUTOS_JANELA_UPLOAD_ANEXO = 60;
+
+/** RN-35: validade do convite de conta compartilhada (issue #70). */
+export const DIAS_EXPIRACAO_CONVITE = 7;
+
+/** Rate limit de POST .../convites, por usuario (04-API.md §26). */
+export const LIMITE_CONVITES_POR_HORA = 20;
+export const MINUTOS_JANELA_CONVITES = 60;
+
+/** RF-55 (issue #71): GET /convites/token/:token e publica e o token e o
+ * unico segredo que o protege — limite estrito por IP, sem chave extra
+ * (nao ha usuario autenticado aqui para compor a chave). */
+export const LIMITE_PREVISUALIZACAO_CONVITE_POR_IP = 20;
+export const MINUTOS_JANELA_PREVISUALIZACAO_CONVITE = 15;

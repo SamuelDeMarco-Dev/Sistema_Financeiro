@@ -2040,8 +2040,8 @@ Milestone · Pontos · Labels · Depende de · Requisitos
 **Critérios de aceite**
 
 - [ ] Participante cria movimentação no grupo; observador recebe `403`.
-- [ ] Categoria de outro grupo responde `422`.
-- [ ] Categoria pessoal em movimentação de grupo responde `422`.
+- [ ] Categoria de outro grupo responde `404` (RN-51 — 04-API.md §12.2: `404 NAO_ENCONTRADO` para conta/categoria fora do escopo, nunca `422`, para não confirmar a existência do recurso).
+- [ ] Categoria pessoal em movimentação de grupo responde `404` (mesmo raciocínio de RN-51).
 - [ ] Movimentações pessoais e de grupo nunca se misturam nas listagens.
 - [ ] `autor` presente com nome e foto.
 - [ ] Saldo do grupo confere com a soma das suas contas.

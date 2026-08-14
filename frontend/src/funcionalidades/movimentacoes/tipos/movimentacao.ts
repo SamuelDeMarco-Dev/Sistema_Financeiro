@@ -102,7 +102,9 @@ export interface Movimentacao {
   dataVencimento: string | null;
   dataEfetivacao: string | null;
   conta: ContaResumoMovimentacao | null;
-  contaCompartilhada: null;
+  /** Ligação direta ao grupo (RN-09): preenchida quando a movimentação
+   * pertence a uma conta compartilhada sem passar por uma sub-conta. */
+  contaCompartilhada: { id: string; nome: string } | null;
   categoria: CategoriaResumoMovimentacao | null;
   cartao: null;
   fatura: null;

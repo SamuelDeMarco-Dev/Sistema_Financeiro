@@ -9,10 +9,13 @@ import {
 import type { Deslocamento, Dimensoes } from '@/utilitarios/recorte-imagem';
 import type { PointerEvent, ReactElement } from 'react';
 
-interface RecorteAvatarProps {
+interface RecorteImagemProps {
   arquivo: File;
   onConfirmar: (recorte: Blob) => void;
   onCancelar: () => void;
+  /** Muda so o texto do botao de confirmacao, para a acao ficar no
+   * vocabulario de quem chama ("foto" no perfil, "imagem" no grupo). */
+  rotuloConfirmar?: string;
 }
 
 const TAMANHO_VISOR_PX = 256;
@@ -24,17 +27,19 @@ const QUALIDADE_WEBP = 0.9;
 /**
  * Ferramenta de recorte simples (arrastar para reposicionar + zoom),
  * sem biblioteca externa — so canvas e pointer events. O backend ja
- * recorta um thumbnail 128x128 centrado (issue #17), mas ali a decisao
- * de "qual parte da foto importa" e' automatica; aqui quem escolhe e' o
- * usuario, antes do upload. A matematica do recorte (escala, limites,
- * retangulo de origem) vive em utilitarios/recorte-imagem.ts, testada
- * isoladamente sem depender de canvas/DOM real.
+ * recorta um thumbnail centrado (foto de perfil na issue #17, imagem de
+ * grupo na #67), mas ali a decisao de "qual parte da imagem importa" e'
+ * automatica; aqui quem escolhe e' o usuario, antes do upload. A
+ * matematica do recorte (escala, limites, retangulo de origem) vive em
+ * utilitarios/recorte-imagem.ts, testada isoladamente sem depender de
+ * canvas/DOM real.
  */
-export function RecorteAvatar({
+export function RecorteImagem({
   arquivo,
   onConfirmar,
   onCancelar,
-}: RecorteAvatarProps): ReactElement {
+  rotuloConfirmar = 'Usar esta imagem',
+}: RecorteImagemProps): ReactElement {
   const urlObjeto = useMemo(() => URL.createObjectURL(arquivo), [arquivo]);
   const imagemRef = useRef<HTMLImageElement>(null);
   const [dimensoesNaturais, setDimensoesNaturais] = useState<Dimensoes | null>(null);
@@ -141,7 +146,7 @@ export function RecorteAvatar({
     <div className="flex flex-col items-center gap-4">
       <div
         role="application"
-        aria-label="Área de recorte da foto — arraste para reposicionar"
+        aria-label="Área de recorte da imagem — arraste para reposicionar"
         onPointerDown={aoIniciarArrasto}
         onPointerMove={aoArrastar}
         onPointerUp={aoSoltarArrasto}
@@ -184,7 +189,7 @@ export function RecorteAvatar({
           Cancelar
         </Botao>
         <Botao onClick={aoConfirmar} disabled={!dimensoesNaturais}>
-          Usar esta foto
+          {rotuloConfirmar}
         </Botao>
       </div>
     </div>
