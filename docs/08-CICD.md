@@ -764,11 +764,31 @@ jobs:
 
       - name: Orçamento de bundle
         run: |
-          TAMANHO=$(find dist/assets -name '*.js' -exec gzip -c {} \; | wc -c)
+          # RNF-04 limita o bundle *inicial* — o que o navegador baixa para
+          # pintar a primeira tela. São os arquivos que o `index.html`
+          # referencia: o entry, os chunks em `modulepreload` e o CSS. As
+          # demais telas entram por `React.lazy` e não contam; somar todos
+          # os chunks de `assets/` mediria o app inteiro e cresceria a cada
+          # tela nova, reprovando um bundle que cabe folgado no orçamento.
+          ARQUIVOS=$(grep -oE '(src|href)="/assets/[^"]+"' dist/index.html \
+                     | sed -E 's|.*"/assets/(.*)"|\1|' | sort -u)
+
+          if [ -z "$ARQUIVOS" ]; then
+            echo "::error::Nenhum ativo referenciado em index.html — o portão mediria zero"
+            exit 1
+          fi
+
+          TAMANHO=0
+          for ARQUIVO in $ARQUIVOS; do
+            BYTES=$(gzip -c "dist/assets/${ARQUIVO}" | wc -c)
+            echo "  ${ARQUIVO}: ${BYTES} bytes"
+            TAMANHO=$((TAMANHO + BYTES))
+          done
+
           LIMITE=256000
-          echo "Bundle gzip: ${TAMANHO} bytes (limite ${LIMITE})"
+          echo "Bundle inicial gzip: ${TAMANHO} bytes (limite ${LIMITE})"
           if [ "$TAMANHO" -gt "$LIMITE" ]; then
-            echo "::error::Bundle excede o orçamento de 250 KB (RNF-04)"
+            echo "::error::Bundle inicial excede o orçamento de 250 KB (RNF-04)"
             exit 1
           fi
 

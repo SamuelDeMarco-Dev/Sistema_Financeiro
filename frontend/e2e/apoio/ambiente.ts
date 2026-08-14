@@ -71,12 +71,10 @@ export function extrairLink(corpo: string, caminho: string): string {
  * real** entregue no Mailpit — nada de escrever no banco por fora, e o fluxo
  * de e-mail continua sendo exercitado de ponta a ponta.
  *
- * A tela `/verificar-email` de propósito não entra no caminho: em modo de
- * desenvolvimento o `StrictMode` invoca o efeito duas vezes e a página fica
- * presa em "Verificando seu e-mail...", ainda que a requisição volte 200
- * (medido; no build de produção a mesma tela funciona). Fazer este cenário
- * depender dela seria acoplá-lo a um artefato do servidor de desenvolvimento.
- * Esse fluxo é do escopo da issue #19, e é lá que a tela deve ser corrigida. */
+ * A tela `/verificar-email` fica fora do caminho por escolha de escopo: ela
+ * tem cobertura própria em `paginas/VerificarEmail.spec.tsx`, inclusive sob
+ * `StrictMode`, e este cenário é sobre grupos compartilhados. Passar por ela
+ * aqui só somaria tempo e um ponto de falha alheio ao que se verifica. */
 export async function criarUsuarioAtivo(nome: string): Promise<Usuario> {
   // Um e-mail novo por execução: RN-04 recusa duplicados, e o limitador de
   // login é por e-mail.

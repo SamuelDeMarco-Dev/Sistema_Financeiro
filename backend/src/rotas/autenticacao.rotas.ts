@@ -33,6 +33,11 @@ const limitadorLogin = limitador({
   janelaMinutos: MINUTOS_BLOQUEIO_LOGIN,
   maximo: LIMITE_TENTATIVAS_LOGIN,
   chaveExtra: (req) => (req.body as EntrarDTO).email.toLowerCase(),
+  // RN-54 limita tentativas **falhas**. Contando tambem as bem-sucedidas,
+  // quem entra no celular, no computador e no navegador do trabalho dentro
+  // da mesma janela leva 429 na quinta vez — sem ter errado a senha uma
+  // vez sequer.
+  apenasFalhas: true,
 });
 
 const limitadorRenovacao = limitador({
