@@ -11,8 +11,9 @@ concurrency:
 env:
   NODE_VERSAO: '22'
   REGISTRO: ghcr.io
-  IMAGEM_API: ${{ github.repository }}/pfm-api
-  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
+  # O nome da imagem sai de `github.repository` em minusculas — ver o passo
+  # `imagem` no job `construir`. Nao da' para minuscular aqui: `env` de
+  # workflow nao executa expansao de shell.
 
 jobs:
   # ─────────────────────────────────────────────
@@ -22,9 +23,35 @@ jobs:
     secrets: inherit
 
   # ─────────────────────────────────────────────
+  # Mesma guarda do deploy de producao: sem VPS, "pular" e' a resposta
+  # honesta — "falhar" so poluiria o historico com uma falha que nao
+  # aponta defeito algum. Precisa ser um job porque o contexto `secrets`
+  # nao existe em `if:` de job.
+  ambiente:
+    name: Ambiente configurado?
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    outputs:
+      configurado: ${{ steps.checar.outputs.valor }}
+    steps:
+      - id: checar
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -n "$VPS_HOST" ]; then
+            echo 'valor=true' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS configurada — build e implantação seguem.'
+          else
+            echo 'valor=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::VPS_HOST ausente — build e implantação puladas. Ver 08-CICD.md §12.'
+          fi
+
+  # ─────────────────────────────────────────────
   construir:
     name: Construir artefatos
-    needs: verificar
+    needs: [verificar, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     # Sem isto, os secrets por-ambiente (08-CICD.md §2.2) resolveriam
     # para o valor de "producao" (ou nenhum), nao o de "staging".
@@ -35,11 +62,19 @@ jobs:
       packages: write
     outputs:
       tag: ${{ steps.tag.outputs.valor }}
+      imagem: ${{ steps.imagem.outputs.base }}
     steps:
       - uses: actions/checkout@v4
 
       - id: tag
         run: echo "valor=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      # `github.repository` preserva as maiusculas do dono e do repositorio,
+      # e o Docker recusa maiuscula em nome de imagem: "repository name must
+      # be lowercase". Sem isto o build falha ao aplicar a tag, antes de
+      # publicar coisa alguma.
+      - id: imagem
+        run: echo "base=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -56,8 +91,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:staging-latest
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -69,8 +104,8 @@ jobs:
           target: migrator
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:staging-latest
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api-migrator:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.imagem.outputs.base }}/pfm-api-migrator:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -101,7 +136,8 @@ jobs:
   # ─────────────────────────────────────────────
   implantar:
     name: Implantar na VPS (homologação)
-    needs: construir
+    needs: [construir, ambiente]
+    if: needs.ambiente.outputs.configurado == 'true'
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -136,7 +172,7 @@ jobs:
           PORTA=3333
           URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
           TAG_IMAGEM=${{ needs.construir.outputs.tag }}
-          GITHUB_REPOSITORIO=${{ github.repository }}
+          GITHUB_REPOSITORIO=${{ needs.construir.outputs.imagem }}
           NOME_CONTAINER_API=pfm-staging-api
           NOME_CONTAINER_POSTGRES=pfm-staging-postgres
           PORTA_API_PUBLICADA=3334
