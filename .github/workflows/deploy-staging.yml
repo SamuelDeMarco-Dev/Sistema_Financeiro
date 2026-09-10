@@ -120,6 +120,24 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: frontend-dist-staging }
 
+      # DIAGNOSTICO TEMPORARIO — remover apos identificar a causa do
+      # "Configurar SSH" falhando sem mensagem legivel (secrets mascarados
+      # pelo GitHub escondem o erro real). So imprime tamanho, nunca o
+      # conteudo do segredo.
+      - name: Diagnostico de segredos (temporario)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORTA_SSH: ${{ secrets.VPS_PORTA_SSH }}
+          VPS_USUARIO: ${{ secrets.VPS_USUARIO }}
+          VPS_CHAVE_SSH: ${{ secrets.VPS_CHAVE_SSH }}
+        run: |
+          echo "VPS_HOST length: ${#VPS_HOST}"
+          echo "VPS_PORTA_SSH length: ${#VPS_PORTA_SSH}"
+          echo "VPS_USUARIO length: ${#VPS_USUARIO}"
+          echo "VPS_CHAVE_SSH length: ${#VPS_CHAVE_SSH}"
+          echo "VPS_CHAVE_SSH primeira linha comeca com BEGIN? $(printf '%s' "$VPS_CHAVE_SSH" | head -1 | grep -c 'BEGIN')"
+          echo "VPS_CHAVE_SSH ultima linha termina com END? $(printf '%s' "$VPS_CHAVE_SSH" | tail -1 | grep -c 'END')"
+
       # Mesma normalizacao de "construir" — GITHUB_REPOSITORIO alimenta
       # ${GITHUB_REPOSITORIO} dentro de docker-compose.prod.yml na VPS, e
       # precisa bater exatamente com o nome minusculo usado no push.
