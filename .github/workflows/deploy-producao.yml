@@ -118,6 +118,14 @@ jobs:
     # não há `url:` aqui (URL_BASE_FRONTEND é secret, não var).
     environment:
       name: producao
+    # `packages: read` garante que o GITHUB_TOKEN abaixo tem escopo para
+    # autenticar no GHCR e puxar as imagens que `construir` acabou de
+    # publicar — sem isto (e sem o login na VPS, logo abaixo), o pacote
+    # nasce privado e `docker compose pull` falha com "unauthorized" no
+    # primeiro deploy.
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -129,6 +137,17 @@ jobs:
           echo "${{ secrets.VPS_CHAVE_SSH }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p ${{ secrets.VPS_PORTA_SSH }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # A imagem publicada por `construir` fica privada por padrão no
+      # GHCR — sem autenticar, o `docker compose pull` na VPS (job
+      # separado, outra maquina) falha com "unauthorized" mesmo a imagem
+      # tendo acabado de ser publicada com sucesso.
+      - name: Login no GHCR a partir da VPS
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "docker login ${{ env.REGISTRO }} -u ${{ github.actor }} --password-stdin" \
+            <<< "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Enviar artefatos e scripts
         run: |

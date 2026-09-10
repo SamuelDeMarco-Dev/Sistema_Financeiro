@@ -105,6 +105,12 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
+    # Mesma razao de deploy-producao.yml: sem escopo de leitura aqui, o
+    # GITHUB_TOKEN usado no login abaixo nao consegue puxar a imagem que
+    # `construir` acabou de publicar (privada por padrao no GHCR).
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -116,6 +122,16 @@ jobs:
           echo "${{ secrets.VPS_CHAVE_SSH }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p ${{ secrets.VPS_PORTA_SSH }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # Imagem privada por padrao no GHCR — sem login, o pull na VPS
+      # (maquina separada do runner que fez o push) falha com
+      # "unauthorized" (08-CICD.md nao cobria este passo).
+      - name: Login no GHCR a partir da VPS
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "docker login ${{ env.REGISTRO }} -u ${{ github.actor }} --password-stdin" \
+            <<< "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Enviar artefatos e scripts
         run: |
