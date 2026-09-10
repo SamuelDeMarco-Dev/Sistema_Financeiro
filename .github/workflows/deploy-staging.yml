@@ -11,8 +11,6 @@ concurrency:
 env:
   NODE_VERSAO: '22'
   REGISTRO: ghcr.io
-  IMAGEM_API: ${{ github.repository }}/pfm-api
-  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
 
 jobs:
   # ─────────────────────────────────────────────
@@ -41,6 +39,12 @@ jobs:
       - id: tag
         run: echo "valor=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
+      # GHCR exige nome de repositorio 100% minusculo — github.repository
+      # preserva a caixa de "SamuelDeMarco-Dev/Sistema_Financeiro", o que
+      # faz o build falhar com "repository name must be lowercase".
+      - id: repositorio
+        run: echo "minusculo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -56,8 +60,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:staging-latest
+            ${{ env.REGISTRO }}/${{ steps.repositorio.outputs.minusculo }}/pfm-api:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.repositorio.outputs.minusculo }}/pfm-api:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -69,8 +73,8 @@ jobs:
           target: migrator
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:staging-latest
+            ${{ env.REGISTRO }}/${{ steps.repositorio.outputs.minusculo }}/pfm-api-migrator:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ steps.repositorio.outputs.minusculo }}/pfm-api-migrator:staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -116,6 +120,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: frontend-dist-staging }
 
+      # Mesma normalizacao de "construir" — GITHUB_REPOSITORIO alimenta
+      # ${GITHUB_REPOSITORIO} dentro de docker-compose.prod.yml na VPS, e
+      # precisa bater exatamente com o nome minusculo usado no push.
+      - id: repositorio
+        run: echo "minusculo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Configurar SSH
         run: |
           mkdir -p ~/.ssh
@@ -152,7 +162,7 @@ jobs:
           PORTA=3333
           URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
           TAG_IMAGEM=${{ needs.construir.outputs.tag }}
-          GITHUB_REPOSITORIO=${{ github.repository }}
+          GITHUB_REPOSITORIO=${{ steps.repositorio.outputs.minusculo }}
           NOME_CONTAINER_API=pfm-staging-api
           NOME_CONTAINER_POSTGRES=pfm-staging-postgres
           PORTA_API_PUBLICADA=3334
