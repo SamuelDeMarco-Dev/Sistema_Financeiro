@@ -191,6 +191,7 @@ jobs:
           RATE_LIMIT_MAXIMO=1000
           NIVEL_LOG=info
           HABILITAR_TAREFAS_AGENDADAS=false
+          TOKEN_METRICAS=${{ secrets.TOKEN_METRICAS }}
           ENVEOF
 
       # Sem backup pré-migration (dispensável em staging, dados
