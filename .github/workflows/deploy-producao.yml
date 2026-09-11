@@ -229,7 +229,14 @@ jobs:
           docker compose -f docker-compose.prod.yml --profile migrate pull migrator
 
           echo "▶ Aplicando migrations"
-          docker compose -f docker-compose.prod.yml run --rm migrator
+          # -T (sem pseudo-tty) + stdin de /dev/null: sem isto, "run"
+          # herda o stdin deste script inteiro (o heredoc do SSH) e engole
+          # tudo que vem depois como entrada do container — o restante do
+          # deploy (subir a api, checar saude, publicar o frontend) nunca
+          # roda, mas como a migration por si so teve sucesso, o script
+          # termina com exit 0 e o job aparece verde sem ter feito nada
+          # disso (achado no primeiro deploy real, nunca testado antes).
+          docker compose -f docker-compose.prod.yml run --rm -T migrator < /dev/null
 
           echo "▶ Subindo a nova versão"
           docker compose -f docker-compose.prod.yml up -d --no-deps api
