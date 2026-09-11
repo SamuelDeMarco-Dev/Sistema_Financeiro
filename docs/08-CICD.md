@@ -54,23 +54,23 @@ flowchart TB
 
 ### 1.1 Gatilhos
 
-| Evento | Workflow | Efeito |
-| ------ | -------- | ------ |
-| `pull_request` → `staging` ou `main` | `ci.yml` | Verificação; merge bloqueado se falhar |
-| `push` → `staging` | `ci.yml` + `deploy-staging.yml` | Publica em homologação |
-| `push` → `main` | `deploy-producao.yml` | **Publica em produção** |
-| `workflow_dispatch` | `deploy-producao.yml` | Deploy manual (rollback, reexecução) |
+| Evento                               | Workflow                        | Efeito                                 |
+| ------------------------------------ | ------------------------------- | -------------------------------------- |
+| `pull_request` → `staging` ou `main` | `ci.yml`                        | Verificação; merge bloqueado se falhar |
+| `push` → `staging`                   | `ci.yml` + `deploy-staging.yml` | Publica em homologação                 |
+| `push` → `main`                      | `deploy-producao.yml`           | **Publica em produção**                |
+| `workflow_dispatch`                  | `deploy-producao.yml`           | Deploy manual (rollback, reexecução)   |
 
 ### 1.2 Princípios
 
-| Princípio | Aplicação |
-| --------- | --------- |
-| **Um só caminho para produção** | Merge em `main`. Não há deploy manual como rotina. |
-| **Portão automático** | `/saude/prontidao` decide se o deploy vale; não há verificação visual como critério. |
-| **Reversível** | Toda publicação guarda a versão anterior pronta para voltar. |
-| **Backup antes de migrar** | Nenhuma migration roda em produção sem dump imediatamente anterior. |
-| **Segredo fora do repositório** | Exclusivamente em GitHub Secrets e `.env` do servidor. |
-| **Migration nunca reverte sozinha** | Rollback automático cobre a aplicação, não o schema (§9.3). |
+| Princípio                           | Aplicação                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| **Um só caminho para produção**     | Merge em `main`. Não há deploy manual como rotina.                                   |
+| **Portão automático**               | `/saude/prontidao` decide se o deploy vale; não há verificação visual como critério. |
+| **Reversível**                      | Toda publicação guarda a versão anterior pronta para voltar.                         |
+| **Backup antes de migrar**          | Nenhuma migration roda em produção sem dump imediatamente anterior.                  |
+| **Segredo fora do repositório**     | Exclusivamente em GitHub Secrets e `.env` do servidor.                               |
+| **Migration nunca reverte sozinha** | Rollback automático cobre a aplicação, não o schema (§9.3).                          |
 
 ---
 
@@ -78,33 +78,33 @@ flowchart TB
 
 ### 2.1 Ambientes
 
-| Ambiente | URL | Branch | Banco | Backup |
-| -------- | --- | ------ | ----- | ------ |
-| Local | `localhost:5173` / `:3333` | qualquer | `pfm` (Docker) | — |
-| Homologação | `staging.<dominio>` | `staging` | `pfm_staging` | não |
-| Produção | `<dominio>` | `main` | `pfm` | diário |
+| Ambiente    | URL                        | Branch    | Banco          | Backup |
+| ----------- | -------------------------- | --------- | -------------- | ------ |
+| Local       | `localhost:5173` / `:3333` | qualquer  | `pfm` (Docker) | —      |
+| Homologação | `staging.<dominio>`        | `staging` | `pfm_staging`  | não    |
+| Produção    | `<dominio>`                | `main`    | `pfm`          | diário |
 
 Homologação e produção convivem na mesma VPS, com containers, portas, volumes e bancos separados. É a escolha econômica adequada ao porte do projeto; a separação lógica é rigorosa.
 
 ### 2.2 GitHub Secrets
 
-Configurados em **Settings → Secrets and variables → Actions**, com *environments* `producao` e `staging` distintos.
+Configurados em **Settings → Secrets and variables → Actions**, com _environments_ `producao` e `staging` distintos.
 
-| Secret | Escopo | Finalidade |
-| ------ | ------ | ---------- |
-| `VPS_HOST` | ambos | IP ou hostname da VPS |
-| `VPS_USUARIO` | ambos | Usuário de deploy (`deploy`) |
-| `VPS_CHAVE_SSH` | ambos | Chave privada SSH (ed25519) do usuário de deploy |
-| `VPS_PORTA_SSH` | ambos | Porta SSH |
-| `DATABASE_URL` | por ambiente | String de conexão do PostgreSQL |
-| `POSTGRES_SENHA` | por ambiente | Senha do banco |
-| `JWT_SEGREDO` | por ambiente | Segredo de assinatura do JWT (≥ 64 caracteres) |
-| `SMTP_HOST` `SMTP_PORTA` `SMTP_USUARIO` `SMTP_SENHA` | por ambiente | Envio de e-mail |
-| `EMAIL_REMETENTE` | por ambiente | Remetente exibido |
-| `URL_BASE_FRONTEND` | por ambiente | Base dos links em e-mails |
-| `ORIGENS_PERMITIDAS` | por ambiente | Origens de CORS |
-| `TOKEN_METRICAS` | por ambiente | Token da rota `/metricas` |
-| `GHCR_TOKEN` | ambos | Publicação de imagem no GitHub Container Registry |
+| Secret                                               | Escopo       | Finalidade                                        |
+| ---------------------------------------------------- | ------------ | ------------------------------------------------- |
+| `VPS_HOST`                                           | ambos        | IP ou hostname da VPS                             |
+| `VPS_USUARIO`                                        | ambos        | Usuário de deploy (`deploy`)                      |
+| `VPS_CHAVE_SSH`                                      | ambos        | Chave privada SSH (ed25519) do usuário de deploy  |
+| `VPS_PORTA_SSH`                                      | ambos        | Porta SSH                                         |
+| `DATABASE_URL`                                       | por ambiente | String de conexão do PostgreSQL                   |
+| `POSTGRES_SENHA`                                     | por ambiente | Senha do banco                                    |
+| `JWT_SEGREDO`                                        | por ambiente | Segredo de assinatura do JWT (≥ 64 caracteres)    |
+| `SMTP_HOST` `SMTP_PORTA` `SMTP_USUARIO` `SMTP_SENHA` | por ambiente | Envio de e-mail                                   |
+| `EMAIL_REMETENTE`                                    | por ambiente | Remetente exibido                                 |
+| `URL_BASE_FRONTEND`                                  | por ambiente | Base dos links em e-mails                         |
+| `ORIGENS_PERMITIDAS`                                 | por ambiente | Origens de CORS                                   |
+| `TOKEN_METRICAS`                                     | por ambiente | Token da rota `/metricas`                         |
+| `GHCR_TOKEN`                                         | ambos        | Publicação de imagem no GitHub Container Registry |
 
 **Regras.** Chave SSH dedicada ao deploy, sem uso humano. Segredos rotacionados a cada 6 meses ou imediatamente após qualquer suspeita. Nenhum `echo` de secret em step de workflow — o mascaramento do GitHub não cobre transformações como `base64`.
 
@@ -125,19 +125,24 @@ sudo chown deploy:deploy /var/pfm/producao/.env
 
 `backend/Dockerfile` — multi-estágio, usuário não-root, `pm2-runtime` como PID 1 (ADR-008).
 
+**Contexto de build = raiz do monorepo, não `./backend`.** O projeto usa npm workspaces com um único `package-lock.json` na raiz — `backend/` não tem lockfile próprio. Todo `docker build`/`docker/build-push-action` deste Dockerfile usa `context: .` com `file: backend/Dockerfile`; os `COPY` abaixo refletem isso (`backend/package.json`, não `package.json`).
+
 ```dockerfile
 # ─────────────── Estágio 1: dependências ───────────────
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY prisma ./prisma
-RUN npm ci
+COPY backend/package.json ./backend/package.json
+COPY backend/prisma ./backend/prisma
+RUN npm ci --workspace=backend --ignore-scripts
 
 # ─────────────── Estágio 2: build ──────────────────────
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/backend/node_modules ./backend/node_modules
+COPY backend ./backend
+WORKDIR /app/backend
 RUN npx prisma generate && npm run build
 
 # ─────────────── Estágio 3: runtime ────────────────────
@@ -147,21 +152,47 @@ WORKDIR /app
 RUN apk add --no-cache dumb-init curl \
  && npm install -g pm2@latest
 
+# /app ainda está vazio aqui — o chown é instantâneo. Feito depois de
+# preenchido, o overlayfs copiaria cada arquivo de novo (camada dobra de
+# tamanho à toa — armadilha real, ver nota de tamanho da imagem abaixo).
+RUN mkdir -p /app/backend && chown -R node:node /app
+
 ENV NODE_ENV=production
 ENV PORTA=3333
 
-# Só dependências de produção
-COPY package.json package-lock.json ./
-COPY prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate && npm cache clean --force
-
-COPY --from=build /app/dist ./dist
-COPY ecosystem.config.cjs ./
-
-# Diretório de uploads (montado como volume em produção)
-RUN mkdir -p /app/uploads && chown -R node:node /app
+# Copiados já com --chown e instalados como `node` desde o início —
+# mesma razão do chown acima.
+COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node backend/package.json ./backend/package.json
+COPY --chown=node:node backend/prisma ./backend/prisma
 
 USER node
+
+# `@prisma/client` declara `prisma` (o CLI) como peerOptional — mesmo com
+# --omit=dev, o hoisting do workspace mantém `prisma` e sua árvore de
+# suporte (@prisma/engines, effect, fast-check, typescript) presos à
+# árvore de produção, porque também são alcançáveis por essa aresta
+# não-dev. ~130 MB que a imagem de runtime não usa (o client já vem
+# gerado, copiado abaixo) — removidos explicitamente.
+RUN npm ci --workspace=backend --omit=dev --ignore-scripts \
+ && rm -rf node_modules/prisma node_modules/typescript \
+           node_modules/@prisma/engines node_modules/@prisma/engines-version \
+           node_modules/@prisma/fetch-engine node_modules/@prisma/get-platform \
+           node_modules/effect node_modules/fast-check \
+ && npm cache clean --force
+
+# O client já foi gerado no estágio `build` (com o CLI `prisma`, uma
+# devDependency) — copiar em vez de gerar de novo evita reinstalar o CLI
+# aqui.
+COPY --chown=node:node --from=build /app/node_modules/.prisma ./node_modules/.prisma
+
+COPY --chown=node:node --from=build /app/backend/dist ./backend/dist
+COPY --chown=node:node backend/ecosystem.config.cjs ./backend/ecosystem.config.cjs
+
+# Diretório de uploads (montado como volume em produção)
+RUN mkdir -p /app/backend/uploads
+
+WORKDIR /app/backend
 EXPOSE 3333
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
@@ -169,9 +200,27 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["pm2-runtime", "start", "ecosystem.config.cjs", "--env", "production"]
+
+# ─────────────── Estágio 4: migrator ───────────────────
+# `prisma migrate deploy` roda num container à parte, construído com
+# `--target migrator` a partir deste mesmo Dockerfile (§7). Mantém o CLI
+# `prisma` fora da imagem `runtime`, que fica exposta o tempo todo e é a
+# que o orçamento de tamanho mede — o migrator só existe durante o
+# deploy.
+FROM node:22-alpine AS migrator
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/backend/node_modules ./backend/node_modules
+COPY --from=build /app/backend/prisma ./backend/prisma
+COPY --from=build /app/backend/package.json ./backend/package.json
+WORKDIR /app/backend
+ENTRYPOINT ["npx", "prisma"]
+CMD ["migrate", "deploy"]
 ```
 
-**Por que `pm2-runtime` e não `pm2 start`.** `pm2 start` desacopla e retorna, deixando o container sem processo em primeiro plano — o Docker o consideraria encerrado. `pm2-runtime` permanece em *foreground*, propaga sinais corretamente e escreve os logs em `stdout`/`stderr`, preservando a semântica de PID 1.
+**Por que `pm2-runtime` e não `pm2 start`.** `pm2 start` desacopla e retorna, deixando o container sem processo em primeiro plano — o Docker o consideraria encerrado. `pm2-runtime` permanece em _foreground_, propaga sinais corretamente e escreve os logs em `stdout`/`stderr`, preservando a semântica de PID 1.
+
+**Tamanho real da imagem.** `docker images`/`docker ps` mostram o tamanho do manifesto de attestation do BuildKit, não o da imagem que roda — para medir de verdade: `docker image inspect <imagem> --format "{{.Size}}"` (ou `docker save <imagem> | wc -c`). A imagem `runtime` mede ~131 MB dessa forma, dentro do orçamento de 250 MB (issue #56) — bem acima disso via `docker images` é esperado e não indica um problema.
 
 ### 3.2 Configuração do PM2
 
@@ -184,16 +233,16 @@ module.exports = {
       name: 'pfm-api',
       script: './dist/index.js',
       exec_mode: 'cluster',
-      instances: 'max',              // um processo por núcleo (RNF-09)
+      instances: 'max', // um processo por núcleo (RNF-09)
       max_memory_restart: '400M',
-      kill_timeout: 35000,           // > 30s do encerramento gracioso da aplicação
+      kill_timeout: 35000, // > 30s do encerramento gracioso da aplicação
       listen_timeout: 10000,
-      wait_ready: true,              // aguarda process.send('ready')
+      wait_ready: true, // aguarda process.send('ready')
       autorestart: true,
       max_restarts: 10,
       min_uptime: '20s',
       merge_logs: true,
-      time: false,                   // timestamp já vem do Pino (JSON)
+      time: false, // timestamp já vem do Pino (JSON)
       env_production: {
         NODE_ENV: 'production',
         PORTA: 3333,
@@ -203,38 +252,53 @@ module.exports = {
 };
 ```
 
-`kill_timeout` maior que a janela de encerramento gracioso da aplicação (30 s) evita que o PM2 mate um processo que ainda está finalizando requisições. `wait_ready` faz o PM2 só considerar a instância viva depois de ela sinalizar prontidão — sem isso, o *reload* colocaria tráfego em processos que ainda não conectaram ao banco.
+`kill_timeout` maior que a janela de encerramento gracioso da aplicação (30 s) evita que o PM2 mate um processo que ainda está finalizando requisições. `wait_ready` faz o PM2 só considerar a instância viva depois de ela sinalizar prontidão — sem isso, o _reload_ colocaria tráfego em processos que ainda não conectaram ao banco.
 
 **Tarefas agendadas.** Rodam apenas na instância `0` (`process.env.NODE_APP_INSTANCE === '0'`). Sem esse guard, N instâncias executariam a mesma tarefa N vezes.
 
 ### 3.3 `docker-compose.prod.yml`
 
+Compartilhado entre produção e homologação — só o `.env` muda (§8). Nome de container é único **por host**, não por projeto do compose, e os dois ambientes convivem na mesma VPS (§2.1); por isso nome de container e porta publicada são parametrizáveis, com o default de produção embutido.
+
 ```yaml
 services:
+  # `docker compose run --rm migrator` (nunca `up -d`, só via `run`):
+  # imagem separada da `api` porque o CLI `prisma` (necessário só para
+  # `migrate deploy`) não entra na imagem que fica no ar o tempo todo
+  # (§3.1, estágio `runtime` vs. `migrator`).
+  migrator:
+    image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api-migrator:${TAG_IMAGEM:-latest}
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [pfm]
+    profiles: ['migrate']
+
   api:
     image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api:${TAG_IMAGEM:-latest}
-    container_name: pfm-api
+    container_name: ${NOME_CONTAINER_API:-pfm-api}
     restart: unless-stopped
     env_file: [.env]
     ports:
-      - "127.0.0.1:3333:3333"        # nunca 0.0.0.0
+      - '127.0.0.1:${PORTA_API_PUBLICADA:-3333}:3333' # nunca 0.0.0.0
     volumes:
-      - /var/pfm/uploads:/app/uploads
+      - /var/pfm/uploads:/app/backend/uploads
     depends_on:
       postgres:
         condition: service_healthy
     deploy:
       resources:
-        limits:   { cpus: "1.5", memory: 1G }
+        limits: { cpus: '1.5', memory: 1G }
         reservations: { memory: 256M }
     logging:
       driver: json-file
-      options: { max-size: "10m", max-file: "5" }
+      options: { max-size: '10m', max-file: '5' }
     networks: [pfm]
 
   postgres:
     image: postgres:16-alpine
-    container_name: pfm-postgres
+    container_name: ${NOME_CONTAINER_POSTGRES:-pfm-postgres}
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USUARIO}
@@ -242,11 +306,11 @@ services:
       POSTGRES_DB: ${POSTGRES_BANCO}
       TZ: America/Sao_Paulo
     ports:
-      - "127.0.0.1:5432:5432"        # apenas loopback
+      - '127.0.0.1:${PORTA_POSTGRES_PUBLICADA:-5432}:5432' # apenas loopback
     volumes:
       - pfm_dados_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USUARIO} -d ${POSTGRES_BANCO}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USUARIO} -d ${POSTGRES_BANCO}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -259,7 +323,7 @@ services:
       - shared_buffers=256MB
     logging:
       driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+      options: { max-size: '10m', max-file: '3' }
     networks: [pfm]
 
 volumes:
@@ -272,6 +336,8 @@ networks:
 
 O `ports` com prefixo `127.0.0.1` é deliberado: sem ele, o Docker abre a porta em todas as interfaces e **contorna o UFW**, expondo o PostgreSQL à internet mesmo com o firewall aparentemente fechado. É uma das armadilhas mais comuns de Docker em VPS.
 
+`/app/backend/uploads` (não `/app/uploads`): o WORKDIR da imagem runtime é `/app/backend` (§3.1, contexto de monorepo). No host, `/var/pfm/uploads` precisa estar `chown 1000:1000` — o processo dentro do container roda como `node` (uid/gid 1000 fixo da imagem `node:22-alpine`), não como o usuário `deploy` do host (`infra/provisionar.sh` já faz isso).
+
 ### 3.4 Compose de desenvolvimento
 
 `docker-compose.yml`
@@ -280,33 +346,33 @@ O `ports` com prefixo `127.0.0.1` é deliberado: sem ele, o Docker abre a porta 
 services:
   postgres:
     image: postgres:16-alpine
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
     environment:
       POSTGRES_USER: pfm
       POSTGRES_PASSWORD: pfm_local
       POSTGRES_DB: pfm
     volumes: [pfm_dev:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pfm"]
+      test: ['CMD-SHELL', 'pg_isready -U pfm']
       interval: 5s
       retries: 10
 
   postgres_teste:
     image: postgres:16-alpine
-    ports: ["5433:5432"]
+    ports: ['5433:5432']
     environment:
       POSTGRES_USER: pfm
       POSTGRES_PASSWORD: pfm_local
       POSTGRES_DB: pfm_teste
-    tmpfs: [/var/lib/postgresql/data]   # em memória: testes rápidos, dados descartáveis
+    tmpfs: [/var/lib/postgresql/data] # em memória: testes rápidos, dados descartáveis
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pfm"]
+      test: ['CMD-SHELL', 'pg_isready -U pfm']
       interval: 5s
       retries: 10
 
   mailpit:
     image: axllent/mailpit:latest
-    ports: ["1025:1025", "8025:8025"]   # SMTP · interface web
+    ports: ['1025:1025', '8025:8025'] # SMTP · interface web
 
 volumes:
   pfm_dev:
@@ -314,7 +380,7 @@ volumes:
 
 ### 3.5 Dockerfile do frontend
 
-Produz apenas o artefato estático (ADR-009) — não há container de frontend em produção.
+Produz apenas o artefato estático (ADR-009) — não há container de frontend em produção. **Não é o que o pipeline de deploy usa**: o frontend é buildado nativamente no runner (§7), sem Docker — este Dockerfile existe para reproduzir o mesmo artefato localmente. Contexto = raiz do monorepo, mesma razão do backend (§3.1).
 
 ```dockerfile
 FROM node:22-alpine AS build
@@ -328,16 +394,19 @@ ENV VITE_AMBIENTE=$VITE_AMBIENTE
 ENV VITE_NOME_APP=$VITE_NOME_APP
 
 COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
+COPY frontend/package.json ./frontend/package.json
+RUN npm ci --workspace=frontend --ignore-scripts
+
+COPY frontend ./frontend
+WORKDIR /app/frontend
 RUN npm run build
 
 # Estágio de export: o artefato é extraído, não servido
 FROM scratch AS artefato
-COPY --from=build /app/dist /dist
+COPY --from=build /app/frontend/dist /dist
 ```
 
-As variáveis `VITE_*` são resolvidas em **tempo de build** e ficam no *bundle*. Tudo que entra aqui é público — nenhum segredo, em nenhuma hipótese.
+As variáveis `VITE_*` são resolvidas em **tempo de build** e ficam no _bundle_. Tudo que entra aqui é público — nenhum segredo, em nenhuma hipótese. `VITE_AMBIENTE=staging` (só no build de homologação, §8) aciona o `BannerHomologacao` do frontend.
 
 ---
 
@@ -443,8 +512,8 @@ server {
 
 Duas configurações merecem atenção porque sua ausência produz falhas confusas:
 
-- **`X-Forwarded-For` + `trust proxy` na aplicação.** Sem os dois, todo o *rate limit* vê o IP do proxy e um único usuário mal-intencionado bloqueia a aplicação para todos.
-- **`index.html` sem cache.** Com cache, o navegador continua pedindo *chunks* da versão antiga após o deploy e a aplicação quebra com erro de módulo não encontrado.
+- **`X-Forwarded-For` + `trust proxy` na aplicação.** Sem os dois, todo o _rate limit_ vê o IP do proxy e um único usuário mal-intencionado bloqueia a aplicação para todos.
+- **`index.html` sem cache.** Com cache, o navegador continua pedindo _chunks_ da versão antiga após o deploy e a aplicação quebra com erro de módulo não encontrado.
 
 ### 4.2 Homologação
 
@@ -481,7 +550,7 @@ Hook de recarga do Nginx após a renovação:
 systemctl reload nginx
 ```
 
-Sem esse hook, o certificado renova mas o Nginx continua servindo o antigo até o próximo *reload* — e o problema só aparece quando o certificado antigo expira.
+Sem esse hook, o certificado renova mas o Nginx continua servindo o antigo até o próximo _reload_ — e o problema só aparece quando o certificado antigo expira.
 
 ---
 
@@ -547,6 +616,13 @@ mkdir -p /var/www/{pfm,pfm-staging,certbot}
 chown -R "$USUARIO_DEPLOY:$USUARIO_DEPLOY" /var/pfm /var/www/pfm /var/www/pfm-staging
 chmod 750 /var/pfm/uploads /var/pfm/backups
 
+# /var/pfm/uploads é bind mount de dentro do container (docker-compose.prod.yml),
+# onde o processo roda como o usuário `node` da imagem node:22-alpine — uid/gid
+# 1000 fixo, não o do usuário `deploy` do host. Sem isto, a API sobe mas
+# /api/v1/saude/prontidao reporta "armazenamento: EACCES" (achado no ensaio
+# de rollback da issue #61).
+chown 1000:1000 /var/pfm/uploads
+
 echo "▶ Swap de 2 GB"
 if [ ! -f /swapfile ]; then
   fallocate -l 2G /swapfile
@@ -563,7 +639,7 @@ systemctl enable --now nginx
 echo "✔ Provisionamento concluído"
 ```
 
-O swap de 2 GB não é luxo: uma VPS de 2 GB de RAM rodando build, PostgreSQL e N processos Node encontra o *OOM killer* sem ele — e o processo morto é normalmente o PostgreSQL.
+O swap de 2 GB não é luxo: uma VPS de 2 GB de RAM rodando build, PostgreSQL e N processos Node encontra o _OOM killer_ sem ele — e o processo morto é normalmente o PostgreSQL.
 
 ---
 
@@ -579,6 +655,7 @@ on:
     branches: [main, staging]
   push:
     branches: [staging]
+  workflow_call: {} # reutilizado pelo job `verificar` de deploy-producao.yml e deploy-staging.yml
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -687,11 +764,31 @@ jobs:
 
       - name: Orçamento de bundle
         run: |
-          TAMANHO=$(find dist/assets -name '*.js' -exec gzip -c {} \; | wc -c)
+          # RNF-04 limita o bundle *inicial* — o que o navegador baixa para
+          # pintar a primeira tela. São os arquivos que o `index.html`
+          # referencia: o entry, os chunks em `modulepreload` e o CSS. As
+          # demais telas entram por `React.lazy` e não contam; somar todos
+          # os chunks de `assets/` mediria o app inteiro e cresceria a cada
+          # tela nova, reprovando um bundle que cabe folgado no orçamento.
+          ARQUIVOS=$(grep -oE '(src|href)="/assets/[^"]+"' dist/index.html \
+                     | sed -E 's|.*"/assets/(.*)"|\1|' | sort -u)
+
+          if [ -z "$ARQUIVOS" ]; then
+            echo "::error::Nenhum ativo referenciado em index.html — o portão mediria zero"
+            exit 1
+          fi
+
+          TAMANHO=0
+          for ARQUIVO in $ARQUIVOS; do
+            BYTES=$(gzip -c "dist/assets/${ARQUIVO}" | wc -c)
+            echo "  ${ARQUIVO}: ${BYTES} bytes"
+            TAMANHO=$((TAMANHO + BYTES))
+          done
+
           LIMITE=256000
-          echo "Bundle gzip: ${TAMANHO} bytes (limite ${LIMITE})"
+          echo "Bundle inicial gzip: ${TAMANHO} bytes (limite ${LIMITE})"
           if [ "$TAMANHO" -gt "$LIMITE" ]; then
-            echo "::error::Bundle excede o orçamento de 250 KB (RNF-04)"
+            echo "::error::Bundle inicial excede o orçamento de 250 KB (RNF-04)"
             exit 1
           fi
 
@@ -709,7 +806,7 @@ jobs:
           echo "Todos os jobs passaram"
 ```
 
-O job `resultado` existe para dar à proteção de branch um único *status check* obrigatório — sem ele, acrescentar um job novo exige reconfigurar a proteção manualmente e o novo job vira opcional por descuido.
+O job `resultado` existe para dar à proteção de branch um único _status check_ obrigatório — sem ele, acrescentar um job novo exige reconfigurar a proteção manualmente e o novo job vira opcional por descuido.
 
 ---
 
@@ -731,12 +828,13 @@ on:
 
 concurrency:
   group: deploy-producao
-  cancel-in-progress: false        # nunca cancelar um deploy em andamento
+  cancel-in-progress: false # nunca cancelar um deploy em andamento
 
 env:
   NODE_VERSAO: '22'
   REGISTRO: ghcr.io
-  IMAGEM: ${{ github.repository }}/pfm-api
+  IMAGEM_API: ${{ github.repository }}/pfm-api
+  IMAGEM_MIGRATOR: ${{ github.repository }}/pfm-api-migrator
 
 jobs:
   # ─────────────────────────────────────────────
@@ -750,6 +848,11 @@ jobs:
     name: Construir artefatos
     needs: verificar
     runs-on: ubuntu-latest
+    # Sem isto, secrets.URL_BASE_FRONTEND (secret por-ambiente, §2.2) não
+    # resolveria aqui — só jobs com `environment:` enxergam o valor do
+    # ambiente correspondente.
+    environment:
+      name: producao
     permissions:
       contents: read
       packages: write
@@ -768,14 +871,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build e push da imagem da API
+      # Contexto = raiz do monorepo (§3.1) — `--target` é obrigatório:
+      # sem ele o build pega o último estágio do Dockerfile (`migrator`),
+      # não `runtime`.
+      - name: Build e push da imagem da API (runtime)
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
+          file: backend/Dockerfile
+          target: runtime
           push: true
           tags: |
-            ${{ env.REGISTRO }}/${{ env.IMAGEM }}:${{ steps.tag.outputs.valor }}
-            ${{ env.REGISTRO }}/${{ env.IMAGEM }}:latest
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_API }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build e push da imagem de migration
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: migrator
+          push: true
+          tags: |
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:${{ steps.tag.outputs.valor }}
+            ${{ env.REGISTRO }}/${{ env.IMAGEM_MIGRATOR }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -783,18 +904,19 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSAO }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
+      # Build nativo no runner (não via Docker): o frontend não tem
+      # container próprio em produção (ADR-009).
       - name: Build do frontend
-        working-directory: ./frontend
         env:
           VITE_API_URL: ${{ secrets.URL_BASE_FRONTEND }}/api/v1
           VITE_AMBIENTE: production
           VITE_NOME_APP: 'Gerenciador de Finanças'
         run: |
           npm ci
-          npm run build
-          tar -czf ../frontend-dist.tar.gz -C dist .
+          npm run build --workspace=frontend
+          tar -czf frontend-dist.tar.gz -C frontend/dist .
 
       - uses: actions/upload-artifact@v4
         with:
@@ -807,9 +929,10 @@ jobs:
     name: Implantar na VPS
     needs: construir
     runs-on: ubuntu-latest
+    # `environment.url` só aceita os contextos env/github/inputs/job/matrix/
+    # needs/runner/steps/strategy/vars — "secrets" não é um deles.
     environment:
       name: producao
-      url: ${{ secrets.URL_BASE_FRONTEND }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -831,15 +954,14 @@ jobs:
             ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }}:/var/pfm/producao/
 
       - name: Gerar .env no servidor
-        env:
-          TAG: ${{ needs.construir.outputs.tag }}
         run: |
           ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
             ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
-            "cat > /var/pfm/producao/.env && chmod 600 /var/pfm/producao/.env" <<ENVEOF
+            "cat > /var/pfm/producao/.env && chmod 600 /var/pfm/producao/.env" <<'ENVEOF'
           NODE_ENV=production
           PORTA=3333
-          TAG_IMAGEM=${TAG}
+          URL_BASE_API=${{ secrets.URL_BASE_FRONTEND }}
+          TAG_IMAGEM=${{ needs.construir.outputs.tag }}
           GITHUB_REPOSITORIO=${{ github.repository }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           POSTGRES_USUARIO=${{ secrets.POSTGRES_USUARIO }}
@@ -848,6 +970,7 @@ jobs:
           JWT_SEGREDO=${{ secrets.JWT_SEGREDO }}
           JWT_EXPIRACAO=15m
           REFRESH_TOKEN_EXPIRACAO_DIAS=7
+          REFRESH_TOKEN_EXPIRACAO_DIAS_LEMBRAR=30
           BCRYPT_CUSTO=12
           ORIGENS_PERMITIDAS=${{ secrets.ORIGENS_PERMITIDAS }}
           URL_BASE_FRONTEND=${{ secrets.URL_BASE_FRONTEND }}
@@ -857,7 +980,11 @@ jobs:
           SMTP_SENHA=${{ secrets.SMTP_SENHA }}
           SMTP_SEGURO=true
           EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
-          DIRETORIO_UPLOADS=/app/uploads
+          DIRETORIO_UPLOADS=/app/backend/uploads
+          TAMANHO_MAXIMO_ANEXO_MB=5
+          TAMANHO_MAXIMO_AVATAR_MB=2
+          RATE_LIMIT_JANELA_MINUTOS=15
+          RATE_LIMIT_MAXIMO=1000
           NIVEL_LOG=info
           HABILITAR_TAREFAS_AGENDADAS=true
           TOKEN_METRICAS=${{ secrets.TOKEN_METRICAS }}
@@ -875,20 +1002,19 @@ jobs:
           chmod +x verificar-saude.sh reverter.sh backup.sh
 
           echo "▶ Registrando a versão atual para rollback"
-          TAG_ANTERIOR=$(docker inspect pfm-api --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || echo "")
-          [ -z "$TAG_ANTERIOR" ] && TAG_ANTERIOR=$(grep -oP '(?<=^TAG_IMAGEM=).*' .env.anterior 2>/dev/null || echo "")
+          TAG_ANTERIOR=$(grep -oP '(?<=^TAG_IMAGEM=).*' .env.anterior 2>/dev/null || echo "")
           echo "$TAG_ANTERIOR" > .tag-anterior
           cp .env .env.anterior 2>/dev/null || true
 
           echo "▶ Backup pré-migration"
           ./backup.sh pre-deploy
 
-          echo "▶ Baixando a nova imagem"
+          echo "▶ Baixando as novas imagens"
           docker compose -f docker-compose.prod.yml pull api
+          docker compose -f docker-compose.prod.yml --profile migrate pull migrator
 
           echo "▶ Aplicando migrations"
-          docker compose -f docker-compose.prod.yml run --rm \
-            --entrypoint "npx prisma migrate deploy" api
+          docker compose -f docker-compose.prod.yml run --rm migrator
 
           echo "▶ Subindo a nova versão"
           docker compose -f docker-compose.prod.yml up -d --no-deps api
@@ -926,9 +1052,12 @@ jobs:
         run: echo "::error::Deploy de produção falhou. Consulte /var/pfm/releases/historico.log na VPS."
 ```
 
+A tag da versão anterior vem de `.env.anterior` (não mais de `docker inspect`/label OCI): como agora há duas imagens por deploy (`pfm-api` e `pfm-api-migrator`), a label de revisão deixou de ser uma fonte única e confiável — o arquivo `.env.anterior`, copiado antes de cada deploy, já é a fonte de verdade usada pelo `reverter.sh` (§9.2).
+
 Detalhes que evitam problemas reais:
 
 - **`cancel-in-progress: false`.** Cancelar um deploy no meio deixa o sistema em estado indeterminado — migrations aplicadas com imagem antiga, por exemplo.
+- **Heredoc do `.env` citado (`<<'ENVEOF'`).** Sem aspas no delimitador, a shell do runner reexpandiria localmente qualquer `$` que apareça dentro do VALOR de um secret (já substituído pelo GitHub Actions antes da shell rodar) — achado com `shellcheck` (SC2087) rodando os workflows.
 - **`--no-deps api`.** Sobe só a API; o PostgreSQL não é reiniciado a cada deploy.
 - **`migrate deploy` em container efêmero.** Roda antes de a nova versão receber tráfego, e sua falha interrompe o deploy sem tocar no container que está servindo.
 - **Verificação externa após a interna.** A checagem interna valida o container; a externa valida o caminho completo, incluindo Nginx e TLS.
@@ -937,17 +1066,27 @@ Detalhes que evitam problemas reais:
 
 ## 8. Workflow de homologação
 
-`.github/workflows/deploy-staging.yml` reproduz a estrutura de produção com quatro diferenças:
+`.github/workflows/deploy-staging.yml` reproduz a estrutura de produção, com o mesmo `docker-compose.prod.yml` (§3.3) apontado por um `.env` diferente:
 
-| Aspecto | Produção | Homologação |
-| ------- | -------- | ----------- |
-| Gatilho | `push` em `main` | `push` em `staging` |
-| Diretório | `/var/pfm/producao` | `/var/pfm/staging` |
-| Porta da API | 3333 | 3334 |
-| Backup pré-migration | obrigatório | dispensado |
-| Rollback automático | sim | não (falha apenas alerta) |
-| Banco | `pfm` | `pfm_staging` |
-| Frontend | `/var/www/pfm` | `/var/www/pfm-staging` |
+| Aspecto                 | Produção            | Homologação                       |
+| ----------------------- | ------------------- | --------------------------------- |
+| Gatilho                 | `push` em `main`    | `push` em `staging`               |
+| `environment` do job    | `producao`          | `staging`                         |
+| Diretório               | `/var/pfm/producao` | `/var/pfm/staging`                |
+| Container da API        | `pfm-api`           | `pfm-staging-api`                 |
+| Container do Postgres   | `pfm-postgres`      | `pfm-staging-postgres`            |
+| Porta da API publicada  | 3333                | 3334                              |
+| Porta do Postgres       | 5432                | 5433                              |
+| Tag de imagem adicional | `latest`            | `staging-latest`                  |
+| Backup pré-migration    | obrigatório         | dispensado                        |
+| Rollback automático     | sim                 | não (falha só gera `::warning::`) |
+| Banco                   | `pfm`               | `pfm_staging`                     |
+| Frontend                | `/var/www/pfm`      | `/var/www/pfm-staging`            |
+| `cancel-in-progress`    | `false`             | `true`                            |
+
+Nome de container é único por host, não por projeto do compose — sem parametrizar `NOME_CONTAINER_API`/`NOME_CONTAINER_POSTGRES`/`PORTA_*_PUBLICADA` no `.env` (§3.3), o segundo `docker compose up` (de qualquer um dos dois ambientes, a depender da ordem) falharia tentando reusar um nome ou uma porta do host já ocupados pelo outro.
+
+Os secrets usam os **mesmos nomes** de produção (`URL_BASE_FRONTEND`, `DATABASE_URL`, `POSTGRES_USUARIO` etc.) — são os GitHub Environments "producao" e "staging" que escopam um valor diferente para o mesmo nome de secret (§2.2), não um sufixo `_STAGING` no nome. Por isso todo job que precisa desses secrets, inclusive `construir` (que builda o frontend com `VITE_API_URL` derivado de `URL_BASE_FRONTEND`), declara `environment:` — sem isso o valor do ambiente certo não resolve.
 
 Rollback automático em homologação seria contraproducente: o objetivo do ambiente é justamente expor a versão quebrada para diagnóstico.
 
@@ -964,6 +1103,7 @@ set -uo pipefail
 URL="${URL_SAUDE:-http://127.0.0.1:3333/api/v1/saude/prontidao}"
 TENTATIVAS="${TENTATIVAS:-18}"      # 18 × 5s = 90s
 INTERVALO="${INTERVALO:-5}"
+CONTAINER_API="${CONTAINER_API:-pfm-api}" # staging usa pfm-staging-api (mesma VPS que produção, §8)
 
 echo "Verificando prontidão em ${URL} (até $((TENTATIVAS * INTERVALO))s)"
 
@@ -989,7 +1129,7 @@ done
 
 echo "✖ Serviço não ficou pronto em $((TENTATIVAS * INTERVALO))s"
 echo "── Últimas 60 linhas do log da API ──"
-docker logs pfm-api --tail 60 2>&1 || true
+docker logs "$CONTAINER_API" --tail 60 2>&1 || true
 exit 1
 ```
 
@@ -1058,39 +1198,60 @@ TAMANHO_MINIMO=10240                     # 10 KB: abaixo disso, dump inválido
 mkdir -p "$DIRETORIO"
 set -a; source /var/pfm/producao/.env; set +a
 
+# Sem este trap, um pg_dump que falha antes de terminar (banco fora do ar,
+# credencial errada) deixa um arquivo vazio/parcial em $ARQUIVO — a checagem
+# de tamanho abaixo nunca roda porque `set -e` já abortou o script na
+# própria linha do pg_dump, e sem limpeza isso também apagaria
+# silenciosamente um backup bom anterior de mesmo nome (timestamp por
+# minuto). Achado rodando de verdade contra um banco inexistente (issue #63).
+SUCESSO=false
+limpar_backup_incompleto() {
+  if [ "$SUCESSO" = false ] && [ -f "$ARQUIVO" ]; then
+    rm -f "$ARQUIVO"
+  fi
+}
+trap limpar_backup_incompleto EXIT
+
 echo "▶ Backup do banco (${ROTULO})"
-docker exec pfm-postgres pg_dump \
+docker exec "${NOME_CONTAINER_POSTGRES:-pfm-postgres}" pg_dump \
   -U "$POSTGRES_USUARIO" -d "$POSTGRES_BANCO" \
   --format=custom --compress=9 > "$ARQUIVO"
 
 TAMANHO=$(stat -c%s "$ARQUIVO")
 if [ "$TAMANHO" -lt "$TAMANHO_MINIMO" ]; then
   echo "✖ Backup suspeito: ${TAMANHO} bytes"
-  rm -f "$ARQUIVO"
   exit 1
 fi
 
 echo "▶ Verificando integridade"
 if ! pg_restore --list "$ARQUIVO" > /dev/null 2>&1; then
   echo "✖ Backup corrompido — descartado"
-  rm -f "$ARQUIVO"
   exit 1
 fi
 
+SUCESSO=true
 echo "✔ Banco: ${ARQUIVO} ($(numfmt --to=iec "$TAMANHO"))"
 
 if [ "$ROTULO" = "diario" ]; then
   echo "▶ Backup dos anexos"
   tar -czf "${DIRETORIO}/uploads-${DATA}.tar.gz" -C /var/pfm uploads
 
+  # `|| true`: sob `set -e -o pipefail`, o `ls` de um glob sem nenhum
+  # arquivo correspondente (comum na primeira execução — ainda não existe
+  # nenhum pfm-pre-deploy-*.dump) sai com status != 0 mesmo com
+  # `2>/dev/null`, o que abortava o script ANTES de registrar o backup que
+  # acabou de ser feito com sucesso (achado rodando de verdade contra um
+  # banco novo, sem histórico prévio — issue #63).
   echo "▶ Aplicando retenção (7 diários, 4 semanais)"
-  ls -1t "${DIRETORIO}"/pfm-diario-*.dump 2>/dev/null | tail -n +8 | xargs -r rm -f
-  ls -1t "${DIRETORIO}"/uploads-*.tar.gz  2>/dev/null | tail -n +8 | xargs -r rm -f
-  ls -1t "${DIRETORIO}"/pfm-pre-deploy-*.dump 2>/dev/null | tail -n +6 | xargs -r rm -f
+  ls -1t "${DIRETORIO}"/pfm-diario-*.dump 2>/dev/null | tail -n +8 | xargs -r rm -f || true
+  ls -1t "${DIRETORIO}"/uploads-*.tar.gz  2>/dev/null | tail -n +8 | xargs -r rm -f || true
+  ls -1t "${DIRETORIO}"/pfm-pre-deploy-*.dump 2>/dev/null | tail -n +6 | xargs -r rm -f || true
 fi
 
 echo "$(date -Iseconds) BACKUP_OK ${ARQUIVO} ${TAMANHO}" >> /var/pfm/releases/historico.log
 ```
+
+Os dois bugs acima (arquivo parcial sem limpeza, `ls` sem correspondência abortando o script) só apareceram rodando o script de verdade contra um Postgres real — nenhum dos dois é visível lendo o script isoladamente.
 
 ### 10.2 Agendamento
 
@@ -1148,16 +1309,18 @@ if [ "$BANCO_DESTINO" = "$POSTGRES_BANCO" ]; then
   ./backup.sh pre-restauracao
 fi
 
-docker exec -i pfm-postgres psql -U "$POSTGRES_USUARIO" -d postgres \
+CONTAINER_POSTGRES="${NOME_CONTAINER_POSTGRES:-pfm-postgres}"
+
+docker exec -i "$CONTAINER_POSTGRES" psql -U "$POSTGRES_USUARIO" -d postgres \
   -c "DROP DATABASE IF EXISTS ${BANCO_DESTINO};" \
   -c "CREATE DATABASE ${BANCO_DESTINO};"
 
-docker exec -i pfm-postgres pg_restore \
+docker exec -i "$CONTAINER_POSTGRES" pg_restore \
   -U "$POSTGRES_USUARIO" -d "$BANCO_DESTINO" \
   --clean --if-exists --no-owner < "$ARQUIVO"
 
 echo "▶ Verificação: contagem de linhas por tabela"
-docker exec -i pfm-postgres psql -U "$POSTGRES_USUARIO" -d "$BANCO_DESTINO" -c "
+docker exec -i "$CONTAINER_POSTGRES" psql -U "$POSTGRES_USUARIO" -d "$BANCO_DESTINO" -c "
   SELECT relname AS tabela, n_live_tup AS linhas
   FROM pg_stat_user_tables
   ORDER BY n_live_tup DESC
@@ -1180,10 +1343,10 @@ docker exec -i pfm-postgres psql -U pfm -d postgres \
   -c "DROP DATABASE pfm_verificacao;"
 ```
 
-| Objetivo | Alvo |
-| -------- | ---- |
-| RPO — perda máxima aceitável | 24 h |
-| RTO — tempo máximo de recuperação | 2 h |
+| Objetivo                          | Alvo |
+| --------------------------------- | ---- |
+| RPO — perda máxima aceitável      | 24 h |
+| RTO — tempo máximo de recuperação | 2 h  |
 
 ---
 
@@ -1228,7 +1391,8 @@ cd /var/pfm/producao
 ./backup.sh pre-deploy
 sed -i "s/^TAG_IMAGEM=.*/TAG_IMAGEM=<sha-desejado>/" .env
 docker compose -f docker-compose.prod.yml pull api
-docker compose -f docker-compose.prod.yml run --rm --entrypoint "npx prisma migrate deploy" api
+docker compose -f docker-compose.prod.yml --profile migrate pull migrator
+docker compose -f docker-compose.prod.yml run --rm migrator   # imagem separada (§3.1) — nao usa mais --entrypoint na api
 docker compose -f docker-compose.prod.yml up -d --no-deps api
 ./verificar-saude.sh
 ```
@@ -1251,31 +1415,37 @@ docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate api
 ### 11.4 Cenários de falha
 
 **A API não sobe.**
+
 1. `docker logs pfm-api --tail 100` — geralmente é variável de ambiente inválida (a validação Zod aborta com a mensagem exata) ou banco inacessível.
 2. Conferir `.env`: `grep -c '=' /var/pfm/producao/.env`.
 3. Testar o banco: `docker exec pfm-postgres pg_isready -U pfm`.
-4. Migrations pendentes: `docker compose ... run --rm --entrypoint "npx prisma migrate status" api`.
+4. Migrations pendentes: `docker compose -f docker-compose.prod.yml run --rm --entrypoint "npx prisma migrate status" migrator` (o CLI `prisma` só existe na imagem `migrator`, não na `api` — §3.1).
 
 **Banco inacessível.**
+
 1. `docker compose ps postgres` e `docker logs pfm-postgres --tail 100`.
-2. Se houve *OOM kill*: `dmesg | grep -i "killed process"` — confirmar que o swap está ativo (`swapon --show`).
+2. Se houve _OOM kill_: `dmesg | grep -i "killed process"` — confirmar que o swap está ativo (`swapon --show`).
 3. Se o volume corrompeu: parar tudo, restaurar o último dump em banco novo, repontar `DATABASE_URL`.
 
 **Disco cheio.**
+
 ```bash
 du -sh /var/lib/docker /var/pfm/* /var/log | sort -h
 docker system prune -af --volumes    # ATENÇÃO: --volumes remove volumes órfãos
 journalctl --vacuum-size=200M
 ls -1t /var/pfm/backups/* | tail -n +10 | xargs -r rm -f
 ```
+
 Causa mais comum: imagens antigas acumuladas e logs sem rotação. A rotação em `docker-compose.prod.yml` previne o segundo caso.
 
 **Certificado expirado.**
+
 ```bash
 sudo certbot certificates
 sudo certbot renew --force-renewal
 sudo systemctl reload nginx
 ```
+
 Se a renovação automática falhou silenciosamente, verificar `systemctl status certbot.timer` e se a porta 80 está acessível (o desafio ACME precisa dela).
 
 **Deploy travado.** O `concurrency` impede paralelismo. Cancelar o workflow e, no servidor, `docker compose ps` para verificar o estado; se ficou meio publicado, executar `reverter.sh`.
@@ -1305,8 +1475,10 @@ Rotacionar `JWT_SEGREDO` invalida **todos** os access tokens em circulação; os
 - [ ] Chave SSH de deploy gerada (`ssh-keygen -t ed25519`), pública em `~deploy/.ssh/authorized_keys`.
 - [ ] Login SSH com a chave testado; login por senha e por root rejeitados.
 - [ ] `ufw status` mostra apenas 22, 80 e 443.
-- [ ] Todos os GitHub Secrets configurados nos *environments* `producao` e `staging`.
+- [ ] Todos os GitHub Secrets configurados nos _environments_ `producao` e `staging`.
 - [ ] `JWT_SEGREDO` com ≥ 64 caracteres aleatórios (não reaproveitado de desenvolvimento).
+- [ ] `TOKEN_METRICAS` configurado (≥ 32 caracteres) — sem ele o processo recusa subir em produção (issue #64).
+- [ ] `ORIGENS_PERMITIDAS` com o domínio real, nunca `*` — mesma validação de inicialização.
 - [ ] Credenciais SMTP validadas com envio de teste.
 - [ ] Proteção de `main` e `staging` ativa.
 
@@ -1317,7 +1489,7 @@ Rotacionar `JWT_SEGREDO` invalida **todos** os access tokens em circulação; os
 - [ ] `certbot renew --dry-run` bem-sucedido.
 - [ ] Hook de recarga do Nginx pós-renovação instalado.
 - [ ] `docker compose -f docker-compose.prod.yml up -d postgres` com healthcheck saudável.
-- [ ] Primeira migration aplicada (`prisma migrate deploy`).
+- [ ] Primeira migration aplicada (`docker compose -f docker-compose.prod.yml run --rm migrator`).
 - [ ] `npm run seed:producao` executado (apenas categorias padrão).
 - [ ] Primeiro deploy via merge em `main` concluído.
 - [ ] Timer de backup habilitado e primeira execução verificada.
@@ -1332,7 +1504,8 @@ Rotacionar `JWT_SEGREDO` invalida **todos** os access tokens em circulação; os
 - [ ] Cadastro, verificação por e-mail e login funcionam em produção.
 - [ ] Upload de anexo funciona e o arquivo persiste em `/var/pfm/uploads`.
 - [ ] PostgreSQL inacessível externamente (`nmap -p 5432 <ip>` → filtered/closed).
-- [ ] Logs de produção sem senha, token ou dado pessoal.
+- [ ] `GET /metricas` responde `401` sem token e `200` com `TOKEN_METRICAS` correto.
+- [ ] Logs de produção sem senha, token ou dado pessoal — inclusive o `stack` de um erro real (`err`, não outra chave: só essa o Pino serializa).
 - [ ] **Rollback ensaiado** com uma versão deliberadamente quebrada.
 - [ ] **Restauração de backup ensaiada** em banco descartável.
 - [ ] Runbook validado por alguém que não fez o provisionamento.

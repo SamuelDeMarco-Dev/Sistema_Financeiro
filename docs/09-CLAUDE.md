@@ -26,14 +26,14 @@ Este documento é lido pelo Claude Code antes de gerar qualquer código neste re
 
 **Gerenciador de Finanças (PFM)** — plataforma web de gestão financeira pessoal **e compartilhada**. O diferencial é tratar finanças de grupo (casal, família, república, sócios) como recurso de primeira classe, no mesmo sistema das finanças individuais.
 
-| Aspecto | Definição |
-| ------- | --------- |
-| Stack backend | Node.js 22 LTS · Express · TypeScript estrito · Prisma 6 · PostgreSQL 16 · Zod · Vitest |
-| Stack frontend | React 18 · Vite 5 · TypeScript · TailwindCSS · Shadcn/UI · React Query v5 · React Hook Form · Recharts |
-| Infra | Docker · PM2 cluster · Nginx · GitHub Actions · VPS Hostinger |
-| Idioma do domínio | **pt-BR** — classes, pastas, entidades, tabelas, colunas, rotas |
-| Arquitetura backend | Camadas: `rota → controlador → serviço → repositório → banco` |
-| Arquitetura frontend | *Feature Based*: `funcionalidades/<dominio>/` autocontidas |
+| Aspecto              | Definição                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| Stack backend        | Node.js 22 LTS · Express · TypeScript estrito · Prisma 6 · PostgreSQL 16 · Zod · Vitest                |
+| Stack frontend       | React 18 · Vite 5 · TypeScript · TailwindCSS · Shadcn/UI · React Query v5 · React Hook Form · Recharts |
+| Infra                | Docker · PM2 cluster · Nginx · GitHub Actions · VPS Hostinger                                          |
+| Idioma do domínio    | **pt-BR** — classes, pastas, entidades, tabelas, colunas, rotas                                        |
+| Arquitetura backend  | Camadas: `rota → controlador → serviço → repositório → banco`                                          |
+| Arquitetura frontend | _Feature Based_: `funcionalidades/<dominio>/` autocontidas                                             |
 
 **Natureza do sistema.** Este é um sistema **financeiro**. Um erro de centavo é um defeito, não um arredondamento aceitável. Um saldo errado destrói a confiança do usuário no produto inteiro. Precisão e correção têm precedência sobre elegância, brevidade e velocidade de entrega.
 
@@ -43,15 +43,15 @@ Este documento é lido pelo Claude Code antes de gerar qualquer código neste re
 
 Antes de escrever código, leia — **na ordem** — o que for pertinente à tarefa:
 
-| # | Documento | Quando é obrigatório |
-| - | --------- | -------------------- |
-| 1 | [07-ISSUES.md](07-ISSUES.md) | **Sempre.** Localize a issue: ela é o contrato de escopo. |
-| 2 | [05-DEVELOPMENT.md](05-DEVELOPMENT.md) | **Sempre.** Convenções, nomenclatura, antipadrões. |
-| 3 | [02-ARCHITECTURE.md](02-ARCHITECTURE.md) | Sempre que criar arquivo novo ou tocar em camadas. |
-| 4 | [01-SPECIFICATION.md](01-SPECIFICATION.md) §5–6 | Sempre que a issue citar `RF-xx` ou `RN-xx`. |
-| 5 | [03-DATABASE.md](03-DATABASE.md) | Ao tocar em schema, migration, consulta ou índice. |
-| 6 | [04-API.md](04-API.md) | Ao criar ou alterar endpoint, ou consumi-lo no frontend. |
-| 7 | [08-CICD.md](08-CICD.md) | Ao tocar em Docker, workflow ou infraestrutura. |
+| #   | Documento                                       | Quando é obrigatório                                      |
+| --- | ----------------------------------------------- | --------------------------------------------------------- |
+| 1   | [07-ISSUES.md](07-ISSUES.md)                    | **Sempre.** Localize a issue: ela é o contrato de escopo. |
+| 2   | [05-DEVELOPMENT.md](05-DEVELOPMENT.md)          | **Sempre.** Convenções, nomenclatura, antipadrões.        |
+| 3   | [02-ARCHITECTURE.md](02-ARCHITECTURE.md)        | Sempre que criar arquivo novo ou tocar em camadas.        |
+| 4   | [01-SPECIFICATION.md](01-SPECIFICATION.md) §5–6 | Sempre que a issue citar `RF-xx` ou `RN-xx`.              |
+| 5   | [03-DATABASE.md](03-DATABASE.md)                | Ao tocar em schema, migration, consulta ou índice.        |
+| 6   | [04-API.md](04-API.md)                          | Ao criar ou alterar endpoint, ou consumi-lo no frontend.  |
+| 7   | [08-CICD.md](08-CICD.md)                        | Ao tocar em Docker, workflow ou infraestrutura.           |
 
 **Não presuma.** Se a issue diz "conforme RN-21", abra a RN-21 e leia o texto. As regras deste projeto têm exceções e casos-limite que não são adivinháveis.
 
@@ -101,7 +101,7 @@ const total = valores.reduce((acc, v) => acc + Number(v), 0);
 
 **R13.** Recurso de outro usuário responde `404`, não `403` — `403` confirmaria a existência do recurso a quem não pode vê-lo (RN-51).
 
-**R14.** Toda entrada externa passa por *schema* Zod na borda. O DTO é **inferido** do schema (`z.infer`), nunca declarado à parte.
+**R14.** Toda entrada externa passa por _schema_ Zod na borda. O DTO é **inferido** do schema (`z.infer`), nunca declarado à parte.
 
 ### 3.4 Nomenclatura
 
@@ -211,7 +211,7 @@ import { z } from 'zod';
 const valorMonetario = z
   .string()
   .regex(/^\d{1,12}(\.\d{1,2})?$/, 'Valor inválido. Use o formato 1234.56.')
-  .refine((v) => Number(v) > 0, 'O valor deve ser maior que zero.');  // RN-08
+  .refine((v) => Number(v) > 0, 'O valor deve ser maior que zero.'); // RN-08
 
 export const criarMovimentacaoSchema = z.object({
   body: z
@@ -225,13 +225,10 @@ export const criarMovimentacaoSchema = z.object({
       cartaoId: z.string().cuid().optional(),
       categoriaId: z.string().cuid(),
     })
-    .refine(
-      (d) => [d.contaId, d.contaCompartilhadaId, d.cartaoId].filter(Boolean).length === 1,
-      {
-        message: 'Informe exatamente um destino: contaId, contaCompartilhadaId ou cartaoId.',
-        path: ['contaId'],
-      },
-    ),  // RN-09
+    .refine((d) => [d.contaId, d.contaCompartilhadaId, d.cartaoId].filter(Boolean).length === 1, {
+      message: 'Informe exatamente um destino: contaId, contaCompartilhadaId ou cartaoId.',
+      path: ['contaId'],
+    }), // RN-09
 });
 
 export type CriarMovimentacaoDTO = z.infer<typeof criarMovimentacaoSchema>['body'];
@@ -265,7 +262,7 @@ export class MovimentacaoRepositorio {
 
   /** Filtro base aplicado a TODA consulta de domínio. */
   private filtroBase(): Prisma.MovimentacaoWhereInput {
-    return { excluidoEm: null, ehModeloRecorrencia: false };  // RN-16, RN-17
+    return { excluidoEm: null, ehModeloRecorrencia: false }; // RN-16, RN-17
   }
 }
 ```
@@ -307,16 +304,11 @@ export class MovimentacaoServico {
 
     this.validarCompatibilidadeCategoria(categoria, dados.tipo);
 
-    return prisma.$transaction((tx) =>
-      this.repositorio.criar({ ...dados, usuarioId }, tx),
-    );  // RN-55
+    return prisma.$transaction((tx) => this.repositorio.criar({ ...dados, usuarioId }, tx)); // RN-55
   }
 
   /** RN-10: o tipo da categoria deve ser compatível com o tipo da movimentação. */
-  private validarCompatibilidadeCategoria(
-    categoria: Categoria,
-    tipo: TipoMovimentacao,
-  ): void {
+  private validarCompatibilidadeCategoria(categoria: Categoria, tipo: TipoMovimentacao): void {
     if (categoria.tipo === 'AMBOS') return;
     if (categoria.tipo !== tipo) {
       throw new RegraNegocioErro(
@@ -408,16 +400,14 @@ describe('MovimentacaoServico.criar', () => {
   it('lança NaoEncontradoErro quando a conta é de outro usuário (RN-51)', async () => {
     contaRepositorio.buscarPorId.mockResolvedValue(fabricarConta({ usuarioId: 'OUTRO' }));
 
-    await expect(servico.criar('u1', fabricarDadosDespesa()))
-      .rejects.toThrow(NaoEncontradoErro);
+    await expect(servico.criar('u1', fabricarDadosDespesa())).rejects.toThrow(NaoEncontradoErro);
   });
 
   it('lança RegraNegocioErro com categoria de tipo incompatível (RN-10)', async () => {
     contaRepositorio.buscarPorId.mockResolvedValue(fabricarConta({ usuarioId: 'u1' }));
     categoriaRepositorio.buscarPorId.mockResolvedValue(fabricarCategoria({ tipo: 'RECEITA' }));
 
-    await expect(servico.criar('u1', fabricarDadosDespesa()))
-      .rejects.toThrow(RegraNegocioErro);
+    await expect(servico.criar('u1', fabricarDadosDespesa())).rejects.toThrow(RegraNegocioErro);
   });
 });
 ```
@@ -425,7 +415,7 @@ describe('MovimentacaoServico.criar', () => {
 ### 5.7 Hook do frontend
 
 ```ts
-// frontend/src/funcionalidades/movimentacoes/hooks/usarMovimentacoes.ts
+// frontend/src/funcionalidades/movimentacoes/hooks/useMovimentacoes.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { movimentacaoServico } from '../servicos/movimentacao.servico';
 import { chavesContas } from '@/funcionalidades/contas/hooks/chaves';
@@ -439,7 +429,7 @@ export const chavesMovimentacoes = {
   detalhe: (id: string) => ['movimentacoes', 'detalhe', id] as const,
 };
 
-export function usarMovimentacoes(filtros: FiltroMovimentacao) {
+export function useMovimentacoes(filtros: FiltroMovimentacao) {
   return useQuery({
     queryKey: chavesMovimentacoes.lista(filtros),
     queryFn: () => movimentacaoServico.listar(filtros),
@@ -468,7 +458,7 @@ export function usarCriarMovimentacao() {
 
 ```tsx
 // frontend/src/funcionalidades/movimentacoes/componentes/ListaMovimentacoes.tsx
-import { usarMovimentacoes } from '../hooks/usarMovimentacoes';
+import { useMovimentacoes } from '../hooks/useMovimentacoes';
 import { CartaoMovimentacao } from './CartaoMovimentacao';
 import { EsqueletoLista, EstadoErro, EstadoVazio } from '@/componentes/feedback';
 import type { FiltroMovimentacao } from '../tipos';
@@ -479,7 +469,7 @@ interface ListaMovimentacoesProps {
 }
 
 export function ListaMovimentacoes({ filtros, onNova }: ListaMovimentacoesProps) {
-  const { data, isLoading, isError, error, refetch } = usarMovimentacoes(filtros);
+  const { data, isLoading, isError, error, refetch } = useMovimentacoes(filtros);
 
   // Os quatro estados obrigatórios, como retornos antecipados
   if (isLoading) return <EsqueletoLista quantidade={5} />;
@@ -541,7 +531,7 @@ Percorra antes de considerar a tarefa concluída.
 - [ ] Os quatro estados implementados: carregando, vazio, erro, conteúdo.
 - [ ] Invalidação em cascata revisada em toda mutação.
 - [ ] Tokens semânticos do Design System; nenhuma cor crua do Tailwind.
-- [ ] Testado em 320 px, 768 px e 1440 px, sem *scroll* horizontal na página.
+- [ ] Testado em 320 px, 768 px e 1440 px, sem _scroll_ horizontal na página.
 - [ ] Operável por teclado; `label` em todo campo; foco visível.
 - [ ] Nenhuma informação transmitida **só** por cor — sempre com sinal, ícone ou texto.
 - [ ] Nenhuma funcionalidade importada de outra `funcionalidades/*`.
@@ -599,21 +589,23 @@ where: { usuarioId, excluidoEm: null, ehModeloRecorrencia: false }
 
 ```ts
 // ❌ A lista atualiza, o saldo do cartão de conta continua o antigo
-onSuccess: () => cliente.invalidateQueries({ queryKey: ['movimentacoes'] })
+onSuccess: () => cliente.invalidateQueries({ queryKey: ['movimentacoes'] });
 
 // ✅ R20
 onSuccess: () => {
   cliente.invalidateQueries({ queryKey: chavesMovimentacoes.todas });
   cliente.invalidateQueries({ queryKey: chavesContas.todas });
   cliente.invalidateQueries({ queryKey: chavesDashboard.todas });
-}
+};
 ```
 
 ### 7.6 Autorização só no frontend
 
 ```tsx
 // ❌ Esconder o botão não impede a requisição via curl
-{ehAdministrador && <BotaoExcluir onClick={excluir} />}
+{
+  ehAdministrador && <BotaoExcluir onClick={excluir} />;
+}
 ```
 
 O botão condicional está correto como UX, mas o serviço **também** precisa verificar o papel (R12). Frontend esconde; backend decide.
@@ -636,10 +628,14 @@ Use `ProibidoErro` apenas quando o usuário **pode** ver o recurso mas não pode
 
 ```ts
 // ❌ Compra no dia exato do fechamento cai na fatura errada
-if (dataCompra.getDate() > diaFechamento) { /* ciclo seguinte */ }
+if (dataCompra.getDate() > diaFechamento) {
+  /* ciclo seguinte */
+}
 
 // ✅ RN-40: a partir do dia do fechamento, inclusive, é o ciclo seguinte
-if (dataCompra.getDate() >= diaFechamento) { /* ciclo seguinte */ }
+if (dataCompra.getDate() >= diaFechamento) {
+  /* ciclo seguinte */
+}
 ```
 
 ### 7.9 Dia 31 em mês de 30 dias
@@ -700,15 +696,15 @@ if (process.env.NODE_APP_INSTANCE === '0' || !process.env.NODE_APP_INSTANCE) {
 
 Interrompa e pergunte, em vez de decidir sozinho, quando:
 
-| Situação | Por quê |
-| -------- | ------- |
-| A documentação **se contradiz** entre dois arquivos | Escolher um lado silenciosamente propaga a inconsistência. Aponte os dois trechos. |
-| A issue exige algo que **viola** uma regra da §3 | Pode ser erro na issue ou exceção legítima — os dois exigem decisão explícita. |
-| A regra de negócio tem um caso-limite **não coberto** pela especificação | Ex.: "e se o orçamento for criado no dia 31?". Pergunte em vez de inventar. |
-| Falta uma **dependência** (`Depende de: #N` não implementada) | Implementar de carona estoura o escopo da issue e da revisão. |
-| A implementação correta exige **mudança de contrato** de API | Contrato quebrado afeta o frontend. Precisa de decisão e atualização de `04-API.md`. |
-| Uma migration seria **destrutiva** | Exige plano de duas fases ([03-DATABASE.md §9.1](03-DATABASE.md#91-regras)) e aprovação. |
-| A tarefa parece exigir **arquitetura nova** (fila, cache distribuído, WebSocket) | Não está previsto. Pode haver solução mais simples dentro do que existe. |
+| Situação                                                                         | Por quê                                                                                  |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| A documentação **se contradiz** entre dois arquivos                              | Escolher um lado silenciosamente propaga a inconsistência. Aponte os dois trechos.       |
+| A issue exige algo que **viola** uma regra da §3                                 | Pode ser erro na issue ou exceção legítima — os dois exigem decisão explícita.           |
+| A regra de negócio tem um caso-limite **não coberto** pela especificação         | Ex.: "e se o orçamento for criado no dia 31?". Pergunte em vez de inventar.              |
+| Falta uma **dependência** (`Depende de: #N` não implementada)                    | Implementar de carona estoura o escopo da issue e da revisão.                            |
+| A implementação correta exige **mudança de contrato** de API                     | Contrato quebrado afeta o frontend. Precisa de decisão e atualização de `04-API.md`.     |
+| Uma migration seria **destrutiva**                                               | Exige plano de duas fases ([03-DATABASE.md §9.1](03-DATABASE.md#91-regras)) e aprovação. |
+| A tarefa parece exigir **arquitetura nova** (fila, cache distribuído, WebSocket) | Não está previsto. Pode haver solução mais simples dentro do que existe.                 |
 
 Não pergunte, decida e siga, quando: o padrão está estabelecido no código vizinho; a convenção está em [05-DEVELOPMENT.md](05-DEVELOPMENT.md); é escolha de nome dentro do dicionário; é detalhe de implementação sem efeito no contrato.
 
@@ -760,13 +756,13 @@ docker compose logs -f postgres
 docker compose down -v                    # remove volumes (perde dados locais)
 ```
 
-| Serviço | Endereço |
-| ------- | -------- |
-| API | http://localhost:3333 |
-| Documentação da API | http://localhost:3333/api/docs |
-| Frontend | http://localhost:5173 |
-| Prisma Studio | http://localhost:5555 |
-| Mailpit (e-mails capturados) | http://localhost:8025 |
+| Serviço                      | Endereço                       |
+| ---------------------------- | ------------------------------ |
+| API                          | http://localhost:3333          |
+| Documentação da API          | http://localhost:3333/api/docs |
+| Frontend                     | http://localhost:5173          |
+| Prisma Studio                | http://localhost:5555          |
+| Mailpit (e-mails capturados) | http://localhost:8025          |
 
 ---
 
