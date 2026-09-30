@@ -215,7 +215,9 @@ jobs:
           SMTP_USUARIO=${{ secrets.SMTP_USUARIO }}
           SMTP_SENHA=${{ secrets.SMTP_SENHA }}
           SMTP_SEGURO=true
-          EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
+          # Aspeado: valores com "<"/">" (nome de exibicao do remetente)
+          # quebram um eventual "source .env" em bash — ver deploy-producao.yml.
+          EMAIL_REMETENTE="${{ secrets.EMAIL_REMETENTE }}"
           DIRETORIO_UPLOADS=/app/backend/uploads
           TAMANHO_MAXIMO_ANEXO_MB=5
           TAMANHO_MAXIMO_AVATAR_MB=2
