@@ -231,7 +231,13 @@ jobs:
           SMTP_USUARIO=${{ secrets.SMTP_USUARIO }}
           SMTP_SENHA=${{ secrets.SMTP_SENHA }}
           SMTP_SEGURO=true
-          EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
+          # Aspeado: backup.sh faz "source .env" antes do pg_dump (nao so
+          # docker compose le este arquivo) — sem aspas, o "<" e ">" do
+          # nome de exibicao ("Nome <email>") viram redirecionamento para o
+          # bash e quebram o source com "syntax error near unexpected
+          # token newline" (staging nunca chama backup.sh, por isso nunca
+          # foi exercitado ate o primeiro deploy real de producao).
+          EMAIL_REMETENTE="${{ secrets.EMAIL_REMETENTE }}"
           DIRETORIO_UPLOADS=/app/backend/uploads
           TAMANHO_MAXIMO_ANEXO_MB=5
           TAMANHO_MAXIMO_AVATAR_MB=2

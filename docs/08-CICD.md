@@ -1019,7 +1019,7 @@ jobs:
           SMTP_USUARIO=${{ secrets.SMTP_USUARIO }}
           SMTP_SENHA=${{ secrets.SMTP_SENHA }}
           SMTP_SEGURO=true
-          EMAIL_REMETENTE=${{ secrets.EMAIL_REMETENTE }}
+          EMAIL_REMETENTE="${{ secrets.EMAIL_REMETENTE }}"
           DIRETORIO_UPLOADS=/app/backend/uploads
           TAMANHO_MAXIMO_ANEXO_MB=5
           TAMANHO_MAXIMO_AVATAR_MB=2
@@ -1098,6 +1098,7 @@ Detalhes que evitam problemas reais:
 
 - **`cancel-in-progress: false`.** Cancelar um deploy no meio deixa o sistema em estado indeterminado — migrations aplicadas com imagem antiga, por exemplo.
 - **Heredoc do `.env` citado (`<<'ENVEOF'`).** Sem aspas no delimitador, a shell do runner reexpandiria localmente qualquer `$` que apareça dentro do VALOR de um secret (já substituído pelo GitHub Actions antes da shell rodar) — achado com `shellcheck` (SC2087) rodando os workflows.
+- **`EMAIL_REMETENTE` aspeado dentro do `.env` gerado.** O `backup.sh` (§9.1) faz `source .env` antes do `pg_dump`, não só o `docker compose`; sem aspas, um remetente no formato `Nome <email>` faz o bash interpretar `<`/`>` como redirecionamento e abortar o `source` com `syntax error near unexpected token 'newline'` — achado no primeiro deploy real de produção (homologação nunca chama `backup.sh`, então nunca exercitou esse caminho).
 - **`--no-deps api`.** Sobe só a API; o PostgreSQL não é reiniciado a cada deploy.
 - **`migrate deploy` em container efêmero.** Roda antes de a nova versão receber tráfego, e sua falha interrompe o deploy sem tocar no container que está servindo.
 - **Verificação externa após a interna.** A checagem interna valida o container; a externa valida o caminho completo, incluindo Nginx e TLS.
