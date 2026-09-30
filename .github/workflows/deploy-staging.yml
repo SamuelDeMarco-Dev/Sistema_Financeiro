@@ -141,10 +141,22 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
+    # Mesma razao de deploy-producao.yml: sem escopo de leitura aqui, o
+    # GITHUB_TOKEN usado no login abaixo nao consegue puxar a imagem que
+    # `construir` acabou de publicar (privada por padrao no GHCR).
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { name: frontend-dist-staging }
+
+      # Mesma normalizacao de "construir" — GITHUB_REPOSITORIO alimenta
+      # ${GITHUB_REPOSITORIO} dentro de docker-compose.prod.yml na VPS, e
+      # precisa bater exatamente com o nome minusculo usado no push.
+      - id: repositorio
+        run: echo "minusculo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Configurar SSH
         run: |
@@ -152,6 +164,16 @@ jobs:
           echo "${{ secrets.VPS_CHAVE_SSH }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p ${{ secrets.VPS_PORTA_SSH }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # Imagem privada por padrao no GHCR — sem login, o pull na VPS
+      # (maquina separada do runner que fez o push) falha com
+      # "unauthorized" (08-CICD.md nao cobria este passo).
+      - name: Login no GHCR a partir da VPS
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.VPS_PORTA_SSH }} \
+            ${{ secrets.VPS_USUARIO }}@${{ secrets.VPS_HOST }} \
+            "docker login ${{ env.REGISTRO }} -u ${{ github.actor }} --password-stdin" \
+            <<< "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Enviar artefatos e scripts
         run: |
@@ -201,6 +223,7 @@ jobs:
           RATE_LIMIT_MAXIMO=1000
           NIVEL_LOG=info
           HABILITAR_TAREFAS_AGENDADAS=false
+          TOKEN_METRICAS=${{ secrets.TOKEN_METRICAS }}
           ENVEOF
 
       # Sem backup pré-migration (dispensável em staging, dados
@@ -221,7 +244,14 @@ jobs:
           docker compose -f docker-compose.prod.yml --profile migrate pull migrator
 
           echo "▶ Aplicando migrations"
-          docker compose -f docker-compose.prod.yml run --rm migrator
+          # -T (sem pseudo-tty) + stdin de /dev/null: sem isto, "run"
+          # herda o stdin deste script inteiro (o heredoc do SSH) e engole
+          # tudo que vem depois como entrada do container — o restante do
+          # deploy (subir a api, checar saude, publicar o frontend) nunca
+          # roda, mas como a migration por si so teve sucesso, o script
+          # termina com exit 0 e o job aparece verde sem ter feito nada
+          # disso (achado no primeiro deploy real, nunca testado antes).
+          docker compose -f docker-compose.prod.yml run --rm -T migrator < /dev/null
 
           echo "▶ Subindo a nova versão"
           docker compose -f docker-compose.prod.yml up -d --no-deps api

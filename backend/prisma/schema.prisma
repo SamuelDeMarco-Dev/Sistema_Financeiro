@@ -91,6 +91,22 @@ enum SituacaoConvite {
   EXPIRADO
 }
 
+// ═══════════════════════════════════════════════════════════
+//  METAS
+// ═══════════════════════════════════════════════════════════
+
+enum SituacaoMeta {
+  ATIVA
+  PAUSADA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TipoMovimentacaoMeta {
+  APORTE
+  RESGATE
+}
+
 model Usuario {
   id        String @id @default(cuid())
   nome      String @db.VarChar(120)
@@ -120,6 +136,7 @@ model Usuario {
   etiquetas         Etiqueta[]
   movimentacoes     Movimentacao[]
   comprasParceladas CompraParcelada[]
+  metas             Meta[]
   anexos            Anexo[]
 
   membros           MembroCompartilhado[]
@@ -204,6 +221,7 @@ model ContaCompartilhada {
   contas        Conta[]
   categorias    Categoria[]
   movimentacoes Movimentacao[]
+  metas         Meta[]
   etiquetas     Etiqueta[]
 
   @@index([criadoPorId])
@@ -295,6 +313,7 @@ model Conta {
   usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
   movimentacoes      Movimentacao[]
+  movimentacoesMeta  MovimentacaoMeta[]
 
   @@index([usuarioId, excluidoEm, arquivadaEm])
   @@index([contaCompartilhadaId, excluidoEm])
@@ -449,8 +468,9 @@ model Movimentacao {
   modeloRecorrencia Movimentacao?  @relation("OcorrenciasRecorrencia", fields: [recorrenciaId], references: [id], onDelete: Cascade)
   ocorrencias       Movimentacao[] @relation("OcorrenciasRecorrencia")
 
-  anexos    Anexo[]
-  etiquetas MovimentacaoEtiqueta[]
+  anexos           Anexo[]
+  etiquetas        MovimentacaoEtiqueta[]
+  movimentacaoMeta MovimentacaoMeta?
 
   @@index([contaId, situacao, dataEfetivacao])
   @@index([usuarioId, dataCompetencia, tipo])
@@ -484,4 +504,57 @@ model Anexo {
   @@index([movimentacaoId])
   @@index([usuarioId])
   @@map("anexos")
+}
+
+model Meta {
+  id String @id @default(cuid())
+
+  /// Escopo XOR: usuarioId OU contaCompartilhadaId. Ver CHECK chk_meta_escopo.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome           String  @db.VarChar(120)
+  descricao      String? @db.VarChar(500)
+  valorAlvo      Decimal @map("valor_alvo") @db.Decimal(14, 2)
+  /// Derivado de MovimentacaoMeta; recalculado a cada aporte/resgate na mesma transacao.
+  valorAcumulado Decimal @default(0) @map("valor_acumulado") @db.Decimal(14, 2)
+
+  prazoEm     DateTime?    @map("prazo_em") @db.Date
+  cor         String       @default("#16A34A") @db.VarChar(9)
+  icone       String       @default("target") @db.VarChar(40)
+  situacao    SituacaoMeta @default(ATIVA)
+  concluidaEm DateTime?    @map("concluida_em") @db.Timestamptz(3)
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      MovimentacaoMeta[]
+
+  @@index([usuarioId, situacao])
+  @@index([contaCompartilhadaId, situacao])
+  @@map("metas")
+}
+
+model MovimentacaoMeta {
+  id             String  @id @default(cuid())
+  metaId         String  @map("meta_id")
+  contaId        String? @map("conta_id")
+  movimentacaoId String? @unique @map("movimentacao_id")
+
+  tipo       TipoMovimentacaoMeta
+  valor      Decimal              @db.Decimal(14, 2)
+  data       DateTime             @db.Date
+  observacao String?              @db.VarChar(500)
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  meta         Meta          @relation(fields: [metaId], references: [id], onDelete: Cascade)
+  conta        Conta?        @relation(fields: [contaId], references: [id], onDelete: SetNull)
+  movimentacao Movimentacao? @relation(fields: [movimentacaoId], references: [id], onDelete: SetNull)
+
+  @@index([metaId, data])
+  @@map("movimentacoes_meta")
 }
