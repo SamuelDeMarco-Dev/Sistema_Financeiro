@@ -49,51 +49,51 @@ Além dos critérios específicos de cada uma:
 - [ ] Documentação atualizada — em especial `04-API.md` quando o contrato muda.
 - [ ] Nenhum defeito conhecido de severidade alta em aberto.
 - [ ] Verificação manual dos fluxos da Milestone em 320 px, 768 px e 1440 px.
-- [ ] Deploy em produção bem-sucedido, com *health check* aprovado (da M5 em diante).
+- [ ] Deploy em produção bem-sucedido, com _health check_ aprovado (da M5 em diante).
 
 ### 1.3 Estimativas
 
 As estimativas estão em **pontos** (escala Fibonacci: 1, 2, 3, 5, 8, 13), não em dias. O ponto expressa esforço e incerteza relativos, e a velocidade real do time é medida depois das duas primeiras Milestones — antes disso qualquer conversão para calendário é chute.
 
-| Pontos | Perfil da tarefa |
-| ------ | ---------------- |
-| 1 | Trivial: configuração, ajuste isolado |
-| 2 | CRUD simples, componente sem lógica |
-| 3 | CRUD com validações, tela com estados |
-| 5 | Regra de negócio não trivial, integração entre camadas |
-| 8 | Funcionalidade complexa com múltiplos casos-limite |
-| 13 | Deve ser dividida antes de entrar em execução |
+| Pontos | Perfil da tarefa                                       |
+| ------ | ------------------------------------------------------ |
+| 1      | Trivial: configuração, ajuste isolado                  |
+| 2      | CRUD simples, componente sem lógica                    |
+| 3      | CRUD com validações, tela com estados                  |
+| 5      | Regra de negócio não trivial, integração entre camadas |
+| 8      | Funcionalidade complexa com múltiplos casos-limite     |
+| 13     | Deve ser dividida antes de entrar em execução          |
 
 ---
 
 ## 2. Visão geral das Milestones
 
-| # | Milestone | Versão | Pontos | Issues | Entregável |
-| - | --------- | ------ | -----: | -----: | ---------- |
-| **M0** | Fundação e Infraestrutura | — | 34 | 9 | Repositório operante, Docker, CI, padrões aplicados |
-| **M1** | Autenticação e Perfil | `0.1.0` | 55 | 12 | Usuário se cadastra, verifica e-mail, entra e edita o perfil |
-| **M2** | Contas Financeiras e Categorias | `0.2.0` | 42 | 10 | Usuário cria contas e categorias e vê saldos |
-| **M3** | Movimentações e Transferências | `0.3.0` | 76 | 14 | Registro completo de receitas, despesas e transferências |
-| **M4** | Dashboard e Relatórios | `0.4.0` | 50 | 10 | Visão consolidada e relatórios mensal/anual |
-| **M5** | CI/CD e Deploy em Produção | **`1.0.0`** | 42 | 10 | **MVP em produção**, deploy automático com rollback |
-| **M6** | Contas Compartilhadas | `1.1.0` | 71 | 13 | Grupos financeiros com convites e permissões |
-| **M7** | Metas Financeiras | `1.1.0` | 29 | 7 | Metas com aportes e acompanhamento |
-| **M8** | Cartões, Faturas e Parcelamentos | `1.2.0` | 63 | 12 | Ciclo completo de cartão de crédito |
-| **M9** | Orçamentos e Notificações | `1.2.0` | 52 | 11 | Orçamento por categoria com alertas |
-| **M10** | Dashboard Analítico e Exportações | `2.0.0` | 47 | 10 | Análises avançadas e exportação PDF/XLSX/CSV |
-| **M11** | Pesquisa, Auditoria e Observabilidade | `2.0.0` | 42 | 10 | Pesquisa global, auditoria e maturidade operacional |
-| | **Total** | | **603** | **128** | |
+| #       | Milestone                             | Versão      |  Pontos |  Issues | Entregável                                                   |
+| ------- | ------------------------------------- | ----------- | ------: | ------: | ------------------------------------------------------------ |
+| **M0**  | Fundação e Infraestrutura             | —           |      34 |       9 | Repositório operante, Docker, CI, padrões aplicados          |
+| **M1**  | Autenticação e Perfil                 | `0.1.0`     |      55 |      12 | Usuário se cadastra, verifica e-mail, entra e edita o perfil |
+| **M2**  | Contas Financeiras e Categorias       | `0.2.0`     |      42 |      10 | Usuário cria contas e categorias e vê saldos                 |
+| **M3**  | Movimentações e Transferências        | `0.3.0`     |      76 |      14 | Registro completo de receitas, despesas e transferências     |
+| **M4**  | Dashboard e Relatórios                | `0.4.0`     |      50 |      10 | Visão consolidada e relatórios mensal/anual                  |
+| **M5**  | CI/CD e Deploy em Produção            | **`1.0.0`** |      42 |      10 | **MVP em produção**, deploy automático com rollback          |
+| **M6**  | Contas Compartilhadas                 | `1.1.0`     |      71 |      13 | Grupos financeiros com convites e permissões                 |
+| **M7**  | Metas Financeiras                     | `1.1.0`     |      29 |       7 | Metas com aportes e acompanhamento                           |
+| **M8**  | Cartões, Faturas e Parcelamentos      | `1.2.0`     |      63 |      12 | Ciclo completo de cartão de crédito                          |
+| **M9**  | Orçamentos e Notificações             | `1.2.0`     |      52 |      11 | Orçamento por categoria com alertas                          |
+| **M10** | Dashboard Analítico e Exportações     | `2.0.0`     |      47 |      10 | Análises avançadas e exportação PDF/XLSX/CSV                 |
+| **M11** | Pesquisa, Auditoria e Observabilidade | `2.0.0`     |      42 |      10 | Pesquisa global, auditoria e maturidade operacional          |
+|         | **Total**                             |             | **603** | **128** |                                                              |
 
 ### 2.1 Marcos de valor
 
-| Marco | Milestone | Significado |
-| ----- | --------- | ----------- |
-| **Primeiro login funcional** | M1 | Autenticação de ponta a ponta |
-| **Primeiro registro financeiro** | M3 | O produto passa a ser útil |
-| **MVP em produção** | M5 | Usuários reais podem usar |
-| **Diferencial competitivo** | M6 | Contas compartilhadas — a razão de existir do produto |
-| **Gestão financeira completa** | M9 | Cartões, orçamentos e notificações |
-| **Plataforma madura** | M11 | Análise, auditoria e operação observável |
+| Marco                            | Milestone | Significado                                           |
+| -------------------------------- | --------- | ----------------------------------------------------- |
+| **Primeiro login funcional**     | M1        | Autenticação de ponta a ponta                         |
+| **Primeiro registro financeiro** | M3        | O produto passa a ser útil                            |
+| **MVP em produção**              | M5        | Usuários reais podem usar                             |
+| **Diferencial competitivo**      | M6        | Contas compartilhadas — a razão de existir do produto |
+| **Gestão financeira completa**   | M9        | Cartões, orçamentos e notificações                    |
+| **Plataforma madura**            | M11       | Análise, auditoria e operação observável              |
 
 ---
 
@@ -191,7 +191,7 @@ Ciclo completo de identidade: cadastro, verificação de e-mail, login, renovaç
 - Renovação com rotação e detecção de reuso de token revogado.
 - Logout individual e global; listagem e revogação de sessões.
 - Recuperação e redefinição de senha; alteração de senha autenticada.
-- *Rate limit* nas rotas sensíveis (RN-54).
+- _Rate limit_ nas rotas sensíveis (RN-54).
 - Templates de e-mail (verificação, recuperação) em pt-BR.
 - Frontend: telas de login, cadastro, verificação, esqueci/redefinir senha, configurações de perfil, upload de avatar, alternância de tema.
 - `ContextoAutenticacao`, `RotaProtegida`, fila única de renovação no interceptor.
@@ -208,7 +208,7 @@ Usuário se cadastra, recebe e-mail no Mailpit, verifica, entra, permanece auten
 - [ ] Reuso de refresh token revogado invalida toda a família de tokens.
 - [ ] Login em conta não verificada responde `403 EMAIL_NAO_VERIFICADO`.
 - [ ] 5 tentativas falhas em 15 min bloqueiam temporariamente (RN-54).
-- [ ] Senha nunca aparece em log, resposta ou *stack trace*.
+- [ ] Senha nunca aparece em log, resposta ou _stack trace_.
 - [ ] Cobertura ≥ 85% em `autenticacao.servico.ts`.
 
 #### Riscos
@@ -271,7 +271,7 @@ A Milestone mais densa e mais importante. Entrega o núcleo do produto: registra
 - Edição e exclusão com escopo (`APENAS_ESTA` / `ESTA_E_FUTURAS` / `TODAS`).
 - Duplicação de movimentação.
 - Transferências como par vinculado, criadas e excluídas atomicamente (ADR-007).
-- Anexos com validação por *magic number* e entrega por rota autenticada.
+- Anexos com validação por _magic number_ e entrega por rota autenticada.
 - Aplicação de etiquetas.
 - Listagem com todos os filtros, paginação, ordenação e totalizadores.
 - Tarefas agendadas: `marcar-atrasadas`, `gerar-recorrencias`.
@@ -353,7 +353,7 @@ Tela inicial que responde em uma olhada "quanto tenho, quanto entrou, quanto sai
 - Provisionamento da VPS: usuário de deploy, Docker, Nginx, firewall, chaves SSH.
 - Nginx: TLS, proxy reverso, SPA estática, compressão, cabeçalhos de segurança, HSTS.
 - Certificado Let's Encrypt com renovação automática.
-- Workflow `deploy-producao.yml`: build → testes → imagem → push via SSH → migrations → *reload* → *health check* → rollback em falha.
+- Workflow `deploy-producao.yml`: build → testes → imagem → push via SSH → migrations → _reload_ → _health check_ → rollback em falha.
 - `GET /saude/prontidao` verificando banco, migrations e armazenamento.
 - Backup diário do PostgreSQL com retenção e dump pré-migration.
 - Logs estruturados com `requestId` e encerramento gracioso.
@@ -361,13 +361,13 @@ Tela inicial que responde em uma olhada "quanto tenho, quanto entrou, quanto sai
 
 #### Entregáveis
 
-Merge em `main` publica em produção sem intervenção manual; falha no *health check* reverte automaticamente para a versão anterior.
+Merge em `main` publica em produção sem intervenção manual; falha no _health check_ reverte automaticamente para a versão anterior.
 
 #### Critérios de fechamento
 
 - [ ] Merge em `main` publica sem passo manual.
-- [ ] Deploy sem *downtime* perceptível (verificado com requisições contínuas durante a publicação).
-- [ ] Falha deliberada no *health check* dispara rollback e a versão anterior volta a atender.
+- [ ] Deploy sem _downtime_ perceptível (verificado com requisições contínuas durante a publicação).
+- [ ] Falha deliberada no _health check_ dispara rollback e a versão anterior volta a atender.
 - [ ] HTTPS com nota A em SSL Labs; HTTP redireciona para HTTPS.
 - [ ] Certificado renova automaticamente (simulação com `certbot renew --dry-run`).
 - [ ] Backup diário executando; restauração testada em banco descartável.
@@ -517,7 +517,7 @@ Fechar o ciclo de controle: planejar limites de gasto, medir o consumo e avisar 
 - Alertas idempotentes por limiar de 80/90/100% (RN-50).
 - Tarefas `alertar-orcamentos` e `notificar-vencimentos`.
 - Preferências de notificação no perfil.
-- Frontend: página de orçamentos com barras e semáforo, central de notificações com *badge*, alertas no dashboard.
+- Frontend: página de orçamentos com barras e semáforo, central de notificações com _badge_, alertas no dashboard.
 
 #### Critérios de fechamento
 
@@ -545,7 +545,7 @@ Análise avançada e portabilidade dos dados.
 
 - Relatório comparativo entre dois períodos arbitrários.
 - Indicadores derivados: média de gastos, maior despesa, taxa de poupança, evolução patrimonial.
-- Gráficos adicionais: área, *heatmap* de gastos por dia da semana, barras empilhadas por categoria.
+- Gráficos adicionais: área, _heatmap_ de gastos por dia da semana, barras empilhadas por categoria.
 - Comparativo de 12 meses por categoria, conta e usuário (em grupos).
 - Exportação em PDF (com gráficos), XLSX e CSV.
 - Processamento assíncrono para relatórios grandes, com entrega por e-mail.
@@ -554,11 +554,11 @@ Análise avançada e portabilidade dos dados.
 #### Critérios de fechamento
 
 - [ ] Comparativo aceita períodos de durações diferentes e sinaliza a diferença ao usuário.
-- [ ] Exportação CSV abre corretamente no Excel em pt-BR (separador e *encoding* UTF-8 com BOM).
+- [ ] Exportação CSV abre corretamente no Excel em pt-BR (separador e _encoding_ UTF-8 com BOM).
 - [ ] PDF legível em A4, com gráficos e cabeçalho identificando período e escopo.
 - [ ] XLSX com valores como número (não texto), permitindo soma na planilha.
 - [ ] Relatório com mais de 5 000 linhas responde `202` e chega por e-mail.
-- [ ] *Heatmap* acessível: acompanhado de tabela equivalente (A11Y-04).
+- [ ] _Heatmap_ acessível: acompanhado de tabela equivalente (A11Y-04).
 - [ ] Nenhuma exportação vaza dado fora do escopo do solicitante.
 
 ---
@@ -603,26 +603,26 @@ Maturidade operacional: encontrar qualquer coisa, saber quem fez o quê e observ
 
 `MAJOR.MINOR.PATCH` — [SemVer](https://semver.org/lang/pt-BR/).
 
-| Componente | Incrementa quando |
-| ---------- | ----------------- |
-| `MAJOR` | Mudança incompatível no contrato de API |
-| `MINOR` | Funcionalidade nova compatível (fechamento de Milestone) |
-| `PATCH` | Correção compatível (hotfix) |
+| Componente | Incrementa quando                                        |
+| ---------- | -------------------------------------------------------- |
+| `MAJOR`    | Mudança incompatível no contrato de API                  |
+| `MINOR`    | Funcionalidade nova compatível (fechamento de Milestone) |
+| `PATCH`    | Correção compatível (hotfix)                             |
 
 ### 5.2 Mapa de versões
 
-| Versão | Milestone | Conteúdo |
-| ------ | --------- | -------- |
-| `0.1.0` | M1 | Autenticação e perfil |
-| `0.2.0` | M2 | Contas e categorias |
-| `0.3.0` | M3 | Movimentações e transferências |
-| `0.4.0` | M4 | Dashboard e relatórios |
-| **`1.0.0`** | M5 | **MVP em produção** |
-| `1.1.0` | M6, M7 | Contas compartilhadas e metas |
-| `1.2.0` | M8, M9 | Cartões, orçamentos e notificações |
-| **`2.0.0`** | M10, M11 | Analítico, exportações, pesquisa e auditoria |
+| Versão      | Milestone | Conteúdo                                     |
+| ----------- | --------- | -------------------------------------------- |
+| `0.1.0`     | M1        | Autenticação e perfil                        |
+| `0.2.0`     | M2        | Contas e categorias                          |
+| `0.3.0`     | M3        | Movimentações e transferências               |
+| `0.4.0`     | M4        | Dashboard e relatórios                       |
+| **`1.0.0`** | M5        | **MVP em produção**                          |
+| `1.1.0`     | M6, M7    | Contas compartilhadas e metas                |
+| `1.2.0`     | M8, M9    | Cartões, orçamentos e notificações           |
+| **`2.0.0`** | M10, M11  | Analítico, exportações, pesquisa e auditoria |
 
-`2.0.0` incrementa o *major* por consolidar o conjunto de recursos e permitir ajustes de contrato acumulados. Se nenhuma mudança incompatível ocorrer até lá, a versão será `1.3.0` — a decisão é tomada no fechamento de M10.
+`2.0.0` incrementa o _major_ por consolidar o conjunto de recursos e permitir ajustes de contrato acumulados. Se nenhuma mudança incompatível ocorrer até lá, a versão será `1.3.0` — a decisão é tomada no fechamento de M10.
 
 ### 5.3 CHANGELOG
 
@@ -632,18 +632,18 @@ Maturidade operacional: encontrar qualquer coisa, saber quem fez o quê e observ
 
 ## 6. Riscos
 
-| # | Risco | Impacto | Prob. | Mitigação |
-| - | ----- | :-----: | :---: | --------- |
-| R1 | Erro no cálculo de saldo passa para M4+ | **Alto** | Média | Cobertura ≥ 90% em serviços; 100% em `dinheiro.ts`; testes de invariante (soma de parcelas, saldo após ciclo completo de operações) |
-| R2 | Falha de autorização em contas compartilhadas | **Alto** | Média | Teste negativo obrigatório para cada combinação papel × ação; `minhasPermissoes` resolvido no servidor |
-| R3 | Deploy quebra produção sem rollback funcional | **Alto** | Baixa | *Health check* como portão; rollback ensaiado em M5; backup pré-migration |
-| R4 | Aritmética de datas em faturas (meses curtos, bissexto, DST) | Médio | **Alta** | 100% de cobertura em `data.ts`; casos-limite escritos antes da implementação |
-| R5 | Degradação de desempenho com o crescimento de `movimentacoes` | Médio | Média | Índices parciais desde M3; `EXPLAIN ANALYZE` obrigatório em PR que toca consulta |
-| R6 | Cache desatualizado exibindo saldo incorreto | Médio | **Alta** | Invalidação em cascata documentada; item obrigatório no checklist de PR |
-| R7 | M3 estourar o escopo e atrasar a cadeia até M5 | Médio | Média | Anexos e etiquetas são o corte previsto; regras de saldo nunca são cortadas |
-| R8 | Migration destrutiva com perda de dados | **Alto** | Baixa | Plano de duas fases obrigatório; dump automático pré-migration; SQL lido na revisão |
-| R9 | Vazamento de segredo no repositório | **Alto** | Baixa | Tudo em GitHub Secrets; `.env` no `.gitignore`; varredura de segredos no CI |
-| R10 | Documentação divergir do código | Médio | **Alta** | `04-API.md` no checklist de PR; contrato verificado em teste de integração |
+| #   | Risco                                                         | Impacto  |  Prob.   | Mitigação                                                                                                                           |
+| --- | ------------------------------------------------------------- | :------: | :------: | ----------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Erro no cálculo de saldo passa para M4+                       | **Alto** |  Média   | Cobertura ≥ 90% em serviços; 100% em `dinheiro.ts`; testes de invariante (soma de parcelas, saldo após ciclo completo de operações) |
+| R2  | Falha de autorização em contas compartilhadas                 | **Alto** |  Média   | Teste negativo obrigatório para cada combinação papel × ação; `minhasPermissoes` resolvido no servidor                              |
+| R3  | Deploy quebra produção sem rollback funcional                 | **Alto** |  Baixa   | _Health check_ como portão; rollback ensaiado em M5; backup pré-migration                                                           |
+| R4  | Aritmética de datas em faturas (meses curtos, bissexto, DST)  |  Médio   | **Alta** | 100% de cobertura em `data.ts`; casos-limite escritos antes da implementação                                                        |
+| R5  | Degradação de desempenho com o crescimento de `movimentacoes` |  Médio   |  Média   | Índices parciais desde M3; `EXPLAIN ANALYZE` obrigatório em PR que toca consulta                                                    |
+| R6  | Cache desatualizado exibindo saldo incorreto                  |  Médio   | **Alta** | Invalidação em cascata documentada; item obrigatório no checklist de PR                                                             |
+| R7  | M3 estourar o escopo e atrasar a cadeia até M5                |  Médio   |  Média   | Anexos e etiquetas são o corte previsto; regras de saldo nunca são cortadas                                                         |
+| R8  | Migration destrutiva com perda de dados                       | **Alto** |  Baixa   | Plano de duas fases obrigatório; dump automático pré-migration; SQL lido na revisão                                                 |
+| R9  | Vazamento de segredo no repositório                           | **Alto** |  Baixa   | Tudo em GitHub Secrets; `.env` no `.gitignore`; varredura de segredos no CI                                                         |
+| R10 | Documentação divergir do código                               |  Médio   | **Alta** | `04-API.md` no checklist de PR; contrato verificado em teste de integração                                                          |
 
 ---
 

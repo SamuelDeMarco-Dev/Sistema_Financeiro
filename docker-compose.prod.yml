@@ -1,0 +1,75 @@
+services:
+  # `docker compose run --rm migrator` (nao sobe com `up -d`, so via
+  # `run` — RN 08-CICD.md §7): imagem separada da `api` porque o CLI
+  # `prisma` (necessario so para `migrate deploy`) nao entra na imagem
+  # que fica no ar o tempo todo (backend/Dockerfile, estagio `runtime`
+  # vs. `migrator`).
+  migrator:
+    image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api-migrator:${TAG_IMAGEM:-latest}
+    env_file: [.env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [pfm]
+    profiles: ['migrate']
+
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORIO}/pfm-api:${TAG_IMAGEM:-latest}
+    # Produção e homologação convivem na mesma VPS (08-CICD.md §2.1) —
+    # nome de container é único por host, não por projeto do compose,
+    # por isso não pode ficar fixo em "pfm-api" (colidiria com staging).
+    container_name: ${NOME_CONTAINER_API:-pfm-api}
+    restart: unless-stopped
+    env_file: [.env]
+    ports:
+      - '127.0.0.1:${PORTA_API_PUBLICADA:-3333}:3333' # nunca 0.0.0.0
+    volumes:
+      - /var/pfm/uploads:/app/backend/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { cpus: '1.5', memory: 1G }
+        reservations: { memory: 256M }
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+    networks: [pfm]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${NOME_CONTAINER_POSTGRES:-pfm-postgres}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USUARIO}
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA}
+      POSTGRES_DB: ${POSTGRES_BANCO}
+      TZ: America/Sao_Paulo
+    ports:
+      - '127.0.0.1:${PORTA_POSTGRES_PUBLICADA:-5432}:5432' # apenas loopback
+    volumes:
+      - pfm_dados_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USUARIO} -d ${POSTGRES_BANCO}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    networks: [pfm]
+
+volumes:
+  pfm_dados_postgres:
+
+networks:
+  pfm:
+    driver: bridge

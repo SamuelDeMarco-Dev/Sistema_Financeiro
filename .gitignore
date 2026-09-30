@@ -1,0 +1,45 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# Uploads locais (backend)
+backend/uploads/
+
+# Cobertura de testes
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
+# Prisma
+backend/prisma/dev.db
+
+# IDE
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Vite
+frontend/.vite/

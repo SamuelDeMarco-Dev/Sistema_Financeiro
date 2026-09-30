@@ -1,0 +1,560 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+//  IDENTIDADE E ACESSO
+// ═══════════════════════════════════════════════════════════
+
+enum TemaPreferido {
+  CLARO
+  ESCURO
+  SISTEMA
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTAS, CATEGORIAS E ETIQUETAS
+// ═══════════════════════════════════════════════════════════
+
+enum TipoConta {
+  CARTEIRA
+  CONTA_CORRENTE
+  POUPANCA
+  INVESTIMENTO
+  DINHEIRO
+  OUTRO
+}
+
+enum TipoCategoria {
+  RECEITA
+  DESPESA
+  AMBOS
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOVIMENTACOES
+// ═══════════════════════════════════════════════════════════
+
+enum TipoMovimentacao {
+  RECEITA
+  DESPESA
+  TRANSFERENCIA
+}
+
+/// Para receitas, PAGA significa "recebida" (RF-29).
+enum SituacaoMovimentacao {
+  PENDENTE
+  PAGA
+  PAGA_PARCIALMENTE
+  ATRASADA
+  CANCELADA
+}
+
+enum SentidoTransferencia {
+  SAIDA
+  ENTRADA
+}
+
+enum FrequenciaRecorrencia {
+  DIARIA
+  SEMANAL
+  QUINZENAL
+  MENSAL
+  BIMESTRAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum PapelMembro {
+  ADMINISTRADOR
+  PARTICIPANTE
+  OBSERVADOR
+}
+
+enum SituacaoMembro {
+  ATIVO
+  REMOVIDO
+  SAIU
+}
+
+enum SituacaoConvite {
+  PENDENTE
+  ACEITO
+  RECUSADO
+  CANCELADO
+  EXPIRADO
+}
+
+// ═══════════════════════════════════════════════════════════
+//  METAS
+// ═══════════════════════════════════════════════════════════
+
+enum SituacaoMeta {
+  ATIVA
+  PAUSADA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TipoMovimentacaoMeta {
+  APORTE
+  RESGATE
+}
+
+model Usuario {
+  id        String @id @default(cuid())
+  nome      String @db.VarChar(120)
+  email     String @unique @db.VarChar(180)
+  senhaHash String @map("senha_hash") @db.VarChar(72)
+
+  emailVerificadoEm        DateTime? @map("email_verificado_em") @db.Timestamptz(3)
+  tokenVerificacao         String?   @unique @map("token_verificacao") @db.VarChar(128)
+  tokenVerificacaoExpiraEm DateTime? @map("token_verificacao_expira_em") @db.Timestamptz(3)
+
+  tokenRecuperacao         String?   @unique @map("token_recuperacao") @db.VarChar(128)
+  tokenRecuperacaoExpiraEm DateTime? @map("token_recuperacao_expira_em") @db.Timestamptz(3)
+
+  tentativasLogin Int       @default(0) @map("tentativas_login")
+  bloqueadoAte    DateTime? @map("bloqueado_ate") @db.Timestamptz(3)
+  ultimoLoginEm   DateTime? @map("ultimo_login_em") @db.Timestamptz(3)
+
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm    DateTime? @map("excluido_em") @db.Timestamptz(3)
+  anonimizadoEm DateTime? @map("anonimizado_em") @db.Timestamptz(3)
+
+  perfil            Perfil?
+  tokensRenovacao   TokenRenovacao[]
+  contas            Conta[]
+  categorias        Categoria[]
+  etiquetas         Etiqueta[]
+  movimentacoes     Movimentacao[]
+  comprasParceladas CompraParcelada[]
+  metas             Meta[]
+  anexos            Anexo[]
+
+  membros           MembroCompartilhado[]
+  gruposCriados     ContaCompartilhada[]  @relation("GrupoCriadoPor")
+  convitesEnviados  Convite[]             @relation("ConviteEnviadoPor")
+  convitesRecebidos Convite[]             @relation("ConviteUsuarioConvidado")
+  membrosConvidados MembroCompartilhado[] @relation("MembroConvidadoPor")
+
+  @@index([excluidoEm])
+  @@map("usuarios")
+}
+
+model Perfil {
+  id        String @id @default(cuid())
+  usuarioId String @unique @map("usuario_id")
+
+  fotoUrl           String?       @map("foto_url") @db.VarChar(500)
+  moedaPadrao       String        @default("BRL") @map("moeda_padrao") @db.Char(3)
+  idioma            String        @default("pt-BR") @db.VarChar(10)
+  tema              TemaPreferido @default(SISTEMA)
+  timezone          String        @default("America/Sao_Paulo") @db.VarChar(64)
+  formatoData       String        @default("dd/MM/yyyy") @map("formato_data") @db.VarChar(20)
+  primeiroDiaSemana Int           @default(0) @map("primeiro_dia_semana")
+
+  notificacoesApp   Boolean @default(true) @map("notificacoes_app")
+  notificacoesEmail Boolean @default(true) @map("notificacoes_email")
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("perfis")
+}
+
+model TokenRenovacao {
+  id        String @id @default(cuid())
+  usuarioId String @map("usuario_id")
+  tokenHash String @unique @map("token_hash") @db.VarChar(128)
+
+  dispositivo String? @db.VarChar(120)
+  ip          String? @db.VarChar(64)
+  userAgent   String? @map("user_agent") @db.VarChar(300)
+
+  expiraEm         DateTime  @map("expira_em") @db.Timestamptz(3)
+  revogadoEm       DateTime? @map("revogado_em") @db.Timestamptz(3)
+  substituidoPorId String?   @map("substituido_por_id")
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revogadoEm])
+  @@index([expiraEm])
+  @@map("tokens_renovacao")
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTAS COMPARTILHADAS
+// ═══════════════════════════════════════════════════════════
+
+model ContaCompartilhada {
+  id        String  @id @default(cuid())
+  nome      String  @db.VarChar(120)
+  descricao String? @db.VarChar(500)
+  imagemUrl String? @map("imagem_url") @db.VarChar(500)
+  moeda     String  @default("BRL") @db.Char(3)
+  cor       String  @default("#2563EB") @db.VarChar(9)
+
+  /// RN-31: permite ao PARTICIPANTE editar/excluir as proprias movimentacoes.
+  permiteParticipanteEditarProprias Boolean @default(true) @map("permite_participante_editar_proprias")
+
+  criadoPorId  String    @map("criado_por_id")
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  criadoPor Usuario @relation("GrupoCriadoPor", fields: [criadoPorId], references: [id], onDelete: Restrict)
+
+  membros       MembroCompartilhado[]
+  convites      Convite[]
+  contas        Conta[]
+  categorias    Categoria[]
+  movimentacoes Movimentacao[]
+  metas         Meta[]
+  etiquetas     Etiqueta[]
+
+  @@index([criadoPorId])
+  @@index([excluidoEm])
+  @@map("contas_compartilhadas")
+}
+
+model MembroCompartilhado {
+  id                   String @id @default(cuid())
+  contaCompartilhadaId String @map("conta_compartilhada_id")
+  usuarioId            String @map("usuario_id")
+
+  papel    PapelMembro    @default(PARTICIPANTE)
+  situacao SituacaoMembro @default(ATIVO)
+
+  entrouEm       DateTime  @default(now()) @map("entrou_em") @db.Timestamptz(3)
+  saiuEm         DateTime? @map("saiu_em") @db.Timestamptz(3)
+  convidadoPorId String?   @map("convidado_por_id")
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  contaCompartilhada ContaCompartilhada @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  usuario            Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  convidadoPor       Usuario?           @relation("MembroConvidadoPor", fields: [convidadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([contaCompartilhadaId, usuarioId])
+  @@index([usuarioId, situacao])
+  @@index([contaCompartilhadaId, papel])
+  @@map("membros_compartilhados")
+}
+
+model Convite {
+  id                   String      @id @default(cuid())
+  contaCompartilhadaId String      @map("conta_compartilhada_id")
+  email                String      @db.VarChar(180)
+  papel                PapelMembro @default(PARTICIPANTE)
+
+  token    String          @unique @db.VarChar(128)
+  situacao SituacaoConvite @default(PENDENTE)
+  mensagem String?         @db.VarChar(300)
+
+  enviadoPorId       String  @map("enviado_por_id")
+  usuarioConvidadoId String? @map("usuario_convidado_id")
+
+  expiraEm     DateTime  @map("expira_em") @db.Timestamptz(3)
+  respondidoEm DateTime? @map("respondido_em") @db.Timestamptz(3)
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  contaCompartilhada ContaCompartilhada @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  enviadoPor         Usuario            @relation("ConviteEnviadoPor", fields: [enviadoPorId], references: [id], onDelete: Restrict)
+  usuarioConvidado   Usuario?           @relation("ConviteUsuarioConvidado", fields: [usuarioConvidadoId], references: [id], onDelete: SetNull)
+
+  @@index([email, situacao])
+  @@index([contaCompartilhadaId, situacao])
+  @@index([expiraEm])
+  @@map("convites")
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTAS, CATEGORIAS E ETIQUETAS
+// ═══════════════════════════════════════════════════════════
+
+model Conta {
+  id String @id @default(cuid())
+
+  /// Escopo XOR: usuarioId OU contaCompartilhadaId. Ver CHECK chk_conta_escopo.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome         String    @db.VarChar(120)
+  tipo         TipoConta
+  instituicao  String?   @db.VarChar(120)
+  saldoInicial Decimal   @default(0) @map("saldo_inicial") @db.Decimal(14, 2)
+  moeda        String    @default("BRL") @db.Char(3)
+  cor          String    @default("#2563EB") @db.VarChar(9)
+  icone        String    @default("wallet") @db.VarChar(40)
+
+  incluirNoSaldoTotal Boolean @default(true) @map("incluir_no_saldo_total")
+  ordem               Int     @default(0)
+
+  arquivadaEm  DateTime? @map("arquivada_em") @db.Timestamptz(3)
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      Movimentacao[]
+  movimentacoesMeta  MovimentacaoMeta[]
+
+  @@index([usuarioId, excluidoEm, arquivadaEm])
+  @@index([contaCompartilhadaId, excluidoEm])
+  @@map("contas")
+}
+
+model Categoria {
+  id String @id @default(cuid())
+
+  /// Escopo: usuarioId, contaCompartilhadaId, ou ambos nulos quando ehPadraoSistema.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+  categoriaPaiId       String? @map("categoria_pai_id")
+
+  nome            String        @db.VarChar(80)
+  tipo            TipoCategoria @default(DESPESA)
+  cor             String        @default("#64748B") @db.VarChar(9)
+  icone           String        @default("tag") @db.VarChar(40)
+  ehPadraoSistema Boolean       @default(false) @map("eh_padrao_sistema")
+  ordem           Int           @default(0)
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  categoriaPai       Categoria?          @relation("Subcategoria", fields: [categoriaPaiId], references: [id], onDelete: Restrict)
+  subcategorias      Categoria[]         @relation("Subcategoria")
+  movimentacoes      Movimentacao[]
+
+  @@index([usuarioId, tipo, excluidoEm])
+  @@index([contaCompartilhadaId, tipo, excluidoEm])
+  @@index([categoriaPaiId])
+  @@map("categorias")
+}
+
+model Etiqueta {
+  id                   String  @id @default(cuid())
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome String @db.VarChar(40)
+  cor  String @default("#64748B") @db.VarChar(9)
+
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  usuario            Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada?    @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      MovimentacaoEtiqueta[]
+
+  @@index([usuarioId])
+  @@index([contaCompartilhadaId])
+  @@map("etiquetas")
+}
+
+model MovimentacaoEtiqueta {
+  movimentacaoId String   @map("movimentacao_id")
+  etiquetaId     String   @map("etiqueta_id")
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+  etiqueta     Etiqueta     @relation(fields: [etiquetaId], references: [id], onDelete: Cascade)
+
+  @@id([movimentacaoId, etiquetaId])
+  @@index([etiquetaId])
+  @@map("movimentacoes_etiquetas")
+}
+
+model CompraParcelada {
+  id        String  @id @default(cuid())
+  usuarioId String  @map("usuario_id")
+  /// Coluna nasce aqui (RN-21/RN-22); FK e relacao com Cartao chegam em M8.
+  cartaoId  String? @map("cartao_id")
+
+  descricao     String   @db.VarChar(200)
+  valorTotal    Decimal  @map("valor_total") @db.Decimal(14, 2)
+  totalParcelas Int      @map("total_parcelas")
+  dataCompra    DateTime @map("data_compra") @db.Date
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario  Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  parcelas Movimentacao[] @relation("ParcelasDaCompra")
+
+  @@index([usuarioId, excluidoEm])
+  @@index([cartaoId])
+  @@map("compras_parceladas")
+}
+
+model Movimentacao {
+  id String @id @default(cuid())
+
+  /// Autor do lancamento. Sempre preenchido, inclusive em grupo (RF-59, M6).
+  usuarioId String @map("usuario_id")
+
+  /// Escopo XOR: contaId (pessoal) OU contaCompartilhadaId (grupo). Ver CHECK chk_mov_escopo.
+  contaId              String? @map("conta_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  categoriaId String? @map("categoria_id")
+
+  tipo       TipoMovimentacao
+  descricao  String           @db.VarChar(200)
+  observacao String?          @db.VarChar(1000)
+
+  /// Sempre positivo. O sinal vem de `tipo` (RN-08).
+  valor     Decimal              @db.Decimal(14, 2)
+  valorPago Decimal              @default(0) @map("valor_pago") @db.Decimal(14, 2)
+  situacao  SituacaoMovimentacao @default(PENDENTE)
+
+  /// Data de referencia contabil — base dos relatorios (RN-12).
+  dataCompetencia DateTime  @map("data_competencia") @db.Date
+  dataVencimento  DateTime? @map("data_vencimento") @db.Date
+  /// Data em que o dinheiro efetivamente entrou/saiu — base do saldo (RN-12).
+  dataEfetivacao  DateTime? @map("data_efetivacao") @db.Date
+
+  // ---- Transferencia (RN-23 a RN-27) ----
+  transferenciaId String?               @map("transferencia_id")
+  sentido         SentidoTransferencia?
+
+  // ---- Recorrencia (RN-17 a RN-20) ----
+  ehModeloRecorrencia  Boolean                @default(false) @map("eh_modelo_recorrencia")
+  recorrenciaId        String?                @map("recorrencia_id")
+  frequencia           FrequenciaRecorrencia?
+  intervaloRecorrencia Int?                   @map("intervalo_recorrencia")
+  recorrenciaFimEm     DateTime?              @map("recorrencia_fim_em") @db.Date
+  recorrenciaTotal     Int?                   @map("recorrencia_total")
+
+  // ---- Parcelamento (RN-21, RN-22) ----
+  compraParceladaId String? @map("compra_parcelada_id")
+  numeroParcela     Int?    @map("numero_parcela")
+  totalParcelas     Int?    @map("total_parcelas")
+
+  /// Colunas nascem aqui; FK/relacao com Cartao e Fatura chegam em M8.
+  cartaoId String? @map("cartao_id")
+  faturaId String? @map("fatura_id")
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario            Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  conta              Conta?              @relation(fields: [contaId], references: [id], onDelete: Restrict)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Restrict)
+  categoria          Categoria?          @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  compraParcelada    CompraParcelada?    @relation("ParcelasDaCompra", fields: [compraParceladaId], references: [id], onDelete: Cascade)
+
+  modeloRecorrencia Movimentacao?  @relation("OcorrenciasRecorrencia", fields: [recorrenciaId], references: [id], onDelete: Cascade)
+  ocorrencias       Movimentacao[] @relation("OcorrenciasRecorrencia")
+
+  anexos           Anexo[]
+  etiquetas        MovimentacaoEtiqueta[]
+  movimentacaoMeta MovimentacaoMeta?
+
+  @@index([contaId, situacao, dataEfetivacao])
+  @@index([usuarioId, dataCompetencia, tipo])
+  @@index([contaCompartilhadaId, dataCompetencia])
+  @@index([categoriaId, dataCompetencia])
+  @@index([situacao, dataVencimento])
+  @@index([transferenciaId])
+  @@index([recorrenciaId])
+  @@index([compraParceladaId])
+  @@index([faturaId])
+  @@index([excluidoEm])
+  @@map("movimentacoes")
+}
+
+model Anexo {
+  id             String @id @default(cuid())
+  movimentacaoId String @map("movimentacao_id")
+  usuarioId      String @map("usuario_id")
+
+  nomeOriginal   String @map("nome_original") @db.VarChar(255)
+  nomeArmazenado String @map("nome_armazenado") @db.VarChar(255)
+  caminho        String @db.VarChar(500)
+  tipoMime       String @map("tipo_mime") @db.VarChar(100)
+  tamanhoBytes   Int    @map("tamanho_bytes")
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([movimentacaoId])
+  @@index([usuarioId])
+  @@map("anexos")
+}
+
+model Meta {
+  id String @id @default(cuid())
+
+  /// Escopo XOR: usuarioId OU contaCompartilhadaId. Ver CHECK chk_meta_escopo.
+  usuarioId            String? @map("usuario_id")
+  contaCompartilhadaId String? @map("conta_compartilhada_id")
+
+  nome           String  @db.VarChar(120)
+  descricao      String? @db.VarChar(500)
+  valorAlvo      Decimal @map("valor_alvo") @db.Decimal(14, 2)
+  /// Derivado de MovimentacaoMeta; recalculado a cada aporte/resgate na mesma transacao.
+  valorAcumulado Decimal @default(0) @map("valor_acumulado") @db.Decimal(14, 2)
+
+  prazoEm     DateTime?    @map("prazo_em") @db.Date
+  cor         String       @default("#16A34A") @db.VarChar(9)
+  icone       String       @default("target") @db.VarChar(40)
+  situacao    SituacaoMeta @default(ATIVA)
+  concluidaEm DateTime?    @map("concluida_em") @db.Timestamptz(3)
+
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  excluidoEm   DateTime? @map("excluido_em") @db.Timestamptz(3)
+
+  usuario            Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaCompartilhada ContaCompartilhada? @relation(fields: [contaCompartilhadaId], references: [id], onDelete: Cascade)
+  movimentacoes      MovimentacaoMeta[]
+
+  @@index([usuarioId, situacao])
+  @@index([contaCompartilhadaId, situacao])
+  @@map("metas")
+}
+
+model MovimentacaoMeta {
+  id             String  @id @default(cuid())
+  metaId         String  @map("meta_id")
+  contaId        String? @map("conta_id")
+  movimentacaoId String? @unique @map("movimentacao_id")
+
+  tipo       TipoMovimentacaoMeta
+  valor      Decimal              @db.Decimal(14, 2)
+  data       DateTime             @db.Date
+  observacao String?              @db.VarChar(500)
+
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  meta         Meta          @relation(fields: [metaId], references: [id], onDelete: Cascade)
+  conta        Conta?        @relation(fields: [contaId], references: [id], onDelete: SetNull)
+  movimentacao Movimentacao? @relation(fields: [movimentacaoId], references: [id], onDelete: SetNull)
+
+  @@index([metaId, data])
+  @@map("movimentacoes_meta")
+}

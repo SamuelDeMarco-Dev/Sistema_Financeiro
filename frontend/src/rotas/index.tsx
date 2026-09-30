@@ -1,0 +1,216 @@
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter } from 'react-router-dom';
+import { EsqueletoPagina } from '@/componentes/feedback';
+import { LayoutAutenticado } from '@/layouts/LayoutAutenticado';
+import { LayoutPublico } from '@/layouts/LayoutPublico';
+import { RotaProtegida } from './RotaProtegida';
+import { RotaPublica } from './RotaPublica';
+import type { ReactElement, ReactNode } from 'react';
+
+// React.lazy: cada pagina vira um chunk separado, carregado sob demanda na
+// navegacao (nunca no bundle inicial).
+const Dashboard = lazy(() =>
+  import('@/paginas/Dashboard').then((modulo) => ({ default: modulo.Dashboard })),
+);
+const Entrar = lazy(() =>
+  import('@/paginas/Entrar').then((modulo) => ({ default: modulo.Entrar })),
+);
+const Cadastro = lazy(() =>
+  import('@/paginas/Cadastro').then((modulo) => ({ default: modulo.Cadastro })),
+);
+const VerificarEmail = lazy(() =>
+  import('@/paginas/VerificarEmail').then((modulo) => ({ default: modulo.VerificarEmail })),
+);
+const EsqueciSenha = lazy(() =>
+  import('@/paginas/EsqueciSenha').then((modulo) => ({ default: modulo.EsqueciSenha })),
+);
+const RedefinirSenha = lazy(() =>
+  import('@/paginas/RedefinirSenha').then((modulo) => ({ default: modulo.RedefinirSenha })),
+);
+const Configuracoes = lazy(() =>
+  import('@/paginas/Configuracoes').then((modulo) => ({ default: modulo.Configuracoes })),
+);
+const Contas = lazy(() =>
+  import('@/paginas/Contas').then((modulo) => ({ default: modulo.Contas })),
+);
+const Categorias = lazy(() =>
+  import('@/paginas/Categorias').then((modulo) => ({ default: modulo.Categorias })),
+);
+const Movimentacoes = lazy(() =>
+  import('@/paginas/Movimentacoes').then((modulo) => ({ default: modulo.Movimentacoes })),
+);
+const Relatorios = lazy(() =>
+  import('@/paginas/Relatorios').then((modulo) => ({ default: modulo.Relatorios })),
+);
+const Compartilhadas = lazy(() =>
+  import('@/paginas/Compartilhadas').then((modulo) => ({ default: modulo.Compartilhadas })),
+);
+const DetalheCompartilhada = lazy(() =>
+  import('@/paginas/DetalheCompartilhada').then((modulo) => ({
+    default: modulo.DetalheCompartilhada,
+  })),
+);
+const ConvitePublico = lazy(() =>
+  import('@/paginas/ConvitePublico').then((modulo) => ({ default: modulo.ConvitePublico })),
+);
+const NaoEncontrada = lazy(() =>
+  import('@/paginas/NaoEncontrada').then((modulo) => ({ default: modulo.NaoEncontrada })),
+);
+
+function ComSuspense({ children }: { children: ReactNode }): ReactElement {
+  return <Suspense fallback={<EsqueletoPagina />}>{children}</Suspense>;
+}
+
+export const rotas = createBrowserRouter([
+  {
+    element: <LayoutPublico />,
+    children: [
+      {
+        // Acessivel independente de sessao: o link do e-mail pode ser aberto
+        // deslogado (caso comum) ou logado, e verificar precisa funcionar
+        // nos dois casos — por isso fora de RotaPublica.
+        path: 'verificar-email',
+        element: (
+          <ComSuspense>
+            <VerificarEmail />
+          </ComSuspense>
+        ),
+      },
+      {
+        // Mesmo raciocinio de /verificar-email: o link de redefinicao de
+        // senha precisa funcionar mesmo com uma sessao antiga ainda ativa
+        // no navegador (RF-07).
+        path: 'redefinir-senha',
+        element: (
+          <ComSuspense>
+            <RedefinirSenha />
+          </ComSuspense>
+        ),
+      },
+      {
+        // O link do convite chega por e-mail e pode ser aberto por quem nao
+        // tem conta (RN-37) ou por quem ja esta logado — como /verificar-email,
+        // precisa funcionar nos dois casos, entao fica fora de RotaPublica.
+        path: 'convites/:token',
+        element: (
+          <ComSuspense>
+            <ConvitePublico />
+          </ComSuspense>
+        ),
+      },
+      {
+        element: <RotaPublica />,
+        children: [
+          {
+            path: 'entrar',
+            element: (
+              <ComSuspense>
+                <Entrar />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'cadastrar',
+            element: (
+              <ComSuspense>
+                <Cadastro />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'esqueci-senha',
+            element: (
+              <ComSuspense>
+                <EsqueciSenha />
+              </ComSuspense>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    element: <RotaProtegida />,
+    children: [
+      {
+        element: <LayoutAutenticado />,
+        // Demais paginas autenticadas entram aqui conforme cada
+        // funcionalidade chega, uma issue por vez.
+        children: [
+          {
+            index: true,
+            element: (
+              <ComSuspense>
+                <Dashboard />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'configuracoes',
+            element: (
+              <ComSuspense>
+                <Configuracoes />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'contas',
+            element: (
+              <ComSuspense>
+                <Contas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'categorias',
+            element: (
+              <ComSuspense>
+                <Categorias />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'movimentacoes',
+            element: (
+              <ComSuspense>
+                <Movimentacoes />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'relatorios',
+            element: (
+              <ComSuspense>
+                <Relatorios />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas',
+            element: (
+              <ComSuspense>
+                <Compartilhadas />
+              </ComSuspense>
+            ),
+          },
+          {
+            path: 'compartilhadas/:id',
+            element: (
+              <ComSuspense>
+                <DetalheCompartilhada />
+              </ComSuspense>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    path: '*',
+    element: (
+      <ComSuspense>
+        <NaoEncontrada />
+      </ComSuspense>
+    ),
+  },
+]);

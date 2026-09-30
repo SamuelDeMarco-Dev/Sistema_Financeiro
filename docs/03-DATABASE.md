@@ -25,26 +25,26 @@
 
 ## 1. Princípios de modelagem
 
-| Princípio | Regra |
-| --------- | ----- |
-| **Idioma** | Modelos em `PascalCase` pt-BR; tabelas em `snake_case` plural pt-BR via `@@map`; colunas em `camelCase` no Prisma, mapeadas para `snake_case` no banco via `@map`. |
-| **Identificadores** | `String` com `@default(cuid())`. Não há IDs sequenciais expostos — evita enumeração de recursos. |
-| **Dinheiro** | `Decimal @db.Decimal(14, 2)`. Nunca `Float`. Ver ADR-012. |
-| **Datas de calendário** | `DateTime @db.Date` para competência, vencimento e efetivação (o dia importa, a hora não). |
-| **Timestamps** | `DateTime @db.Timestamptz(3)` para `criadoEm`, `atualizadoEm` e demais instantes. Sempre UTC no banco; conversão para o *timezone* do perfil ocorre na aplicação. |
-| **Exclusão lógica** | Entidades com valor histórico têm `excluidoEm DateTime?`. Nenhuma consulta de domínio ignora esse filtro. |
-| **Auditoria** | `criadoEm` e `atualizadoEm` em toda entidade mutável. |
-| **Escopo dual** | Entidades compartilháveis (`Conta`, `Categoria`, `Movimentacao`, `Meta`, `Orcamento`, `Etiqueta`) pertencem a um usuário **ou** a uma conta compartilhada, garantido por `CHECK` (§6). |
-| **Cascatas** | `onDelete: Cascade` apenas onde o filho não tem sentido sem o pai (perfil, tokens, vínculos N:N). Dados financeiros usam `Restrict` — perder histórico por cascata é inaceitável. |
+| Princípio               | Regra                                                                                                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Idioma**              | Modelos em `PascalCase` pt-BR; tabelas em `snake_case` plural pt-BR via `@@map`; colunas em `camelCase` no Prisma, mapeadas para `snake_case` no banco via `@map`.                     |
+| **Identificadores**     | `String` com `@default(cuid())`. Não há IDs sequenciais expostos — evita enumeração de recursos.                                                                                       |
+| **Dinheiro**            | `Decimal @db.Decimal(14, 2)`. Nunca `Float`. Ver ADR-012.                                                                                                                              |
+| **Datas de calendário** | `DateTime @db.Date` para competência, vencimento e efetivação (o dia importa, a hora não).                                                                                             |
+| **Timestamps**          | `DateTime @db.Timestamptz(3)` para `criadoEm`, `atualizadoEm` e demais instantes. Sempre UTC no banco; conversão para o _timezone_ do perfil ocorre na aplicação.                      |
+| **Exclusão lógica**     | Entidades com valor histórico têm `excluidoEm DateTime?`. Nenhuma consulta de domínio ignora esse filtro.                                                                              |
+| **Auditoria**           | `criadoEm` e `atualizadoEm` em toda entidade mutável.                                                                                                                                  |
+| **Escopo dual**         | Entidades compartilháveis (`Conta`, `Categoria`, `Movimentacao`, `Meta`, `Orcamento`, `Etiqueta`) pertencem a um usuário **ou** a uma conta compartilhada, garantido por `CHECK` (§6). |
+| **Cascatas**            | `onDelete: Cascade` apenas onde o filho não tem sentido sem o pai (perfil, tokens, vínculos N:N). Dados financeiros usam `Restrict` — perder histórico por cascata é inaceitável.      |
 
 ### 1.1 Desvios deliberados de `specs/SPEC.md §22`
 
-| Entidade original | Decisão nesta modelagem | Justificativa |
-| ----------------- | ----------------------- | ------------- |
-| `Installment` (`parcelas`) | Substituída por `CompraParcelada` + campos `numeroParcela`/`totalParcelas` em `Movimentacao` | RN-22 define que cada parcela **é** uma movimentação. Uma tabela paralela de parcelas duplicaria o mesmo fato em dois lugares, com risco de divergência. `CompraParcelada` guarda apenas o agregado da compra. |
-| `Transaction` sem vínculo de par | `Movimentacao` com `transferenciaId` + `sentido` | ADR-007: cada conta precisa do próprio lançamento no extrato. |
-| Entidades em inglês | Todas renomeadas para pt-BR | ADR-003. |
-| `Profile` com dados duplicados de `User` | `Perfil` contém apenas preferências; identidade permanece em `Usuario` | Evita dois donos do mesmo dado. |
+| Entidade original                        | Decisão nesta modelagem                                                                      | Justificativa                                                                                                                                                                                                  |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Installment` (`parcelas`)               | Substituída por `CompraParcelada` + campos `numeroParcela`/`totalParcelas` em `Movimentacao` | RN-22 define que cada parcela **é** uma movimentação. Uma tabela paralela de parcelas duplicaria o mesmo fato em dois lugares, com risco de divergência. `CompraParcelada` guarda apenas o agregado da compra. |
+| `Transaction` sem vínculo de par         | `Movimentacao` com `transferenciaId` + `sentido`                                             | ADR-007: cada conta precisa do próprio lançamento no extrato.                                                                                                                                                  |
+| Entidades em inglês                      | Todas renomeadas para pt-BR                                                                  | ADR-003.                                                                                                                                                                                                       |
+| `Profile` com dados duplicados de `User` | `Perfil` contém apenas preferências; identidade permanece em `Usuario`                       | Evita dois donos do mesmo dado.                                                                                                                                                                                |
 
 ---
 
@@ -886,46 +886,46 @@ Apenas os campos cuja semântica não é evidente pelo nome. Os demais são auto
 
 ### 5.1 `movimentacoes`
 
-| Coluna | Tipo | Semântica |
-| ------ | ---- | --------- |
-| `usuario_id` | FK | **Autor** do lançamento — não necessariamente o proprietário do dinheiro. Em grupo, é quem registrou (RF-59). |
-| `conta_id` | FK? | Conta pessoal afetada. Nulo em movimentação de grupo. |
-| `conta_compartilhada_id` | FK? | Grupo afetado. Nulo em movimentação pessoal. Exatamente um dos dois é não-nulo. |
-| `valor` | `Decimal(14,2)` | Sempre `> 0`. O efeito no saldo é definido por `tipo` e `sentido`. |
-| `valor_pago` | `Decimal(14,2)` | Quanto já foi efetivamente pago/recebido. Igual a `valor` quando `situacao = PAGA`. Base do impacto no saldo em `PAGA_PARCIALMENTE` (RN-03). |
-| `data_competencia` | `date` | Mês contábil ao qual pertence. **Base de relatórios e orçamentos.** |
-| `data_vencimento` | `date?` | Quando deveria ser pago. Base do cálculo de atraso (RF-30) e das notificações. |
-| `data_efetivacao` | `date?` | Quando o dinheiro se moveu. **Base do saldo atual.** Nulo enquanto pendente. |
-| `transferencia_id` | `text?` | UUID que une os dois lados de uma transferência. Ambos os lados compartilham o valor (ADR-007). |
-| `sentido` | enum? | `SAIDA` na conta de origem, `ENTRADA` na de destino. Obrigatório quando `tipo = TRANSFERENCIA`, nulo caso contrário. |
-| `eh_modelo_recorrencia` | `bool` | `true` no registro-mãe, que **não** entra em saldos nem listagens; serve apenas de molde (RN-17). |
-| `recorrencia_id` | FK? | Aponta para o registro-mãe. Nulo em movimentação avulsa e no próprio registro-mãe. |
-| `intervalo_recorrencia` | `int?` | Multiplicador da frequência. `frequencia = MENSAL` + `intervalo = 3` ⇒ a cada 3 meses. |
-| `compra_parcelada_id` | FK? | Vincula a parcela à compra-mãe. |
-| `numero_parcela` / `total_parcelas` | `int?` | Rótulo `x/N` (RN-22). |
-| `fatura_id` | FK? | Fatura à qual a despesa de cartão foi alocada (RN-40). Preenchido pelo serviço, nunca pelo cliente. |
-| `excluido_em` | `timestamptz?` | Exclusão lógica (RN-16). Todo filtro de domínio inclui `excluido_em IS NULL`. |
+| Coluna                              | Tipo            | Semântica                                                                                                                                    |
+| ----------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `usuario_id`                        | FK              | **Autor** do lançamento — não necessariamente o proprietário do dinheiro. Em grupo, é quem registrou (RF-59).                                |
+| `conta_id`                          | FK?             | Conta pessoal afetada. Nulo em movimentação de grupo.                                                                                        |
+| `conta_compartilhada_id`            | FK?             | Grupo afetado. Nulo em movimentação pessoal. Exatamente um dos dois é não-nulo.                                                              |
+| `valor`                             | `Decimal(14,2)` | Sempre `> 0`. O efeito no saldo é definido por `tipo` e `sentido`.                                                                           |
+| `valor_pago`                        | `Decimal(14,2)` | Quanto já foi efetivamente pago/recebido. Igual a `valor` quando `situacao = PAGA`. Base do impacto no saldo em `PAGA_PARCIALMENTE` (RN-03). |
+| `data_competencia`                  | `date`          | Mês contábil ao qual pertence. **Base de relatórios e orçamentos.**                                                                          |
+| `data_vencimento`                   | `date?`         | Quando deveria ser pago. Base do cálculo de atraso (RF-30) e das notificações.                                                               |
+| `data_efetivacao`                   | `date?`         | Quando o dinheiro se moveu. **Base do saldo atual.** Nulo enquanto pendente.                                                                 |
+| `transferencia_id`                  | `text?`         | UUID que une os dois lados de uma transferência. Ambos os lados compartilham o valor (ADR-007).                                              |
+| `sentido`                           | enum?           | `SAIDA` na conta de origem, `ENTRADA` na de destino. Obrigatório quando `tipo = TRANSFERENCIA`, nulo caso contrário.                         |
+| `eh_modelo_recorrencia`             | `bool`          | `true` no registro-mãe, que **não** entra em saldos nem listagens; serve apenas de molde (RN-17).                                            |
+| `recorrencia_id`                    | FK?             | Aponta para o registro-mãe. Nulo em movimentação avulsa e no próprio registro-mãe.                                                           |
+| `intervalo_recorrencia`             | `int?`          | Multiplicador da frequência. `frequencia = MENSAL` + `intervalo = 3` ⇒ a cada 3 meses.                                                       |
+| `compra_parcelada_id`               | FK?             | Vincula a parcela à compra-mãe.                                                                                                              |
+| `numero_parcela` / `total_parcelas` | `int?`          | Rótulo `x/N` (RN-22).                                                                                                                        |
+| `fatura_id`                         | FK?             | Fatura à qual a despesa de cartão foi alocada (RN-40). Preenchido pelo serviço, nunca pelo cliente.                                          |
+| `excluido_em`                       | `timestamptz?`  | Exclusão lógica (RN-16). Todo filtro de domínio inclui `excluido_em IS NULL`.                                                                |
 
 ### 5.2 `contas`
 
-| Coluna | Semântica |
-| ------ | --------- |
-| `saldo_inicial` | Saldo declarado no momento do cadastro. Ponto de partida do cálculo de RN-01. |
+| Coluna                   | Semântica                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `saldo_inicial`          | Saldo declarado no momento do cadastro. Ponto de partida do cálculo de RN-01.                                                         |
 | `incluir_no_saldo_total` | Se `false`, a conta aparece na listagem mas é excluída do saldo consolidado (RN-05). Útil para contas de investimento de longo prazo. |
-| `arquivada_em` | Conta arquivada não aceita novos lançamentos e não aparece em seletores, mas preserva histórico (RF-17). |
+| `arquivada_em`           | Conta arquivada não aceita novos lançamentos e não aparece em seletores, mas preserva histórico (RF-17).                              |
 
 ### 5.3 `faturas`
 
-| Coluna | Semântica |
-| ------ | --------- |
-| `ano` / `mes` | Identificam o **ciclo**, não a data de vencimento. Chave natural junto com `cartao_id`. |
-| `valor_total` | Soma das movimentações alocadas. Recalculado a cada alocação, dentro da transação. |
-| `movimentacao_pagamento_id` | Despesa gerada na conta pagadora ao liquidar a fatura (RN-45). Relação 1:1. |
+| Coluna                      | Semântica                                                                               |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `ano` / `mes`               | Identificam o **ciclo**, não a data de vencimento. Chave natural junto com `cartao_id`. |
+| `valor_total`               | Soma das movimentações alocadas. Recalculado a cada alocação, dentro da transação.      |
+| `movimentacao_pagamento_id` | Despesa gerada na conta pagadora ao liquidar a fatura (RN-45). Relação 1:1.             |
 
 ### 5.4 `orcamentos`
 
-| Coluna | Semântica |
-| ------ | --------- |
+| Coluna                      | Semântica                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------- |
 | `alerta_80_enviado_em` etc. | Marca de idempotência: garante no máximo um alerta por limiar por período (RN-50). |
 
 ---
@@ -1110,7 +1110,7 @@ CREATE INDEX idx_mov_pendentes_vencimento
     AND situacao IN ('PENDENTE', 'ATRASADA');
 ```
 
-> **Nota sobre `uq_grupo_um_administrador`:** o índice único parcial impede *dois* administradores, mas não impede *zero*. A ausência de administrador é impedida pela lógica de serviço (RN-29: transferência obrigatória antes da saída) e coberta por teste de integração dedicado.
+> **Nota sobre `uq_grupo_um_administrador`:** o índice único parcial impede _dois_ administradores, mas não impede _zero_. A ausência de administrador é impedida pela lógica de serviço (RN-29: transferência obrigatória antes da saída) e coberta por teste de integração dedicado.
 
 ---
 
@@ -1120,18 +1120,18 @@ CREATE INDEX idx_mov_pendentes_vencimento
 
 `movimentacoes` é a tabela que cresce e concentra praticamente toda a carga. Os índices foram derivados das consultas reais de §8, não adicionados por intuição.
 
-| Índice | Serve a | Tipo |
-| ------ | ------- | ---- |
-| `(conta_id, situacao, data_efetivacao)` | Extrato e saldo por conta | B-tree composto |
-| `(usuario_id, data_competencia, tipo)` | Dashboard e relatórios do usuário | B-tree composto |
-| `(conta_compartilhada_id, data_competencia)` | Extrato de grupo | B-tree composto |
-| `(categoria_id, data_competencia)` | Relatório por categoria, consumo de orçamento | B-tree composto |
-| `(situacao, data_vencimento)` | Tarefa de atraso, notificações | B-tree composto |
-| `idx_mov_saldo` | Agregação de saldo | **Parcial + covering** |
-| `idx_mov_pendentes_vencimento` | Fila de pendências | **Parcial** |
-| `idx_mov_descricao_trgm` | Pesquisa global por texto | **GIN trigram** |
+| Índice                                       | Serve a                                       | Tipo                   |
+| -------------------------------------------- | --------------------------------------------- | ---------------------- |
+| `(conta_id, situacao, data_efetivacao)`      | Extrato e saldo por conta                     | B-tree composto        |
+| `(usuario_id, data_competencia, tipo)`       | Dashboard e relatórios do usuário             | B-tree composto        |
+| `(conta_compartilhada_id, data_competencia)` | Extrato de grupo                              | B-tree composto        |
+| `(categoria_id, data_competencia)`           | Relatório por categoria, consumo de orçamento | B-tree composto        |
+| `(situacao, data_vencimento)`                | Tarefa de atraso, notificações                | B-tree composto        |
+| `idx_mov_saldo`                              | Agregação de saldo                            | **Parcial + covering** |
+| `idx_mov_pendentes_vencimento`               | Fila de pendências                            | **Parcial**            |
+| `idx_mov_descricao_trgm`                     | Pesquisa global por texto                     | **GIN trigram**        |
 
-Os dois índices parciais são os mais valiosos: restringem a leitura às poucas linhas que interessam a operações executadas em toda requisição de dashboard, e o `INCLUDE (valor_pago)` permite *index-only scan* na soma de saldo.
+Os dois índices parciais são os mais valiosos: restringem a leitura às poucas linhas que interessam a operações executadas em toda requisição de dashboard, e o `INCLUDE (valor_pago)` permite _index-only scan_ na soma de saldo.
 
 ### 7.2 Ordem das colunas em índices compostos
 
@@ -1139,12 +1139,12 @@ Regra aplicada: **igualdade antes de faixa**. Em `(conta_id, situacao, data_efet
 
 ### 7.3 Orçamento de desempenho
 
-| Operação | Alvo | Verificação |
-| -------- | ---- | ----------- |
+| Operação                                     | Alvo     | Verificação                              |
+| -------------------------------------------- | -------- | ---------------------------------------- |
 | Listar movimentações (20 itens, com filtros) | < 120 ms | `EXPLAIN ANALYZE` em teste de integração |
-| Saldo consolidado do usuário | < 80 ms | idem |
-| Dashboard completo (5 consultas paralelas) | < 300 ms | teste de carga |
-| Relatório de 12 meses por categoria | < 800 ms | idem |
+| Saldo consolidado do usuário                 | < 80 ms  | idem                                     |
+| Dashboard completo (5 consultas paralelas)   | < 300 ms | teste de carga                           |
+| Relatório de 12 meses por categoria          | < 800 ms | idem                                     |
 
 `EXPLAIN ANALYZE` das quatro consultas acima é obrigatório em toda PR que altere consulta ou índice. Qualquer `Seq Scan` em `movimentacoes` reprova a revisão.
 
@@ -1316,7 +1316,7 @@ WHERE c.excluido_em IS NULL
 GROUP BY c.id, c.usuario_id, c.conta_compartilhada_id, c.saldo_inicial;
 ```
 
-A view é consultada via `prisma.$queryRaw` tipado, dentro de `ContaRepositorio`. **Não** é uma *materialized view*: consistência imediata vale mais que o ganho de leitura neste volume (ADR-005).
+A view é consultada via `prisma.$queryRaw` tipado, dentro de `ContaRepositorio`. **Não** é uma _materialized view_: consistência imediata vale mais que o ganho de leitura neste volume (ADR-005).
 
 ---
 
@@ -1327,11 +1327,11 @@ A view é consultada via `prisma.$queryRaw` tipado, dentro de `ContaRepositorio`
 1. **Nunca** editar uma migration já aplicada em `staging` ou `main`. Correção se faz com nova migration.
 2. Toda migration é revisada no PR — o SQL gerado é lido, não apenas o schema.
 3. Migrations destrutivas (`DROP COLUMN`, `DROP TABLE`, mudança de tipo com perda) exigem plano de duas fases:
-   - **Fase 1:** adiciona a nova estrutura, mantém a antiga, aplica *backfill*, código passa a escrever nas duas.
+   - **Fase 1:** adiciona a nova estrutura, mantém a antiga, aplica _backfill_, código passa a escrever nas duas.
    - **Fase 2** (migration seguinte, após deploy estável): remove a antiga.
 4. `prisma migrate dev` só em ambiente local. `staging` e `main` usam `prisma migrate deploy`.
 5. `prisma db push` é **proibido** em qualquer ambiente compartilhado.
-6. Toda migration recebe *backup* automático do banco antes da aplicação em produção (ver [08-CICD.md](08-CICD.md)).
+6. Toda migration recebe _backup_ automático do banco antes da aplicação em produção (ver [08-CICD.md](08-CICD.md)).
 
 ### 9.2 Comandos
 
@@ -1365,18 +1365,18 @@ npx prisma migrate reset
 
 ### 9.4 Ordem de aplicação prevista
 
-| Ordem | Migration | Milestone |
-| ----- | --------- | --------- |
-| 1 | `cria_estrutura_inicial` — `usuarios`, `perfis`, `tokens_renovacao` | M1 |
-| 2 | `adiciona_contas_e_categorias` | M2 |
-| 3 | `adiciona_movimentacoes_e_etiquetas` | M3 |
-| 4 | `constraints_dominio` — todos os `CHECK` e índices parciais de §6 | M3 |
-| 5 | `adiciona_views_saldo` | M4 |
-| 6 | `adiciona_contas_compartilhadas` — grupos, membros, convites, colunas de escopo | M6 |
-| 7 | `adiciona_metas` | M7 |
-| 8 | `adiciona_cartoes_faturas_parcelamentos` | M8 |
-| 9 | `adiciona_orcamentos_e_notificacoes` | M9 |
-| 10 | `adiciona_indice_trgm_e_auditoria` | M11 |
+| Ordem | Migration                                                                       | Milestone |
+| ----- | ------------------------------------------------------------------------------- | --------- |
+| 1     | `cria_estrutura_inicial` — `usuarios`, `perfis`, `tokens_renovacao`             | M1        |
+| 2     | `adiciona_contas_e_categorias`                                                  | M2        |
+| 3     | `adiciona_movimentacoes_e_etiquetas`                                            | M3        |
+| 4     | `constraints_dominio` — todos os `CHECK` e índices parciais de §6               | M3        |
+| 5     | `adiciona_views_saldo`                                                          | M4        |
+| 6     | `adiciona_contas_compartilhadas` — grupos, membros, convites, colunas de escopo | M6        |
+| 7     | `adiciona_metas`                                                                | M7        |
+| 8     | `adiciona_cartoes_faturas_parcelamentos`                                        | M8        |
+| 9     | `adiciona_orcamentos_e_notificacoes`                                            | M9        |
+| 10    | `adiciona_indice_trgm_e_auditoria`                                              | M11       |
 
 As colunas `conta_compartilhada_id` das entidades de escopo dual nascem em M6. Até lá, os `CHECK` de escopo são criados na forma que considera apenas `usuario_id`/`conta_id`, e a migration 6 os recria na forma completa de §6.
 
@@ -1390,28 +1390,28 @@ Arquivo: `backend/prisma/seed.ts`. Idempotente — pode rodar múltiplas vezes s
 
 `eh_padrao_sistema = true`, sem escopo. Copiadas para o usuário no cadastro (RF-19).
 
-| Nome | Tipo | Cor | Ícone |
-| ---- | ---- | --- | ----- |
-| Salário | RECEITA | `#16A34A` | `banknote` |
-| Freelance | RECEITA | `#22C55E` | `laptop` |
-| Investimentos | AMBOS | `#7C3AED` | `trending-up` |
-| Reembolso | RECEITA | `#14B8A6` | `undo` |
-| Outras receitas | RECEITA | `#64748B` | `plus-circle` |
-| Alimentação | DESPESA | `#EA580C` | `utensils` |
-| Mercado | DESPESA | `#F97316` | `shopping-cart` |
-| Transporte | DESPESA | `#0EA5E9` | `car` |
-| Moradia | DESPESA | `#8B5CF6` | `home` |
-| Saúde | DESPESA | `#EF4444` | `heart-pulse` |
-| Educação | DESPESA | `#3B82F6` | `graduation-cap` |
-| Lazer | DESPESA | `#EC4899` | `party-popper` |
-| Assinaturas | DESPESA | `#A855F7` | `repeat` |
-| Impostos | DESPESA | `#78716C` | `landmark` |
-| Vestuário | DESPESA | `#F59E0B` | `shirt` |
-| Pets | DESPESA | `#84CC16` | `dog` |
-| Presentes | DESPESA | `#F43F5E` | `gift` |
-| Outras despesas | DESPESA | `#64748B` | `minus-circle` |
+| Nome            | Tipo    | Cor       | Ícone            |
+| --------------- | ------- | --------- | ---------------- |
+| Salário         | RECEITA | `#16A34A` | `banknote`       |
+| Freelance       | RECEITA | `#22C55E` | `laptop`         |
+| Investimentos   | AMBOS   | `#7C3AED` | `trending-up`    |
+| Reembolso       | RECEITA | `#14B8A6` | `undo`           |
+| Outras receitas | RECEITA | `#64748B` | `plus-circle`    |
+| Alimentação     | DESPESA | `#EA580C` | `utensils`       |
+| Mercado         | DESPESA | `#F97316` | `shopping-cart`  |
+| Transporte      | DESPESA | `#0EA5E9` | `car`            |
+| Moradia         | DESPESA | `#8B5CF6` | `home`           |
+| Saúde           | DESPESA | `#EF4444` | `heart-pulse`    |
+| Educação        | DESPESA | `#3B82F6` | `graduation-cap` |
+| Lazer           | DESPESA | `#EC4899` | `party-popper`   |
+| Assinaturas     | DESPESA | `#A855F7` | `repeat`         |
+| Impostos        | DESPESA | `#78716C` | `landmark`       |
+| Vestuário       | DESPESA | `#F59E0B` | `shirt`          |
+| Pets            | DESPESA | `#84CC16` | `dog`            |
+| Presentes       | DESPESA | `#F43F5E` | `gift`           |
+| Outras despesas | DESPESA | `#64748B` | `minus-circle`   |
 
-Subcategorias iniciais: *Alimentação* → `Restaurante`, `Delivery`, `Lanche`; *Transporte* → `Combustível`, `Aplicativo`, `Transporte público`, `Estacionamento`; *Moradia* → `Aluguel`, `Condomínio`, `Energia`, `Água`, `Internet`.
+Subcategorias iniciais: _Alimentação_ → `Restaurante`, `Delivery`, `Lanche`; _Transporte_ → `Combustível`, `Aplicativo`, `Transporte público`, `Estacionamento`; _Moradia_ → `Aluguel`, `Condomínio`, `Energia`, `Água`, `Internet`.
 
 ### 10.2 Dados de desenvolvimento
 
@@ -1457,15 +1457,15 @@ npm run seed:producao     # SOMENTE categorias padrão do sistema
 
 ### 11.1 Rotina
 
-| Aspecto | Configuração |
-| ------- | ------------ |
-| Frequência | Diária, 03:30 (horário do servidor) |
-| Ferramenta | `pg_dump --format=custom --compress=9` |
-| Destino | `/var/pfm/backups/pfm-YYYYMMDD-HHMM.dump` |
-| Retenção | 7 diários + 4 semanais |
-| Pré-migration | *Dump* automático antes de `migrate deploy` em produção |
-| Anexos | `tar` incremental de `/var/pfm/uploads` |
-| Verificação | Restauração mensal em banco descartável, com contagem de linhas por tabela |
+| Aspecto       | Configuração                                                               |
+| ------------- | -------------------------------------------------------------------------- |
+| Frequência    | Diária, 03:30 (horário do servidor)                                        |
+| Ferramenta    | `pg_dump --format=custom --compress=9`                                     |
+| Destino       | `/var/pfm/backups/pfm-YYYYMMDD-HHMM.dump`                                  |
+| Retenção      | 7 diários + 4 semanais                                                     |
+| Pré-migration | _Dump_ automático antes de `migrate deploy` em produção                    |
+| Anexos        | `tar` incremental de `/var/pfm/uploads`                                    |
+| Verificação   | Restauração mensal em banco descartável, com contagem de linhas por tabela |
 
 Backup não testado não é backup. A restauração mensal é uma tarefa recorrente do roadmap, não uma sugestão.
 
@@ -1490,10 +1490,10 @@ psql pfm_restauracao -c "
 
 ### 11.3 Objetivos de recuperação
 
-| Métrica | Alvo |
-| ------- | ---- |
-| RPO (perda máxima aceitável) | 24 h |
-| RTO (tempo máximo de recuperação) | 2 h |
+| Métrica                           | Alvo |
+| --------------------------------- | ---- |
+| RPO (perda máxima aceitável)      | 24 h |
+| RTO (tempo máximo de recuperação) | 2 h  |
 
 ---
 
